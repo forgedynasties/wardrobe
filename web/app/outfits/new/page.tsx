@@ -101,7 +101,7 @@ export default function NewOutfitPage() {
 
           <div className="space-y-2">
             <Label>Season</Label>
-            <Select value={season} onValueChange={setSeason}>
+            <Select value={season} onValueChange={(v) => setSeason(v || "")}>
               <SelectTrigger>
                 <SelectValue placeholder="Optional" />
               </SelectTrigger>
