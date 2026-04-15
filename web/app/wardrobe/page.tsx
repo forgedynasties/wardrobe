@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { getItems } from "@/lib/api";
 import { ItemGrid } from "@/components/item-grid";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,10 @@ export default function WardrobePage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Wardrobe</h1>
         <Link href="/items/new">
-          <Button size="sm">+ Add</Button>
+          <Button size="sm" className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Add
+          </Button>
         </Link>
       </div>
 
@@ -38,7 +42,7 @@ export default function WardrobePage() {
           <Badge
             key={cat}
             variant={filter === cat ? "default" : "outline"}
-            className="cursor-pointer whitespace-nowrap"
+            className="cursor-pointer whitespace-nowrap select-none"
             onClick={() => setFilter(cat)}
           >
             {cat}
@@ -46,14 +50,14 @@ export default function WardrobePage() {
         ))}
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <span className="text-muted-foreground animate-pulse">
-            Loading...
-          </span>
-        </div>
-      ) : (
-        <ItemGrid items={filtered} />
+      <ItemGrid items={filtered} loading={loading} />
+
+      {!loading && items.length > 0 && (
+        <Link href="/items/new" className="fixed bottom-20 right-4 z-40 md:hidden">
+          <Button size="icon" className="h-14 w-14 rounded-full shadow-lg">
+            <Plus className="h-6 w-6" />
+          </Button>
+        </Link>
       )}
     </div>
   );

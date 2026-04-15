@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Plus, Sparkles } from "lucide-react";
 import { getOutfits } from "@/lib/api";
 import { OutfitCard } from "@/components/outfit-card";
 import { OutfitStats } from "@/components/outfit-stats";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -52,34 +54,48 @@ export default function OutfitsPage() {
     }
   });
 
-  // Calculate stats
-  const stats = {
-    total: outfits.length,
-    mostWorn: outfits.length > 0 ? Math.max(...outfits.map(o => o.usage_count)) : 0,
-    avgWears: outfits.length > 0 ? Math.round(outfits.reduce((sum, o) => sum + o.usage_count, 0) / outfits.length) : 0,
-    neverWorn: outfits.filter(o => !o.last_worn).length,
-  };
-
   return (
     <div className="p-4 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Outfits</h1>
         <Link href="/outfits/new">
-          <Button size="sm">+ Create</Button>
+          <Button size="sm" className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Create
+          </Button>
         </Link>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <span className="text-muted-foreground animate-pulse">
-            Loading...
-          </span>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="aspect-square w-full rounded-lg" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : outfits.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <span className="text-5xl mb-4">✨</span>
-          <p className="text-lg">No outfits yet</p>
-          <p className="text-sm">Create your first outfit to get started</p>
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+            <Sparkles className="h-8 w-8" />
+          </div>
+          <p className="text-lg font-medium text-foreground mb-1">No outfits yet</p>
+          <p className="text-sm mb-6">Combine items into outfits to track what you wear</p>
+          <Link href="/outfits/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create first outfit
+            </Button>
+          </Link>
         </div>
       ) : (
         <>
@@ -107,6 +123,14 @@ export default function OutfitsPage() {
             ))}
           </div>
         </>
+      )}
+
+      {!loading && outfits.length > 0 && (
+        <Link href="/outfits/new" className="fixed bottom-20 right-4 z-40 md:hidden">
+          <Button size="icon" className="h-14 w-14 rounded-full shadow-lg">
+            <Plus className="h-6 w-6" />
+          </Button>
+        </Link>
       )}
     </div>
   );
