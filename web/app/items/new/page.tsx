@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createItem, uploadImage } from "@/lib/api";
 import { ImageUpload } from "@/components/image-upload";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,14 @@ export default function NewItemPage() {
 
   return (
     <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Add Item</h1>
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/wardrobe")} className="gap-1.5">
+          <ArrowLeft className="h-4 w-4" />
+          Wardrobe
+        </Button>
+        <h1 className="text-2xl font-bold">Add Item</h1>
+        <div className="w-20" />
+      </div>
 
       <div className="space-y-4">
         <ImageUpload

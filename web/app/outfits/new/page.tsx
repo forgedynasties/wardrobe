@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createOutfit, addOutfitItem } from "@/lib/api";
 import { FitBuilder } from "@/components/fit-builder";
 import { Button } from "@/components/ui/button";
@@ -77,14 +78,12 @@ export default function NewOutfitPage() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Create Outfit</h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-        >
-          ← Back
+        <Button variant="ghost" size="sm" onClick={() => router.push("/outfits")} className="gap-1.5">
+          <ArrowLeft className="h-4 w-4" />
+          Outfits
         </Button>
+        <h1 className="text-2xl font-bold">Create Outfit</h1>
+        <div className="w-20" />
       </div>
 
       <div className="space-y-6">
