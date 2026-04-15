@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, Check } from "lucide-react";
-import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, imageUrl } from "@/lib/api";
+import { ArrowLeft, Pencil, Trash2, Check, Plus, X } from "lucide-react";
+import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, imageUrl } from "@/lib/api";
+import { FitBuilder } from "@/components/fit-builder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import type { Outfit } from "@/lib/types";
 
 const seasons = ["Spring", "Summer", "Fall", "Winter", "All Season"];
@@ -52,6 +60,8 @@ export default function OutfitDetailPage() {
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showItemPicker, setShowItemPicker] = useState(false);
+  const [removingItem, setRemovingItem] = useState<string | null>(null);
 
   useEffect(() => {
     getOutfit(id).then((o) => {
@@ -103,6 +113,28 @@ export default function OutfitDetailPage() {
       router.push("/outfits");
     } catch {
       setDeleting(false);
+    }
+  };
+
+  const handleAddItems = async (itemIds: string[]) => {
+    const currentItemIds = new Set(outfit?.items?.map(i => i.id) || []);
+    const newIds = itemIds.filter(iid => !currentItemIds.has(iid));
+    for (const itemId of newIds) {
+      await addOutfitItem(id, itemId);
+    }
+    const updated = await getOutfit(id);
+    setOutfit(updated);
+    setShowItemPicker(false);
+  };
+
+  const handleRemoveItem = async (itemId: string) => {
+    setRemovingItem(itemId);
+    try {
+      await removeOutfitItem(id, itemId);
+      const updated = await getOutfit(id);
+      setOutfit(updated);
+    } finally {
+      setRemovingItem(null);
     }
   };
 
@@ -259,7 +291,18 @@ export default function OutfitDetailPage() {
           )}
 
           <div>
-            <Label className="text-xs text-muted-foreground">Items</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Items ({outfit.items?.length || 0})</Label>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 h-7 text-xs"
+                onClick={() => setShowItemPicker(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Add
+              </Button>
+            </div>
             {outfit.items && outfit.items.length > 0 ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-3">
                 {outfit.items.map((item) => {
@@ -271,23 +314,31 @@ export default function OutfitDetailPage() {
                         : null;
 
                   return (
-                    <Link
-                      key={item.id}
-                      href={`/items/${item.id}`}
-                      className="bg-muted/50 rounded-lg aspect-square flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all"
-                    >
-                      {src ? (
-                        <img
-                          src={src}
-                          alt={item.category}
-                          className="object-contain w-full h-full p-2"
-                        />
-                      ) : (
-                        <span className="text-3xl text-muted-foreground/50">
-                          {item.category === "Shoes" ? "👟" : "👕"}
-                        </span>
-                      )}
-                    </Link>
+                    <div key={item.id} className="relative group">
+                      <Link
+                        href={`/items/${item.id}`}
+                        className="bg-muted/50 rounded-lg aspect-square flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all block"
+                      >
+                        {src ? (
+                          <img
+                            src={src}
+                            alt={item.category}
+                            className="object-contain w-full h-full p-2"
+                          />
+                        ) : (
+                          <span className="text-3xl text-muted-foreground/50">
+                            {item.category === "Shoes" ? "👟" : "👕"}
+                          </span>
+                        )}
+                      </Link>
+                      <button
+                        onClick={() => handleRemoveItem(item.id)}
+                        disabled={removingItem === item.id}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -299,6 +350,21 @@ export default function OutfitDetailPage() {
           </div>
         </div>
       )}
+
+      <Sheet open={showItemPicker} onOpenChange={setShowItemPicker}>
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Add items to outfit</SheetTitle>
+            <SheetDescription>Select items to add</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4">
+            <FitBuilder
+              onSelect={handleAddItems}
+              initialItems={outfit.items || []}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
