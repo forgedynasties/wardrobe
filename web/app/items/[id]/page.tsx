@@ -2,12 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Trash2, Pencil, ArrowLeft } from "lucide-react";
 import { getItem, updateItem, deleteItem, uploadImage, imageUrl } from "@/lib/api";
 import { ImageUpload } from "@/components/image-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -32,6 +42,8 @@ export default function ItemDetailPage() {
   const [material, setMaterial] = useState("");
   const [showRaw, setShowRaw] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     getItem(id).then((i) => {
@@ -60,9 +72,13 @@ export default function ItemDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this item?")) return;
-    await deleteItem(id);
-    router.push("/wardrobe");
+    setDeleting(true);
+    try {
+      await deleteItem(id);
+      router.push("/wardrobe");
+    } catch {
+      setDeleting(false);
+    }
   };
 
   const handleReupload = async (file: File) => {
@@ -78,8 +94,11 @@ export default function ItemDetailPage() {
 
   if (!item) {
     return (
-      <div className="flex justify-center py-20">
-        <span className="text-muted-foreground animate-pulse">Loading...</span>
+      <div className="p-4 max-w-md mx-auto space-y-4">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="aspect-square w-full rounded-lg" />
+        <Skeleton className="h-6 w-1/2" />
+        <Skeleton className="h-4 w-1/3" />
       </div>
     );
   }
@@ -97,22 +116,24 @@ export default function ItemDetailPage() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          Back
+        <Button variant="ghost" size="sm" onClick={() => router.push("/wardrobe")} className="gap-1.5">
+          <ArrowLeft className="h-4 w-4" />
+          Wardrobe
         </Button>
         <div className="flex gap-2">
           {!editing && (
-            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5">
+              <Pencil className="h-3.5 w-3.5" />
               Edit
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={handleDelete}>
-            Delete
+          <Button variant="ghost" size="sm" onClick={() => setShowDeleteDialog(true)} className="text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <div className="aspect-square bg-muted rounded-lg mb-4 flex items-center justify-center relative overflow-hidden">
+      <div className="aspect-square bg-muted/50 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden">
         {imgSrc ? (
           <img
             src={imgSrc}
@@ -159,7 +180,7 @@ export default function ItemDetailPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={category} onValueChange={(v) => v && setCategory(v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -248,6 +269,25 @@ export default function ItemDetailPage() {
           )}
         </div>
       )}
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete item</DialogTitle>
+            <DialogDescription>
+              This will permanently remove this {item.category.toLowerCase()} from your wardrobe. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

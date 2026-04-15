@@ -1,12 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOutfitLogs, getOutfits, logOutfitWear, getItems, deleteOutfitLog, imageUrl } from "@/lib/api";
+import { getOutfitLogs, getOutfits, logOutfitWear, getItems, deleteOutfitLog, addOutfitItem, createOutfit, imageUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -15,7 +30,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Outfit, ClothingItem, OutfitLog } from "@/lib/types";
-import { createOutfit } from "@/lib/api";
 
 export default function OutfitLoggerPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -25,7 +39,7 @@ export default function OutfitLoggerPage() {
   const [loading, setLoading] = useState(true);
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showLogDialog, setShowLogDialog] = useState(false);
+  const [showLogSheet, setShowLogSheet] = useState(false);
   const [logMode, setLogMode] = useState<"outfit" | "items">("outfit");
   const [selectedOutfit, setSelectedOutfit] = useState<string>("");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -34,6 +48,7 @@ export default function OutfitLoggerPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveAsOutfit, setSaveAsOutfit] = useState(false);
   const [outfitName, setOutfitName] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ dateStr: string; log: OutfitLog } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -70,7 +85,6 @@ export default function OutfitLoggerPage() {
       const logsData = await getOutfitLogs(startDate, endDate);
       const logsMap = new Map(
         logsData.map((log) => {
-          // Extract date part from wear_date (e.g., "2024-01-15" from "2024-01-15T00:00:00Z")
           const dateKey = log.wear_date.split("T")[0];
           return [dateKey, log];
         })
@@ -84,7 +98,17 @@ export default function OutfitLoggerPage() {
   const handleDateClick = (date: number) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), date);
     setSelectedDate(newDate);
-    setShowLogDialog(true);
+    setShowLogSheet(true);
+    setSaveError(null);
+  };
+
+  const resetForm = () => {
+    setSelectedOutfit("");
+    setSelectedItems(new Set());
+    setNotes("");
+    setSaveAsOutfit(false);
+    setOutfitName("");
+    setSaveError(null);
   };
 
   const handleSaveLog = async () => {
@@ -93,12 +117,10 @@ export default function OutfitLoggerPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      // Format as RFC3339 datetime (midnight UTC for the selected date)
       const wearDate = new Date(selectedDate);
       wearDate.setHours(0, 0, 0, 0);
-      const dateString = wearDate.toISOString(); // "2024-01-15T00:00:00.000Z"
-      
-      // Validate that we have either outfit or items selected
+      const dateString = wearDate.toISOString();
+
       if (logMode === "outfit" && !selectedOutfit) {
         setSaveError("Please select an outfit");
         setSaving(false);
@@ -113,7 +135,6 @@ export default function OutfitLoggerPage() {
 
       let outfitIdToLog: string | undefined = selectedOutfit || undefined;
 
-      // Create outfit first if requested in items mode
       if (logMode === "items" && saveAsOutfit) {
         if (!outfitName.trim()) {
           setSaveError("Please enter an outfit name");
@@ -121,30 +142,22 @@ export default function OutfitLoggerPage() {
           return;
         }
 
-        const newOutfit = await createOutfit({
-          name: outfitName,
-        });
+        const newOutfit = await createOutfit({ name: outfitName });
         outfitIdToLog = newOutfit.id;
-        
-        // Add items to the new outfit
+
         for (const itemId of Array.from(selectedItems)) {
           try {
-            await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081"}/api/outfits/${newOutfit.id}/items`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ clothing_item_id: itemId }),
-            });
+            await addOutfitItem(newOutfit.id, itemId);
           } catch (err) {
             console.error("Failed to add item to outfit:", err);
           }
         }
       }
 
-      const requestData: any = {
+      const requestData: Record<string, unknown> = {
         wear_date: dateString,
       };
 
-      // Only include optional fields if they have values
       if (outfitIdToLog) {
         requestData.outfit_id = outfitIdToLog;
       }
@@ -155,36 +168,25 @@ export default function OutfitLoggerPage() {
         requestData.notes = notes;
       }
 
-      console.log("Sending log request:", requestData);
+      await logOutfitWear(requestData as any);
 
-      const response = await logOutfitWear(requestData);
-      console.log("Log saved:", response);
-
-      // Reset form and reload
-      setSelectedOutfit("");
-      setSelectedItems(new Set());
-      setNotes("");
-      setSaveAsOutfit(false);
-      setOutfitName("");
-      setShowLogDialog(false);
-      setSaveError(null);
+      resetForm();
+      setShowLogSheet(false);
       await loadMonthLogs();
-      await loadData(); // Refresh outfits list
+      await loadData();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to save log";
-      console.error("Error saving log:", err);
       setSaveError(errorMessage);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteLog = async (logDate: string) => {
-    const log = logs.get(logDate);
-    if (!log || !confirm("Delete this log entry?")) return;
-
+  const handleDeleteLog = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteOutfitLog(log.id);
+      await deleteOutfitLog(deleteTarget.log.id);
+      setDeleteTarget(null);
       await loadMonthLogs();
     } catch (err) {
       console.error(err);
@@ -201,7 +203,7 @@ export default function OutfitLoggerPage() {
 
   const daysInMonth = getDaysInMonth(currentMonth);
   const firstDay = getFirstDayOfMonth(currentMonth);
-  const days = [];
+  const days: (number | null)[] = [];
 
   for (let i = 0; i < firstDay; i++) {
     days.push(null);
@@ -215,8 +217,15 @@ export default function OutfitLoggerPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <span className="text-muted-foreground animate-pulse">Loading...</span>
+      <div className="p-4 max-w-6xl mx-auto space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-5 w-64" />
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+        <Skeleton className="h-96 w-full rounded-lg" />
       </div>
     );
   }
@@ -231,23 +240,25 @@ export default function OutfitLoggerPage() {
       <div className="flex items-center justify-between">
         <Button
           variant="outline"
+          size="sm"
           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
         >
-          ← Previous
+          Previous
         </Button>
         <h2 className="text-xl font-semibold">{monthName}</h2>
         <Button
           variant="outline"
+          size="sm"
           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
         >
-          Next →
+          Next
         </Button>
       </div>
 
-      <Card className="p-6">
-        <div className="grid grid-cols-7 gap-2">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div key={day} className="text-center font-semibold text-sm">
+      <Card className="p-3 md:p-6">
+        <div className="grid grid-cols-7 gap-1 md:gap-2">
+          {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+            <div key={i} className="text-center font-semibold text-xs text-muted-foreground py-2">
               {day}
             </div>
           ))}
@@ -264,56 +275,56 @@ export default function OutfitLoggerPage() {
             return (
               <div
                 key={idx}
-                className={`min-h-24 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all p-2 ${
+                className={`min-h-14 md:min-h-24 rounded-lg border flex flex-col items-center justify-start cursor-pointer transition-all p-1 md:p-2 group ${
                   !day
-                    ? "bg-muted/30"
+                    ? "bg-transparent border-transparent cursor-default"
                     : hasLog
-                      ? "bg-primary/20 border-primary hover:bg-primary/30"
-                      : "bg-card border-border hover:border-primary"
+                      ? "bg-primary/10 border-primary/30 hover:bg-primary/20"
+                      : "bg-card border-border hover:border-primary/50"
                 }`}
                 onClick={() => day && handleDateClick(day)}
               >
                 {day && (
                   <>
-                    <div className="text-sm font-medium mb-1">{day}</div>
+                    <div className="text-xs md:text-sm font-medium mb-0.5">{day}</div>
                     {hasLog && log && (
-                      <div className="flex flex-col items-center gap-2 w-full flex-1">
-                        {/* Display item thumbnails only */}
-                        <div className="flex gap-2 flex-wrap justify-center w-full items-center min-h-6">
+                      <div className="flex flex-col items-center gap-0.5 w-full flex-1">
+                        <div className="flex gap-0.5 md:gap-1 flex-wrap justify-center w-full items-center">
                           {log.items && log.items.length > 0 ? (
                             log.items.slice(0, 4).map((item) => {
-                              const imgSrc = 
-                                item.image_status === "done" && item.image_url 
-                                  ? imageUrl(item.image_url) 
-                                  : item.raw_image_url 
-                                    ? imageUrl(item.raw_image_url) 
+                              const imgSrc =
+                                item.image_status === "done" && item.image_url
+                                  ? imageUrl(item.image_url)
+                                  : item.raw_image_url
+                                    ? imageUrl(item.raw_image_url)
                                     : null;
-                              
+
                               return imgSrc ? (
                                 <img
                                   key={item.id}
                                   src={imgSrc}
                                   alt={item.category}
-                                  className="w-10 h-10 rounded-md object-cover border border-muted/50 shadow-sm"
-                                  onError={(e: any) => {
-                                    if (e.currentTarget) {
-                                      e.currentTarget.style.display = "none";
-                                    }
+                                  className="w-5 h-5 md:w-9 md:h-9 rounded object-cover"
+                                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                    e.currentTarget.style.display = "none";
                                   }}
                                 />
                               ) : null;
                             })
-                          ) : null}
+                          ) : (
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                          )}
                         </div>
-                        {/* Delete button */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteLog(dateStr);
+                            if (dateStr && log) {
+                              setDeleteTarget({ dateStr, log });
+                            }
                           }}
-                          className="text-muted-foreground hover:text-destructive text-xs"
+                          className="text-muted-foreground hover:text-destructive text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          ✕
+                          &times;
                         </button>
                       </div>
                     )}
@@ -323,46 +334,33 @@ export default function OutfitLoggerPage() {
             );
           })}
         </div>
-
-        {saveError && (
-          <div className="bg-destructive/10 border border-destructive/50 text-destructive px-3 py-2 rounded-md text-sm mt-4">
-            {saveError}
-          </div>
-        )}
       </Card>
 
-      {showLogDialog && selectedDate && (
-        <Card className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">
-              Log outfit for {selectedDate.toLocaleDateString()}
-            </h3>
-            <button
-              onClick={() => {
-                setShowLogDialog(false);
-                setSelectedItems(new Set());
-                setSaveAsOutfit(false);
-                setOutfitName("");
-                setSaveError(null);
-              }}
-              className="text-2xl hover:text-muted-foreground"
-            >
-              ✕
-            </button>
-          </div>
+      <Sheet open={showLogSheet} onOpenChange={(open) => { setShowLogSheet(open); if (!open) resetForm(); }}>
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>
+              Log outfit for {selectedDate?.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </SheetTitle>
+            <SheetDescription>
+              Record what you wore
+            </SheetDescription>
+          </SheetHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 px-4 pb-4">
             <div className="space-y-2">
               <Label>Log Type</Label>
               <div className="flex gap-2">
                 <Button
                   variant={logMode === "outfit" ? "default" : "outline"}
+                  size="sm"
                   onClick={() => setLogMode("outfit")}
                 >
                   Existing Outfit
                 </Button>
                 <Button
                   variant={logMode === "items" ? "default" : "outline"}
+                  size="sm"
                   onClick={() => setLogMode("items")}
                 >
                   Select Items
@@ -388,8 +386,8 @@ export default function OutfitLoggerPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>Select Items</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                <Label>Select Items ({selectedItems.size} selected)</Label>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto">
                   {items.map((item) => {
                     const src =
                       item.image_status === "done" && item.image_url
@@ -412,23 +410,20 @@ export default function OutfitLoggerPage() {
                         }}
                         className={`rounded-lg border-2 transition-all overflow-hidden aspect-square flex flex-col items-center justify-center ${
                           selectedItems.has(item.id)
-                            ? "bg-primary/20 border-primary"
-                            : "bg-muted border-border hover:border-primary"
+                            ? "bg-primary/15 border-primary"
+                            : "bg-muted/50 border-border hover:border-primary/50"
                         }`}
                       >
                         {src ? (
                           <img
                             src={src}
                             alt={item.category}
-                            className="w-full h-full object-contain p-2"
+                            className="w-full h-full object-contain p-1"
                           />
                         ) : (
-                          <div className="flex flex-col items-center gap-1 p-2">
+                          <div className="flex flex-col items-center gap-0.5 p-1">
                             <div className="text-lg">👕</div>
-                            <div className="text-xs font-medium">{item.category}</div>
-                            {item.sub_category && (
-                              <div className="text-xs text-muted-foreground">{item.sub_category}</div>
-                            )}
+                            <div className="text-[10px] font-medium">{item.sub_category || item.category}</div>
                           </div>
                         )}
                       </button>
@@ -446,7 +441,7 @@ export default function OutfitLoggerPage() {
                     id="save-as-outfit"
                     checked={saveAsOutfit}
                     onChange={(e) => setSaveAsOutfit(e.target.checked)}
-                    className="w-4 h-4 rounded border"
+                    className="w-4 h-4 rounded border accent-primary"
                   />
                   <Label htmlFor="save-as-outfit" className="cursor-pointer">
                     Save as new outfit
@@ -457,7 +452,6 @@ export default function OutfitLoggerPage() {
                     value={outfitName}
                     onChange={(e) => setOutfitName(e.target.value)}
                     placeholder="Enter outfit name..."
-                    className="w-full"
                   />
                 )}
               </div>
@@ -472,7 +466,13 @@ export default function OutfitLoggerPage() {
               />
             </div>
 
-            <div className="flex gap-2">
+            {saveError && (
+              <div className="bg-destructive/10 border border-destructive/50 text-destructive px-3 py-2 rounded-md text-sm">
+                {saveError}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
               <Button
                 className="flex-1"
                 onClick={handleSaveLog}
@@ -487,20 +487,33 @@ export default function OutfitLoggerPage() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => {
-                  setShowLogDialog(false);
-                  setSelectedItems(new Set());
-                  setSaveAsOutfit(false);
-                  setOutfitName("");
-                  setSaveError(null);
-                }}
+                onClick={() => { setShowLogSheet(false); resetForm(); }}
               >
                 Cancel
               </Button>
             </div>
           </div>
-        </Card>
-      )}
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete log entry</DialogTitle>
+            <DialogDescription>
+              Remove the outfit log for this day? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteLog}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
