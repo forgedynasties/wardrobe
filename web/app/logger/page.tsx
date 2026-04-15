@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getOutfitLogs, getOutfits, logOutfitWear, getItems, deleteOutfitLog, addOutfitItem, createOutfit, imageUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -239,19 +240,21 @@ export default function OutfitLoggerPage() {
 
       <div className="flex items-center justify-between">
         <Button
-          variant="outline"
-          size="sm"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10"
           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
         >
-          Previous
+          <ChevronLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-xl font-semibold">{monthName}</h2>
+        <h2 className="text-lg md:text-xl font-semibold">{monthName}</h2>
         <Button
-          variant="outline"
-          size="sm"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10"
           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
         >
-          Next
+          <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
 
