@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Trash2, Pencil, ArrowLeft } from "lucide-react";
 import { getItem, updateItem, deleteItem, uploadImage, imageUrl } from "@/lib/api";
 import { ImageUpload } from "@/components/image-upload";
+import { ColorPicker } from "@/components/color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -204,19 +205,7 @@ export default function ItemDetailPage() {
 
           <div className="space-y-2">
             <Label>Color</Label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={colorHex || "#000000"}
-                onChange={(e) => setColorHex(e.target.value)}
-                className="w-10 h-10 rounded cursor-pointer border-0"
-              />
-              <Input
-                value={colorHex}
-                onChange={(e) => setColorHex(e.target.value)}
-                className="font-mono"
-              />
-            </div>
+            <ColorPicker value={colorHex || "#000000"} onChange={setColorHex} />
           </div>
 
           <div className="space-y-2">

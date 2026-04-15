@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createItem, uploadImage } from "@/lib/api";
 import { ImageUpload } from "@/components/image-upload";
+import { ColorPicker } from "@/components/color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,8 @@ export default function NewItemPage() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileSelect = (f: File) => {
     setFile(f);
@@ -41,8 +44,10 @@ export default function NewItemPage() {
   };
 
   const handleSubmit = async () => {
+    setAttempted(true);
     if (!category) return;
     setSaving(true);
+    setError(null);
     try {
       const item = await createItem({
         category,
@@ -55,7 +60,7 @@ export default function NewItemPage() {
       }
       router.push(`/items/${item.id}`);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : "Failed to create item");
       setSaving(false);
     }
   };
@@ -71,7 +76,7 @@ export default function NewItemPage() {
         <div className="w-20" />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         <ImageUpload
           onFileSelect={handleFileSelect}
           preview={preview}
@@ -79,9 +84,12 @@ export default function NewItemPage() {
         />
 
         <div className="space-y-2">
-          <Label>Category</Label>
-          <Select value={category} onValueChange={(v) => { setCategory(v); setSubCategory(""); }}>
-            <SelectTrigger>
+          <Label>Category *</Label>
+          <Select
+            value={category}
+            onValueChange={(v) => { if (v) { setCategory(v); setSubCategory(""); } }}
+          >
+            <SelectTrigger className={attempted && !category ? "border-destructive" : ""}>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
@@ -92,12 +100,15 @@ export default function NewItemPage() {
               ))}
             </SelectContent>
           </Select>
+          {attempted && !category && (
+            <p className="text-xs text-destructive">Category is required</p>
+          )}
         </div>
 
         {category && subCategories[category] && (
           <div className="space-y-2">
             <Label>Type</Label>
-            <Select value={subCategory} onValueChange={setSubCategory}>
+            <Select value={subCategory} onValueChange={(v) => v && setSubCategory(v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
@@ -114,20 +125,7 @@ export default function NewItemPage() {
 
         <div className="space-y-2">
           <Label>Color</Label>
-          <div className="flex items-center gap-3">
-            <input
-              type="color"
-              value={colorHex}
-              onChange={(e) => setColorHex(e.target.value)}
-              className="w-10 h-10 rounded cursor-pointer border-0"
-            />
-            <Input
-              value={colorHex}
-              onChange={(e) => setColorHex(e.target.value)}
-              placeholder="#000000"
-              className="font-mono"
-            />
-          </div>
+          <ColorPicker value={colorHex} onChange={setColorHex} />
         </div>
 
         <div className="space-y-2">
@@ -139,8 +137,15 @@ export default function NewItemPage() {
           />
         </div>
 
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/50 text-destructive px-3 py-2 rounded-md text-sm">
+            {error}
+          </div>
+        )}
+
         <Button
           className="w-full"
+          size="lg"
           onClick={handleSubmit}
           disabled={!category || saving}
         >
