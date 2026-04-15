@@ -1,6 +1,8 @@
 import type {
   ClothingItem,
   Outfit,
+  OutfitLog,
+  LogOutfitWearRequest,
   CreateItemRequest,
   UpdateItemRequest,
   CreateOutfitRequest,
@@ -127,6 +129,31 @@ export function wearOutfit(id: string): Promise<Outfit> {
   return fetcher(`/api/outfits/${id}/wear`, {
     method: "POST",
   });
+}
+
+// Outfit Logs
+
+export function logOutfitWear(data: LogOutfitWearRequest): Promise<OutfitLog> {
+  return fetcher("/api/outfit-logs", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function getOutfitLogs(startDate: string, endDate: string): Promise<OutfitLog[]> {
+  const params = new URLSearchParams({
+    start_date: startDate,
+    end_date: endDate,
+  });
+  return fetcher(`/api/outfit-logs?${params}`);
+}
+
+export function getOutfitLogByDate(date: string): Promise<OutfitLog> {
+  return fetcher(`/api/outfit-logs/${date}`);
+}
+
+export function deleteOutfitLog(id: string): Promise<void> {
+  return fetcher(`/api/outfit-logs/${id}`, { method: "DELETE" });
 }
 
 export function imageUrl(path: string): string {

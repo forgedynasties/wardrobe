@@ -28,4 +28,12 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		outfits.POST("/:id/items", h.AddOutfitItem)
 		outfits.DELETE("/:id/items/:itemId", h.RemoveOutfitItem)
 	}
+
+	logs := api.Group("/outfit-logs")
+	{
+		logs.POST("", h.LogOutfitWear)
+		logs.GET("", h.GetOutfitLogs)
+		logs.GET("/:date", h.GetOutfitLogByDate)
+		logs.DELETE("/:id", h.DeleteOutfitLog)
+	}
 }

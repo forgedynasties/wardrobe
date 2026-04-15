@@ -70,3 +70,24 @@ type UpdateOutfitRequest struct {
 type AddOutfitItemRequest struct {
 	ClothingItemID uuid.UUID `json:"clothing_item_id" binding:"required"`
 }
+type OutfitLog struct {
+	ID       uuid.UUID      `json:"id"`
+	OutfitID *uuid.UUID     `json:"outfit_id"`
+	WearDate time.Time      `json:"wear_date"`
+	Notes    string         `json:"notes"`
+	Items    []ClothingItem `json:"items,omitempty"`
+	CreatedAt time.Time     `json:"created_at"`
+	UpdatedAt time.Time     `json:"updated_at"`
+}
+
+type LogOutfitWearRequest struct {
+	OutfitID   *uuid.UUID  `json:"outfit_id"`
+	WearDate   time.Time   `json:"wear_date" binding:"required"`
+	ItemIDs    []uuid.UUID `json:"item_ids"`
+	Notes      string      `json:"notes"`
+}
+
+type GetOutfitLogsRequest struct {
+	StartDate time.Time `json:"start_date" binding:"required"`
+	EndDate   time.Time `json:"end_date" binding:"required"`
+}

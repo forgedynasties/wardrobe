@@ -49,3 +49,20 @@ export interface UpdateOutfitRequest {
   season?: string;
   vibe?: string[];
 }
+
+export interface OutfitLog {
+  id: string;
+  outfit_id: string | null;
+  wear_date: string;
+  notes: string;
+  items?: ClothingItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LogOutfitWearRequest {
+  outfit_id?: string;
+  wear_date: string;
+  item_ids?: string[];
+  notes?: string;
+}

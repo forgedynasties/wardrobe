@@ -312,3 +312,177 @@ func (s *Store) WearOutfit(id uuid.UUID) (*domain.Outfit, error) {
 
 	return &o, rows.Err()
 }
+
+// Outfit Logs
+
+func (s *Store) LogOutfitWear(req domain.LogOutfitWearRequest) (*domain.OutfitLog, error) {
+	var log domain.OutfitLog
+	err := s.db.QueryRow(`
+		INSERT INTO outfit_logs (outfit_id, wear_date, notes)
+		VALUES ($1, $2, $3)
+		RETURNING id, outfit_id, wear_date, notes, created_at, updated_at`,
+		req.OutfitID, req.WearDate, req.Notes).
+		Scan(&log.ID, &log.OutfitID, &log.WearDate, &log.Notes, &log.CreatedAt, &log.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add items if provided (for manual logs)
+	for _, itemID := range req.ItemIDs {
+		_, err := s.db.Exec(`
+			INSERT INTO outfit_log_items (outfit_log_id, clothing_item_id)
+			VALUES ($1, $2)`,
+			log.ID, itemID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Load items
+	if len(req.ItemIDs) > 0 {
+		itemRows, err := s.db.Query(`
+			SELECT id, category, sub_category, color_hex, material, image_url, raw_image_url, image_status, last_worn, created_at, updated_at
+			FROM clothing_items WHERE id = ANY($1)`,
+			pq.Array(req.ItemIDs))
+		if err != nil {
+			return nil, err
+		}
+		defer itemRows.Close()
+
+		for itemRows.Next() {
+			var item domain.ClothingItem
+			err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
+				&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+			if err != nil {
+				return nil, err
+			}
+			log.Items = append(log.Items, item)
+		}
+	}
+
+	return &log, nil
+}
+
+func (s *Store) GetOutfitLogs(startDate, endDate time.Time) ([]domain.OutfitLog, error) {
+	rows, err := s.db.Query(`
+		SELECT id, outfit_id, wear_date, notes, created_at, updated_at
+		FROM outfit_logs
+		WHERE wear_date >= $1 AND wear_date <= $2
+		ORDER BY wear_date DESC`,
+		startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []domain.OutfitLog
+	for rows.Next() {
+		var log domain.OutfitLog
+		err := rows.Scan(&log.ID, &log.OutfitID, &log.WearDate, &log.Notes, &log.CreatedAt, &log.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		// Load items based on whether it's an outfit log or manual items log
+		if log.OutfitID != nil {
+			// Load items from the outfit
+			itemRows, err := s.db.Query(`
+				SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+				FROM clothing_items ci
+				JOIN outfit_items oi ON oi.clothing_item_id = ci.id
+				WHERE oi.outfit_id = $1`, log.OutfitID)
+			if err != nil {
+				return nil, err
+			}
+
+			for itemRows.Next() {
+				var item domain.ClothingItem
+				err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
+					&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+				if err != nil {
+					itemRows.Close()
+					return nil, err
+				}
+				log.Items = append(log.Items, item)
+			}
+			itemRows.Close()
+		} else {
+			// Load items from manual log
+			itemRows, err := s.db.Query(`
+				SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+				FROM clothing_items ci
+				JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
+				WHERE oli.outfit_log_id = $1`, log.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			for itemRows.Next() {
+				var item domain.ClothingItem
+				err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
+					&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+				if err != nil {
+					itemRows.Close()
+					return nil, err
+				}
+				log.Items = append(log.Items, item)
+			}
+			itemRows.Close()
+		}
+
+		logs = append(logs, log)
+	}
+	return logs, rows.Err()
+}
+
+func (s *Store) GetOutfitLogByDate(wearDate time.Time) (*domain.OutfitLog, error) {
+	var log domain.OutfitLog
+	err := s.db.QueryRow(`
+		SELECT id, outfit_id, wear_date, notes, created_at, updated_at
+		FROM outfit_logs
+		WHERE wear_date = $1
+		LIMIT 1`,
+		wearDate).
+		Scan(&log.ID, &log.OutfitID, &log.WearDate, &log.Notes, &log.CreatedAt, &log.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load items
+	itemRows, err := s.db.Query(`
+		SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+		FROM clothing_items ci
+		JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
+		WHERE oli.outfit_log_id = $1`, log.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer itemRows.Close()
+
+	for itemRows.Next() {
+		var item domain.ClothingItem
+		err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		log.Items = append(log.Items, item)
+	}
+
+	return &log, itemRows.Err()
+}
+
+func (s *Store) DeleteOutfitLog(logID uuid.UUID) error {
+	result, err := s.db.Exec(`DELETE FROM outfit_logs WHERE id = $1`, logID)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("outfit log not found")
+	}
+	return nil
+}

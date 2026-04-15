@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -279,4 +280,80 @@ func (h *Handler) UploadImage(c *gin.Context) {
 		"status":        "processing",
 		"raw_image_url": h.imageStore.RawURL(id),
 	})
+}
+
+// Outfit Logs
+
+func (h *Handler) LogOutfitWear(c *gin.Context) {
+	var req domain.LogOutfitWearRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	log, err := h.store.LogOutfitWear(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, log)
+}
+
+func (h *Handler) GetOutfitLogs(c *gin.Context) {
+	startDateStr := c.Query("start_date")
+	endDateStr := c.Query("end_date")
+
+	startDate, err := time.Parse("2006-01-02", startDateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_date format (use YYYY-MM-DD)"})
+		return
+	}
+
+	endDate, err := time.Parse("2006-01-02", endDateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_date format (use YYYY-MM-DD)"})
+		return
+	}
+
+	logs, err := h.store.GetOutfitLogs(startDate, endDate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if logs == nil {
+		logs = []domain.OutfitLog{}
+	}
+	c.JSON(http.StatusOK, logs)
+}
+
+func (h *Handler) GetOutfitLogByDate(c *gin.Context) {
+	dateStr := c.Param("date")
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format (use YYYY-MM-DD)"})
+		return
+	}
+
+	log, err := h.store.GetOutfitLogByDate(date)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no log found for this date"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, log)
+}
+
+func (h *Handler) DeleteOutfitLog(c *gin.Context) {
+	logID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	if err := h.store.DeleteOutfitLog(logID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusNoContent, nil)
 }
