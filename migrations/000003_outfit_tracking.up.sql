@@ -1,0 +1,1 @@
+ALTER TABLE outfits ADD COLUMN last_worn TIMESTAMPTZ;

@@ -1,0 +1,58 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Go Build
+bin/
+dist/
+vendor/
+*.exe
+*.test
+*.out
+*.o
+*.a
+*.so
+*.dylib
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+Thumbs.db
+.directory
+
+# Local storage
+uploads/raw/
+uploads/clean/
+!uploads/.gitkeep
+
+# Temporary & Cache
+*.tmp
+*.temp
+.cache/
+logs/
+*.log

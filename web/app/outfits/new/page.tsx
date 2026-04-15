@@ -1,0 +1,183 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createOutfit, addOutfitItem } from "@/lib/api";
+import { FitBuilder } from "@/components/fit-builder";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+
+const seasons = ["Spring", "Summer", "Fall", "Winter", "All Season"];
+const vibes = [
+  "Casual",
+  "Formal",
+  "Athletic",
+  "Streetwear",
+  "Vintage",
+  "Minimalist",
+  "Bold",
+  "Bohemian",
+];
+
+export default function NewOutfitPage() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [season, setSeason] = useState("");
+  const [selectedVibes, setSelectedVibes] = useState<Set<string>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
+
+  const handleToggleVibe = (vibe: string) => {
+    const next = new Set(selectedVibes);
+    if (next.has(vibe)) {
+      next.delete(vibe);
+    } else {
+      next.add(vibe);
+    }
+    setSelectedVibes(next);
+  };
+
+  const handleItemsSelected = (itemIds: string[]) => {
+    setSelectedItems(itemIds);
+    setShowBuilder(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!name) return;
+    setSaving(true);
+    try {
+      const outfit = await createOutfit({
+        name,
+        season: season || undefined,
+        vibe: Array.from(selectedVibes),
+      });
+
+      // Add selected items to the outfit
+      for (const itemId of selectedItems) {
+        await addOutfitItem(outfit.id, itemId);
+      }
+
+      router.push(`/outfits/${outfit.id}`);
+    } catch (err) {
+      console.error(err);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Create Outfit</h1>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+        >
+          ← Back
+        </Button>
+      </div>
+
+      <div className="space-y-6">
+        {/* Outfit Details */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Outfit Name</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Summer beach vibes"
+              className="text-lg"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Season</Label>
+            <Select value={season} onValueChange={setSeason}>
+              <SelectTrigger>
+                <SelectValue placeholder="Optional" />
+              </SelectTrigger>
+              <SelectContent>
+                {seasons.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Vibe Tags</Label>
+            <div className="flex flex-wrap gap-2">
+              {vibes.map((vibe) => (
+                <Badge
+                  key={vibe}
+                  variant={selectedVibes.has(vibe) ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => handleToggleVibe(vibe)}
+                >
+                  {vibe}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Item Selection */}
+        <div className="border-t pt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Items ({selectedItems.length})</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowBuilder(!showBuilder)}
+            >
+              {showBuilder ? "Done" : "Add Items"}
+            </Button>
+          </div>
+
+          {showBuilder ? (
+            <FitBuilder onSelect={handleItemsSelected} />
+          ) : selectedItems.length > 0 ? (
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                {selectedItems.length} item{selectedItems.length !== 1 ? "s" : ""} selected
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => setShowBuilder(true)}
+              >
+                Modify
+              </Button>
+            </div>
+          ) : (
+            <div className="bg-muted/30 p-4 rounded-lg text-center text-muted-foreground">
+              <p className="text-sm">No items added yet</p>
+            </div>
+          )}
+        </div>
+
+        <Button
+          className="w-full"
+          size="lg"
+          onClick={handleSubmit}
+          disabled={!name || saving}
+        >
+          {saving ? "Creating..." : "Create Outfit"}
+        </Button>
+      </div>
+    </div>
+  );
+}
