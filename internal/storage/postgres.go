@@ -374,13 +374,18 @@ func (s *Store) FindOrCreateOutfitByItems(itemIDs []uuid.UUID) (*domain.Outfit, 
 		itemRows.Close()
 
 		if match && idx == len(itemIDs) {
+			if o.Name == "" || o.Name == "Outfit" {
+				newName := domain.RandomOutfitName()
+				if _, err := s.db.Exec(`UPDATE outfits SET name = $1 WHERE id = $2`, newName, o.ID); err == nil {
+					o.Name = newName
+				}
+			}
 			return &o, nil
 		}
 	}
 
 	// No matching outfit found, create new one
-	outfitName := "Outfit"
-	o := domain.CreateOutfitRequest{Name: outfitName}
+	o := domain.CreateOutfitRequest{Name: domain.RandomOutfitName()}
 	outfit, err := s.CreateOutfit(o)
 	if err != nil {
 		return nil, err

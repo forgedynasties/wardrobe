@@ -146,7 +146,7 @@ func (h *Handler) CreateOutfit(c *gin.Context) {
 	}
 	// Auto-generate name if empty
 	if req.Name == "" {
-		req.Name = fmt.Sprintf("Outfit %s", time.Now().Format("Jan 2"))
+		req.Name = domain.RandomOutfitName()
 	}
 	outfit, err := h.store.CreateOutfit(req)
 	if err != nil {
