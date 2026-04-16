@@ -36,6 +36,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 	{
 		outfits.GET("", h.ListOutfits)
 		outfits.GET("/recommendations", h.RecommendOutfits)
+		outfits.GET("/suggestions", h.SuggestOutfits)
 		outfits.GET("/:id", h.GetOutfit)
 		outfits.POST("", h.CreateOutfit)
 		outfits.PUT("/:id", h.UpdateOutfit)

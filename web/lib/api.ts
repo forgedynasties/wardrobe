@@ -3,6 +3,7 @@ import type {
   Outfit,
   OutfitLog,
   OutfitRecommendation,
+  OutfitSuggestion,
   LogOutfitWearRequest,
   CreateItemRequest,
   UpdateItemRequest,
@@ -150,6 +151,10 @@ export function wearOutfit(id: string): Promise<Outfit> {
 
 export function getOutfitRecommendations(limit = 5): Promise<OutfitRecommendation[]> {
   return fetcher(`/api/outfits/recommendations?limit=${limit}`);
+}
+
+export function getOutfitSuggestions(count = 3): Promise<OutfitSuggestion[]> {
+  return fetcher(`/api/outfits/suggestions?count=${count}`);
 }
 
 // Outfit Logs

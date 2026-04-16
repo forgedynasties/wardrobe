@@ -49,6 +49,11 @@ export interface OutfitRecommendation extends Outfit {
   reason: string;
 }
 
+export interface OutfitSuggestion {
+  items: ClothingItem[];
+  reason: string;
+}
+
 export interface OutfitLog {
   id: string;
   outfit_id: string | null;

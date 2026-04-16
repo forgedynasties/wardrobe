@@ -3,6 +3,9 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"math/rand"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -490,6 +493,141 @@ func recommendationReason(neverWorn bool, daysSinceWorn float64, usageCount int,
 		return fmt.Sprintf("Last worn %d days ago", days)
 	}
 	return "Worth revisiting"
+}
+
+// Suggestions: synthesize new outfit combos from stale items
+
+func (s *Store) SuggestOutfits(count int) ([]domain.OutfitSuggestion, error) {
+	pools, err := s.loadStaleItemPools()
+	if err != nil {
+		return nil, err
+	}
+	if len(pools["Top"]) == 0 || len(pools["Bottom"]) == 0 || len(pools["Shoes"]) == 0 {
+		return []domain.OutfitSuggestion{}, nil
+	}
+
+	existing, err := s.loadOutfitSignatures()
+	if err != nil {
+		return nil, err
+	}
+
+	suggestions := []domain.OutfitSuggestion{}
+	seen := map[string]bool{}
+
+	maxAttempts := count * 20
+	for attempts := 0; len(suggestions) < count && attempts < maxAttempts; attempts++ {
+		top := pickWeightedStale(pools["Top"])
+		bottom := pickWeightedStale(pools["Bottom"])
+		shoes := pickWeightedStale(pools["Shoes"])
+
+		items := []domain.ClothingItem{top, bottom, shoes}
+		sig := comboSignature(items)
+		if existing[sig] || seen[sig] {
+			continue
+		}
+		seen[sig] = true
+
+		suggestions = append(suggestions, domain.OutfitSuggestion{
+			Items:  items,
+			Reason: suggestionReason(items),
+		})
+	}
+
+	return suggestions, nil
+}
+
+func (s *Store) loadStaleItemPools() (map[string][]domain.ClothingItem, error) {
+	rows, err := s.db.Query(`
+		SELECT id, category, sub_category, color_hex, material, image_url, raw_image_url, image_status, last_worn, created_at, updated_at
+		FROM clothing_items
+		WHERE category IN ('Top', 'Bottom', 'Shoes')
+		ORDER BY last_worn ASC NULLS FIRST`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	pools := map[string][]domain.ClothingItem{}
+	for rows.Next() {
+		var item domain.ClothingItem
+		if err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		pools[item.Category] = append(pools[item.Category], item)
+	}
+	return pools, rows.Err()
+}
+
+func (s *Store) loadOutfitSignatures() (map[string]bool, error) {
+	rows, err := s.db.Query(`
+		SELECT outfit_id, clothing_item_id
+		FROM outfit_items
+		ORDER BY outfit_id, clothing_item_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	groups := map[uuid.UUID][]string{}
+	for rows.Next() {
+		var oid, iid uuid.UUID
+		if err := rows.Scan(&oid, &iid); err != nil {
+			return nil, err
+		}
+		groups[oid] = append(groups[oid], iid.String())
+	}
+
+	sigs := map[string]bool{}
+	for _, ids := range groups {
+		sort.Strings(ids)
+		sigs[strings.Join(ids, "|")] = true
+	}
+	return sigs, rows.Err()
+}
+
+func comboSignature(items []domain.ClothingItem) string {
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ID.String()
+	}
+	sort.Strings(ids)
+	return strings.Join(ids, "|")
+}
+
+// pickWeightedStale: bias toward stalest items but allow variety.
+// Pool is pre-sorted oldest-worn first; sample from top portion with falloff.
+func pickWeightedStale(pool []domain.ClothingItem) domain.ClothingItem {
+	n := len(pool)
+	window := n
+	if window > 5 {
+		window = 5
+	}
+	idx := rand.Intn(window)
+	return pool[idx]
+}
+
+func suggestionReason(items []domain.ClothingItem) string {
+	hasNeverWorn := false
+	maxDays := 0
+	now := time.Now()
+	for _, it := range items {
+		if it.LastWorn == nil {
+			hasNeverWorn = true
+			continue
+		}
+		d := int(now.Sub(*it.LastWorn).Hours() / 24)
+		if d > maxDays {
+			maxDays = d
+		}
+	}
+	if hasNeverWorn {
+		return "Includes never-worn pieces"
+	}
+	if maxDays > 30 {
+		return "Items overdue for rotation"
+	}
+	return "Fresh combo to try"
 }
 
 // Outfit Logs

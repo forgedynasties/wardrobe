@@ -265,6 +265,24 @@ func (h *Handler) RecommendOutfits(c *gin.Context) {
 	c.JSON(http.StatusOK, recs)
 }
 
+func (h *Handler) SuggestOutfits(c *gin.Context) {
+	count := 3
+	if v := c.Query("count"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 20 {
+			count = n
+		}
+	}
+	suggestions, err := h.store.SuggestOutfits(count)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if suggestions == nil {
+		suggestions = []domain.OutfitSuggestion{}
+	}
+	c.JSON(http.StatusOK, suggestions)
+}
+
 // Image Upload
 
 func (h *Handler) UploadImage(c *gin.Context) {

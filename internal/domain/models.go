@@ -92,6 +92,11 @@ type OutfitRecommendation struct {
 	Reason string  `json:"reason"`
 }
 
+type OutfitSuggestion struct {
+	Items  []ClothingItem `json:"items"`
+	Reason string         `json:"reason"`
+}
+
 type ItemStats struct {
 	OutfitCount int        `json:"outfit_count"`
 	WearCount   int        `json:"wear_count"`
