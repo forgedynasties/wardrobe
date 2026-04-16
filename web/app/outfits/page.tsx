@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Sparkles } from "lucide-react";
-import { getOutfits } from "@/lib/api";
+import { getOutfits, getOutfitRecommendations } from "@/lib/api";
 import { OutfitCard } from "@/components/outfit-card";
 import { OutfitStats } from "@/components/outfit-stats";
+import { OutfitRecommendations } from "@/components/outfit-recommendations";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -15,18 +16,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Outfit } from "@/lib/types";
+import type { Outfit, OutfitRecommendation } from "@/lib/types";
 
 type SortOption = "recent" | "most-worn" | "least-worn" | "last-worn" | "never-worn";
 
 export default function OutfitsPage() {
   const [outfits, setOutfits] = useState<Outfit[]>([]);
+  const [recommendations, setRecommendations] = useState<OutfitRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("recent");
 
   useEffect(() => {
-    getOutfits()
-      .then(setOutfits)
+    Promise.all([getOutfits(), getOutfitRecommendations(5)])
+      .then(([os, recs]) => {
+        setOutfits(os);
+        setRecommendations(recs);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -100,6 +105,8 @@ export default function OutfitsPage() {
       ) : (
         <>
           <OutfitStats outfits={outfits} />
+
+          <OutfitRecommendations recommendations={recommendations} />
 
           <div className="flex gap-2 items-center">
             <span className="text-sm font-medium">Sort by:</span>

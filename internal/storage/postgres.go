@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 
 	"wardrobe/internal/domain"
@@ -134,7 +133,7 @@ func (s *Store) SetImageProcessing(id uuid.UUID, rawImageURL string) error {
 
 func (s *Store) ListOutfits() ([]domain.Outfit, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, season, vibe, usage_count, last_worn, created_at, updated_at
+		SELECT id, name, usage_count, last_worn, created_at, updated_at
 		FROM outfits ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -144,7 +143,7 @@ func (s *Store) ListOutfits() ([]domain.Outfit, error) {
 	var outfits []domain.Outfit
 	for rows.Next() {
 		var o domain.Outfit
-		err := rows.Scan(&o.ID, &o.Name, &o.Season, pq.Array(&o.Vibe), &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		err := rows.Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -179,9 +178,9 @@ func (s *Store) ListOutfits() ([]domain.Outfit, error) {
 func (s *Store) GetOutfit(id uuid.UUID) (*domain.Outfit, error) {
 	var o domain.Outfit
 	err := s.db.QueryRow(`
-		SELECT id, name, season, vibe, usage_count, last_worn, created_at, updated_at
+		SELECT id, name, usage_count, last_worn, created_at, updated_at
 		FROM outfits WHERE id = $1`, id).
-		Scan(&o.ID, &o.Name, &o.Season, pq.Array(&o.Vibe), &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -211,11 +210,11 @@ func (s *Store) GetOutfit(id uuid.UUID) (*domain.Outfit, error) {
 func (s *Store) CreateOutfit(req domain.CreateOutfitRequest) (*domain.Outfit, error) {
 	var o domain.Outfit
 	err := s.db.QueryRow(`
-		INSERT INTO outfits (name, season, vibe)
-		VALUES ($1, $2, $3)
-		RETURNING id, name, season, vibe, usage_count, last_worn, created_at, updated_at`,
-		req.Name, req.Season, pq.Array(req.Vibe)).
-		Scan(&o.ID, &o.Name, &o.Season, pq.Array(&o.Vibe), &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		INSERT INTO outfits (name)
+		VALUES ($1)
+		RETURNING id, name, usage_count, last_worn, created_at, updated_at`,
+		req.Name).
+		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -227,13 +226,11 @@ func (s *Store) UpdateOutfit(id uuid.UUID, req domain.UpdateOutfitRequest) (*dom
 	err := s.db.QueryRow(`
 		UPDATE outfits SET
 			name = COALESCE($2, name),
-			season = COALESCE($3, season),
-			vibe = COALESCE($4, vibe),
 			updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, name, season, vibe, usage_count, last_worn, created_at, updated_at`,
-		id, req.Name, req.Season, pq.Array(req.Vibe)).
-		Scan(&o.ID, &o.Name, &o.Season, pq.Array(&o.Vibe), &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		RETURNING id, name, usage_count, last_worn, created_at, updated_at`,
+		id, req.Name).
+		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -283,9 +280,9 @@ func (s *Store) WearOutfit(id uuid.UUID) (*domain.Outfit, error) {
 			last_worn = NOW(),
 			updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, name, season, vibe, usage_count, last_worn, created_at, updated_at`,
+		RETURNING id, name, usage_count, last_worn, created_at, updated_at`,
 		id).
-		Scan(&o.ID, &o.Name, &o.Season, pq.Array(&o.Vibe), &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +319,7 @@ func (s *Store) FindOrCreateOutfitByItems(itemIDs []uuid.UUID) (*domain.Outfit, 
 	// Query for outfits with the exact item set
 	// First get all outfits with same number of items
 	rows, err := s.db.Query(`
-		SELECT o.id, o.name, o.season, o.vibe, o.usage_count, o.last_worn, o.created_at, o.updated_at,
+		SELECT o.id, o.name, o.usage_count, o.last_worn, o.created_at, o.updated_at,
 			COUNT(oi.clothing_item_id) as item_count
 		FROM outfits o
 		LEFT JOIN outfit_items oi ON oi.outfit_id = o.id
@@ -336,7 +333,7 @@ func (s *Store) FindOrCreateOutfitByItems(itemIDs []uuid.UUID) (*domain.Outfit, 
 	for rows.Next() {
 		var o domain.Outfit
 		var itemCount int
-		err := rows.Scan(&o.ID, &o.Name, &o.Season, pq.Array(&o.Vibe), &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt, &itemCount)
+		err := rows.Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt, &itemCount)
 		if err != nil {
 			continue
 		}
@@ -399,6 +396,100 @@ func (s *Store) FindOrCreateOutfitByItems(itemIDs []uuid.UUID) (*domain.Outfit, 
 	}
 
 	return outfit, nil
+}
+
+// Recommendations
+
+func (s *Store) RecommendOutfits(limit int) ([]domain.OutfitRecommendation, error) {
+	rows, err := s.db.Query(`
+		WITH outfit_metrics AS (
+			SELECT
+				o.id, o.name, o.usage_count, o.last_worn, o.created_at, o.updated_at,
+				COALESCE(EXTRACT(EPOCH FROM (NOW() - o.last_worn)) / 86400.0, 365.0) AS days_since_worn,
+				EXTRACT(EPOCH FROM (NOW() - o.created_at)) / 86400.0 AS days_since_created,
+				COALESCE((
+					SELECT AVG(COALESCE(EXTRACT(EPOCH FROM (NOW() - ci.last_worn)) / 86400.0, 365.0))
+					FROM outfit_items oi
+					JOIN clothing_items ci ON ci.id = oi.clothing_item_id
+					WHERE oi.outfit_id = o.id
+				), 365.0) AS avg_item_days,
+				(SELECT COUNT(*) FROM outfit_items oi WHERE oi.outfit_id = o.id) AS item_count
+			FROM outfits o
+		)
+		SELECT id, name, usage_count, last_worn, created_at, updated_at,
+			days_since_worn, days_since_created, avg_item_days,
+			(
+				0.4 * (1.0 - EXP(-days_since_worn / 14.0)) +
+				0.2 * (1.0 / (1 + usage_count)) +
+				0.3 * LEAST(avg_item_days / 14.0, 1.0) +
+				0.1 * EXP(-days_since_created / 30.0)
+			) AS score
+		FROM outfit_metrics
+		WHERE item_count >= 2
+		ORDER BY score DESC
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var recs []domain.OutfitRecommendation
+	for rows.Next() {
+		var r domain.OutfitRecommendation
+		var daysSinceWorn, daysSinceCreated, avgItemDays float64
+		if err := rows.Scan(&r.ID, &r.Name, &r.UsageCount, &r.LastWorn, &r.CreatedAt, &r.UpdatedAt,
+			&daysSinceWorn, &daysSinceCreated, &avgItemDays, &r.Score); err != nil {
+			return nil, err
+		}
+		r.Reason = recommendationReason(r.LastWorn == nil, daysSinceWorn, r.UsageCount, daysSinceCreated)
+		recs = append(recs, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range recs {
+		itemRows, err := s.db.Query(`
+			SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+			FROM clothing_items ci
+			JOIN outfit_items oi ON oi.clothing_item_id = ci.id
+			WHERE oi.outfit_id = $1`, recs[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		for itemRows.Next() {
+			var item domain.ClothingItem
+			if err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
+				&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
+				itemRows.Close()
+				return nil, err
+			}
+			recs[i].Items = append(recs[i].Items, item)
+		}
+		itemRows.Close()
+	}
+
+	return recs, nil
+}
+
+func recommendationReason(neverWorn bool, daysSinceWorn float64, usageCount int, daysSinceCreated float64) string {
+	if neverWorn {
+		return "Never worn"
+	}
+	days := int(daysSinceWorn)
+	if days >= 21 {
+		return fmt.Sprintf("Not worn in %d days", days)
+	}
+	if usageCount <= 1 {
+		return "Rarely worn"
+	}
+	if daysSinceCreated < 7 {
+		return "Recently created"
+	}
+	if days >= 7 {
+		return fmt.Sprintf("Last worn %d days ago", days)
+	}
+	return "Worth revisiting"
 }
 
 // Outfit Logs

@@ -9,7 +9,6 @@ import { FitBuilder } from "@/components/fit-builder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -20,13 +19,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -34,18 +26,6 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import type { Outfit } from "@/lib/types";
-
-const seasons = ["Spring", "Summer", "Fall", "Winter", "All Season"];
-const vibes = [
-  "Casual",
-  "Formal",
-  "Athletic",
-  "Streetwear",
-  "Vintage",
-  "Minimalist",
-  "Bold",
-  "Bohemian",
-];
 
 export default function OutfitDetailPage() {
   const params = useParams();
@@ -55,8 +35,6 @@ export default function OutfitDetailPage() {
   const [outfit, setOutfit] = useState<Outfit | null>(null);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
-  const [season, setSeason] = useState("");
-  const [selectedVibes, setSelectedVibes] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -67,8 +45,6 @@ export default function OutfitDetailPage() {
     getOutfit(id).then((o) => {
       setOutfit(o);
       setName(o.name);
-      setSeason(o.season || "");
-      setSelectedVibes(new Set(o.vibe || []));
     });
   }, [id]);
 
@@ -81,24 +57,10 @@ export default function OutfitDetailPage() {
     }
   };
 
-  const handleToggleVibe = (vibe: string) => {
-    const next = new Set(selectedVibes);
-    if (next.has(vibe)) {
-      next.delete(vibe);
-    } else {
-      next.add(vibe);
-    }
-    setSelectedVibes(next);
-  };
-
   const handleSave = async () => {
     setSaving(true);
     try {
-      const updated = await updateOutfit(id, {
-        name,
-        season: season || undefined,
-        vibe: Array.from(selectedVibes),
-      });
+      const updated = await updateOutfit(id, { name });
       setOutfit(updated);
       setEditing(false);
     } finally {
@@ -196,38 +158,6 @@ export default function OutfitDetailPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Season</Label>
-            <Select value={season} onValueChange={(v) => setSeason(v || "")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Optional" />
-              </SelectTrigger>
-              <SelectContent>
-                {seasons.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Vibe Tags</Label>
-            <div className="flex flex-wrap gap-2">
-              {vibes.map((vibe) => (
-                <Badge
-                  key={vibe}
-                  variant={selectedVibes.has(vibe) ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => handleToggleVibe(vibe)}
-                >
-                  {vibe}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
           <div className="flex gap-2">
             <Button
               className="flex-1"
@@ -269,26 +199,6 @@ export default function OutfitDetailPage() {
             <Check className="h-5 w-5" />
             Wear Today
           </Button>
-
-          {outfit.season && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Season</Label>
-              <Badge className="mt-1">{outfit.season}</Badge>
-            </div>
-          )}
-
-          {outfit.vibe && outfit.vibe.length > 0 && (
-            <div>
-              <Label className="text-xs text-muted-foreground">Vibes</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {outfit.vibe.map((v) => (
-                  <Badge key={v} variant="secondary">
-                    {v}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div>
             <div className="flex items-center justify-between">

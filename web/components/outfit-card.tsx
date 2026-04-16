@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { imageUrl } from "@/lib/api";
 import type { Outfit } from "@/lib/types";
 
@@ -59,18 +58,6 @@ export function OutfitCard({ outfit }: OutfitCardProps) {
         </div>
         <div className="px-3 py-2.5 space-y-1.5">
           <h3 className="font-semibold text-sm truncate">{outfit.name}</h3>
-          <div className="flex gap-1 flex-wrap">
-            {outfit.season && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                {outfit.season}
-              </Badge>
-            )}
-            {outfit.vibe && outfit.vibe.length > 0 && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                {outfit.vibe[0]}
-              </Badge>
-            )}
-          </div>
           <div className="text-xs text-muted-foreground">
             {outfit.items?.length || 0} items &middot; {outfit.usage_count} wear{outfit.usage_count !== 1 ? "s" : ""}
           </div>

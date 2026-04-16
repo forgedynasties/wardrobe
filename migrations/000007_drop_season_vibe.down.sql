@@ -1,0 +1,2 @@
+ALTER TABLE outfits ADD COLUMN season VARCHAR(50);
+ALTER TABLE outfits ADD COLUMN vibe TEXT[] DEFAULT '{}';

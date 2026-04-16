@@ -15,8 +15,6 @@ export interface ClothingItem {
 export interface Outfit {
   id: string;
   name: string;
-  season: string;
-  vibe: string[];
   usage_count: number;
   last_worn: string | null;
   items?: ClothingItem[];
@@ -39,15 +37,16 @@ export interface UpdateItemRequest {
 }
 
 export interface CreateOutfitRequest {
-  name: string;
-  season?: string;
-  vibe?: string[];
+  name?: string;
 }
 
 export interface UpdateOutfitRequest {
   name?: string;
-  season?: string;
-  vibe?: string[];
+}
+
+export interface OutfitRecommendation extends Outfit {
+  score: number;
+  reason: string;
 }
 
 export interface OutfitLog {

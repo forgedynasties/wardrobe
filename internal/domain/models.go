@@ -28,8 +28,6 @@ type ImageJob struct {
 type Outfit struct {
 	ID         uuid.UUID      `json:"id"`
 	Name       string         `json:"name"`
-	Season     string         `json:"season"`
-	Vibe       []string       `json:"vibe"`
 	UsageCount int            `json:"usage_count"`
 	LastWorn   *time.Time     `json:"last_worn"`
 	Items      []ClothingItem `json:"items,omitempty"`
@@ -56,15 +54,11 @@ type UpdateItemRequest struct {
 }
 
 type CreateOutfitRequest struct {
-	Name   string   `json:"name"`
-	Season string   `json:"season"`
-	Vibe   []string `json:"vibe"`
+	Name string `json:"name"`
 }
 
 type UpdateOutfitRequest struct {
-	Name   *string  `json:"name"`
-	Season *string  `json:"season"`
-	Vibe   []string `json:"vibe"`
+	Name *string `json:"name"`
 }
 
 type AddOutfitItemRequest struct {
@@ -90,6 +84,12 @@ type LogOutfitWearRequest struct {
 type GetOutfitLogsRequest struct {
 	StartDate time.Time `json:"start_date" binding:"required"`
 	EndDate   time.Time `json:"end_date" binding:"required"`
+}
+
+type OutfitRecommendation struct {
+	Outfit
+	Score  float64 `json:"score"`
+	Reason string  `json:"reason"`
 }
 
 type ItemStats struct {

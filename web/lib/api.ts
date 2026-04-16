@@ -2,6 +2,7 @@ import type {
   ClothingItem,
   Outfit,
   OutfitLog,
+  OutfitRecommendation,
   LogOutfitWearRequest,
   CreateItemRequest,
   UpdateItemRequest,
@@ -145,6 +146,10 @@ export function wearOutfit(id: string): Promise<Outfit> {
   return fetcher(`/api/outfits/${id}/wear`, {
     method: "POST",
   });
+}
+
+export function getOutfitRecommendations(limit = 5): Promise<OutfitRecommendation[]> {
+  return fetcher(`/api/outfits/recommendations?limit=${limit}`);
 }
 
 // Outfit Logs

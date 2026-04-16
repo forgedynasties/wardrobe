@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -244,6 +245,24 @@ func (h *Handler) WearOutfit(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, outfit)
+}
+
+func (h *Handler) RecommendOutfits(c *gin.Context) {
+	limit := 5
+	if v := c.Query("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 50 {
+			limit = n
+		}
+	}
+	recs, err := h.store.RecommendOutfits(limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if recs == nil {
+		recs = []domain.OutfitRecommendation{}
+	}
+	c.JSON(http.StatusOK, recs)
 }
 
 // Image Upload
