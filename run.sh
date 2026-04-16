@@ -32,11 +32,21 @@ BACKEND_PID=$!
 
 sleep 2
 
+# Get LAN IP dynamically (try multiple methods)
+LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="src") print $(i+1)}')
+if [ -z "$LAN_IP" ]; then
+    LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+fi
+if [ -z "$LAN_IP" ]; then
+    LAN_IP="localhost"
+fi
+echo -e "${YELLOW}📡 LAN IP: ${LAN_IP}${NC}"
+
 # Start frontend in background
 echo -e "${YELLOW}⚛️  Starting frontend...${NC}"
 cd web
 npm install > /dev/null 2>&1
-npm run dev &
+NEXT_PUBLIC_API_URL=http://${LAN_IP}:8081 npm run dev -- -H 0.0.0.0 &
 FRONTEND_PID=$!
 
 cd ..
@@ -44,8 +54,8 @@ cd ..
 echo ""
 echo -e "${GREEN}✅ App started!${NC}"
 echo ""
-echo "Backend:  http://localhost:8080"
-echo "Frontend: http://localhost:3000"
+echo "Backend:  http://${LAN_IP}:8081"
+echo "Frontend: http://${LAN_IP}:3000"
 echo ""
 echo "Press Ctrl+C to stop all services"
 echo ""
