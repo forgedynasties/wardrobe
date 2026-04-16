@@ -151,31 +151,41 @@ func (s *Store) ListOutfits() ([]domain.Outfit, error) {
 			return nil, err
 		}
 
-		// Load items for this outfit
-		itemRows, err := s.db.Query(`
-			SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
-			FROM clothing_items ci
-			JOIN outfit_items oi ON oi.clothing_item_id = ci.id
-			WHERE oi.outfit_id = $1`, o.ID)
+		items, err := s.loadOutfitItems(o.ID)
 		if err != nil {
 			return nil, err
 		}
-
-		for itemRows.Next() {
-			var item domain.ClothingItem
-			err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
-				&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
-			if err != nil {
-				itemRows.Close()
-				return nil, err
-			}
-			o.Items = append(o.Items, item)
-		}
-		itemRows.Close()
+		o.Items = items
 
 		outfits = append(outfits, o)
 	}
 	return outfits, rows.Err()
+}
+
+func (s *Store) loadOutfitItems(outfitID uuid.UUID) ([]domain.OutfitItem, error) {
+	rows, err := s.db.Query(`
+		SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at,
+			oi.position_x, oi.position_y, oi.scale, oi.z_index
+		FROM clothing_items ci
+		JOIN outfit_items oi ON oi.clothing_item_id = ci.id
+		WHERE oi.outfit_id = $1
+		ORDER BY oi.z_index ASC, ci.category ASC`, outfitID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []domain.OutfitItem
+	for rows.Next() {
+		var item domain.OutfitItem
+		if err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt,
+			&item.PositionX, &item.PositionY, &item.Scale, &item.ZIndex); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 func (s *Store) GetOutfit(id uuid.UUID) (*domain.Outfit, error) {
@@ -188,26 +198,12 @@ func (s *Store) GetOutfit(id uuid.UUID) (*domain.Outfit, error) {
 		return nil, err
 	}
 
-	rows, err := s.db.Query(`
-		SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
-		FROM clothing_items ci
-		JOIN outfit_items oi ON oi.clothing_item_id = ci.id
-		WHERE oi.outfit_id = $1`, id)
+	items, err := s.loadOutfitItems(id)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var item domain.ClothingItem
-		err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
-		if err != nil {
-			return nil, err
-		}
-		o.Items = append(o.Items, item)
-	}
-	return &o, rows.Err()
+	o.Items = items
+	return &o, nil
 }
 
 func (s *Store) CreateOutfit(req domain.CreateOutfitRequest) (*domain.Outfit, error) {
@@ -290,27 +286,47 @@ func (s *Store) WearOutfit(id uuid.UUID) (*domain.Outfit, error) {
 		return nil, err
 	}
 
-	rows, err := s.db.Query(`
-		SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
-		FROM clothing_items ci
-		JOIN outfit_items oi ON oi.clothing_item_id = ci.id
-		WHERE oi.outfit_id = $1`, id)
+	items, err := s.loadOutfitItems(id)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	o.Items = items
 
-	for rows.Next() {
-		var item domain.ClothingItem
-		err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+	return &o, nil
+}
+
+func (s *Store) UpdateOutfitLayout(outfitID uuid.UUID, layouts []domain.OutfitItemLayout) (*domain.Outfit, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	for _, l := range layouts {
+		res, err := tx.Exec(`
+			UPDATE outfit_items
+			SET position_x = $3, position_y = $4, scale = $5, z_index = $6
+			WHERE outfit_id = $1 AND clothing_item_id = $2`,
+			outfitID, l.ClothingItemID, l.PositionX, l.PositionY, l.Scale, l.ZIndex)
 		if err != nil {
 			return nil, err
 		}
-		o.Items = append(o.Items, item)
+		n, err := res.RowsAffected()
+		if err != nil {
+			return nil, err
+		}
+		if n == 0 {
+			return nil, fmt.Errorf("item %s not in outfit", l.ClothingItemID)
+		}
+	}
+	if _, err := tx.Exec(`UPDATE outfits SET updated_at = NOW() WHERE id = $1`, outfitID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
 	}
 
-	return &o, rows.Err()
+	return s.GetOutfit(outfitID)
 }
 
 // Helper function to find or create an outfit by items
@@ -452,24 +468,11 @@ func (s *Store) RecommendOutfits(limit int) ([]domain.OutfitRecommendation, erro
 	}
 
 	for i := range recs {
-		itemRows, err := s.db.Query(`
-			SELECT ci.id, ci.category, ci.sub_category, ci.color_hex, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
-			FROM clothing_items ci
-			JOIN outfit_items oi ON oi.clothing_item_id = ci.id
-			WHERE oi.outfit_id = $1`, recs[i].ID)
+		items, err := s.loadOutfitItems(recs[i].ID)
 		if err != nil {
 			return nil, err
 		}
-		for itemRows.Next() {
-			var item domain.ClothingItem
-			if err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, &item.ColorHex, &item.Material,
-				&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
-				itemRows.Close()
-				return nil, err
-			}
-			recs[i].Items = append(recs[i].Items, item)
-		}
-		itemRows.Close()
+		recs[i].Items = items
 	}
 
 	return recs, nil

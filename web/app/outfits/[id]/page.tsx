@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, Check, Plus, X } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Check, Plus, X, LayoutGrid } from "lucide-react";
 import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, imageUrl } from "@/lib/api";
 import { FitBuilder } from "@/components/fit-builder";
+import { OutfitCanvas } from "@/components/outfit-canvas";
+import { OutfitLayoutEditor } from "@/components/outfit-layout-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +36,7 @@ export default function OutfitDetailPage() {
 
   const [outfit, setOutfit] = useState<Outfit | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editingLayout, setEditingLayout] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -123,8 +126,18 @@ export default function OutfitDetailPage() {
           Outfits
         </Button>
         <div className="flex gap-2">
-          {!editing && (
+          {!editing && !editingLayout && (
             <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditingLayout(true)}
+                className="gap-1.5"
+                disabled={!outfit.items || outfit.items.length === 0}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Layout
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -147,7 +160,16 @@ export default function OutfitDetailPage() {
         </div>
       </div>
 
-      {editing ? (
+      {editingLayout ? (
+        <OutfitLayoutEditor
+          outfit={outfit}
+          onSave={(updated) => {
+            setOutfit(updated);
+            setEditingLayout(false);
+          }}
+          onCancel={() => setEditingLayout(false)}
+        />
+      ) : editing ? (
         <div className="space-y-6">
           <div className="space-y-2">
             <Label>Outfit Name</Label>
@@ -190,6 +212,12 @@ export default function OutfitDetailPage() {
               )}
             </div>
           </div>
+
+          {outfit.items && outfit.items.length > 0 && (
+            <div className="aspect-[3/4] w-full max-w-sm mx-auto bg-muted/30 rounded-lg overflow-hidden">
+              <OutfitCanvas items={outfit.items} />
+            </div>
+          )}
 
           <Button
             size="lg"

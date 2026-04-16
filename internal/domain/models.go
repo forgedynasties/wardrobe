@@ -25,14 +25,34 @@ type ImageJob struct {
 	RawPath string
 }
 
+type OutfitItem struct {
+	ClothingItem
+	PositionX float64 `json:"position_x"`
+	PositionY float64 `json:"position_y"`
+	Scale     float64 `json:"scale"`
+	ZIndex    int     `json:"z_index"`
+}
+
 type Outfit struct {
-	ID         uuid.UUID      `json:"id"`
-	Name       string         `json:"name"`
-	UsageCount int            `json:"usage_count"`
-	LastWorn   *time.Time     `json:"last_worn"`
-	Items      []ClothingItem `json:"items,omitempty"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	ID         uuid.UUID    `json:"id"`
+	Name       string       `json:"name"`
+	UsageCount int          `json:"usage_count"`
+	LastWorn   *time.Time   `json:"last_worn"`
+	Items      []OutfitItem `json:"items,omitempty"`
+	CreatedAt  time.Time    `json:"created_at"`
+	UpdatedAt  time.Time    `json:"updated_at"`
+}
+
+type OutfitItemLayout struct {
+	ClothingItemID uuid.UUID `json:"clothing_item_id" binding:"required"`
+	PositionX      float64   `json:"position_x"`
+	PositionY      float64   `json:"position_y"`
+	Scale          float64   `json:"scale"`
+	ZIndex         int       `json:"z_index"`
+}
+
+type UpdateOutfitLayoutRequest struct {
+	Items []OutfitItemLayout `json:"items" binding:"required"`
 }
 
 type CreateItemRequest struct {

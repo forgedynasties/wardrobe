@@ -12,14 +12,29 @@ export interface ClothingItem {
   updated_at: string;
 }
 
+export interface OutfitItem extends ClothingItem {
+  position_x: number;
+  position_y: number;
+  scale: number;
+  z_index: number;
+}
+
 export interface Outfit {
   id: string;
   name: string;
   usage_count: number;
   last_worn: string | null;
-  items?: ClothingItem[];
+  items?: OutfitItem[];
   created_at: string;
   updated_at: string;
+}
+
+export interface OutfitItemLayout {
+  clothing_item_id: string;
+  position_x: number;
+  position_y: number;
+  scale: number;
+  z_index: number;
 }
 
 export interface CreateItemRequest {

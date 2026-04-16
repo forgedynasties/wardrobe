@@ -229,6 +229,25 @@ func (h *Handler) RemoveOutfitItem(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
+func (h *Handler) UpdateOutfitLayout(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	var req domain.UpdateOutfitLayoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	outfit, err := h.store.UpdateOutfitLayout(id, req.Items)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, outfit)
+}
+
 func (h *Handler) WearOutfit(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
