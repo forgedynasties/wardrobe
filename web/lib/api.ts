@@ -7,6 +7,8 @@ import type {
   UpdateItemRequest,
   CreateOutfitRequest,
   UpdateOutfitRequest,
+  ItemStats,
+  WardrobeStats,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
@@ -24,7 +26,21 @@ async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(body.error || `API error ${res.status}`);
   }
   if (res.status === 204) return undefined as T;
-  return res.json();
+  
+  // Handle empty responses
+  const contentLength = res.headers.get("content-length");
+  if (contentLength === "0" || res.body === null) {
+    return undefined as T;
+  }
+  
+  try {
+    const text = await res.text();
+    if (!text) return undefined as T;
+    return JSON.parse(text);
+  } catch (err) {
+    console.error("Failed to parse JSON response from", path, err);
+    throw err;
+  }
 }
 
 // Items
@@ -154,6 +170,26 @@ export function getOutfitLogByDate(date: string): Promise<OutfitLog> {
 
 export function deleteOutfitLog(id: string): Promise<void> {
   return fetcher(`/api/outfit-logs/${id}`, { method: "DELETE" });
+}
+
+export function updateOutfitLog(
+  id: string,
+  data: { notes: string; item_ids: string[] },
+): Promise<OutfitLog> {
+  return fetcher(`/api/outfit-logs/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+// Stats
+
+export function getItemStats(id: string): Promise<ItemStats> {
+  return fetcher(`/api/items/${id}/stats`);
+}
+
+export function getWardrobeStats(): Promise<WardrobeStats> {
+  return fetcher(`/api/stats`);
 }
 
 export function imageUrl(path: string): string {

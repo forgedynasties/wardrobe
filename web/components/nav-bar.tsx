@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shirt, Sparkles, CalendarDays } from "lucide-react";
+import { Shirt, Sparkles, CalendarDays, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/wardrobe", label: "Wardrobe", icon: Shirt },
   { href: "/outfits", label: "Outfits", icon: Sparkles },
   { href: "/logger", label: "Logger", icon: CalendarDays },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
 ];
 
 export function NavBar() {

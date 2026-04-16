@@ -3,6 +3,20 @@ package api
 import "github.com/gin-gonic/gin"
 
 func RegisterRoutes(r *gin.Engine, h *Handler) {
+	// Add CORS middleware to allow the frontend to communicate with the backend
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
+
 	api := r.Group("/api")
 
 	items := api.Group("/items")
@@ -13,6 +27,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		items.PUT("/:id", h.UpdateItem)
 		items.DELETE("/:id", h.DeleteItem)
 		items.POST("/:id/image", h.UploadImage)
+		items.GET("/:id/stats", h.GetItemStats)
 	}
 
 	r.Static("/uploads", "./uploads")
@@ -34,6 +49,14 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		logs.POST("", h.LogOutfitWear)
 		logs.GET("", h.GetOutfitLogs)
 		logs.GET("/:date", h.GetOutfitLogByDate)
+		logs.PUT("/:id", h.UpdateOutfitLog)
 		logs.DELETE("/:id", h.DeleteOutfitLog)
+	}
+
+	stats := api.Group("/stats")
+	{
+		stats.GET("", h.GetWardrobeStats)
+		stats.GET("/utility/stale-data", h.DetectStaleData)
+		stats.POST("/utility/fix-stale-data", h.FixStaleData)
 	}
 }

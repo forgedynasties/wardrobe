@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -142,6 +143,10 @@ func (h *Handler) CreateOutfit(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+	// Auto-generate name if empty
+	if req.Name == "" {
+		req.Name = fmt.Sprintf("Outfit %s", time.Now().Format("Jan 2"))
 	}
 	outfit, err := h.store.CreateOutfit(req)
 	if err != nil {
@@ -357,3 +362,79 @@ func (h *Handler) DeleteOutfitLog(c *gin.Context) {
 	}
 	c.JSON(http.StatusNoContent, nil)
 }
+
+func (h *Handler) UpdateOutfitLog(c *gin.Context) {
+	logID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req struct {
+		Notes   string        `json:"notes"`
+		ItemIDs []uuid.UUID   `json:"item_ids"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	log, err := h.store.UpdateOutfitLog(logID, req.Notes, req.ItemIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, log)
+}
+
+// Stats
+
+func (h *Handler) GetItemStats(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	stats, err := h.store.GetItemStats(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, stats)
+}
+
+func (h *Handler) GetWardrobeStats(c *gin.Context) {
+	stats, err := h.store.GetWardrobeStats()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, stats)
+}
+
+// Utility endpoints
+
+func (h *Handler) DetectStaleData(c *gin.Context) {
+	staleItems, err := h.store.DetectStaleItemData()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"stale_items_count": len(staleItems),
+		"stale_items":       staleItems,
+	})
+}
+
+func (h *Handler) FixStaleData(c *gin.Context) {
+	fixedCount, err := h.store.FixStaleItemData()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"fixed_items_count": fixedCount,
+		"message":           fmt.Sprintf("Fixed %d stale items", fixedCount),
+	})
+}
+

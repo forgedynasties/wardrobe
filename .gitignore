@@ -56,3 +56,4 @@ uploads/clean/
 .cache/
 logs/
 *.log
+*.md

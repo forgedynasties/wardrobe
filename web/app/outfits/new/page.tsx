@@ -8,45 +8,13 @@ import { FitBuilder } from "@/components/fit-builder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-
-const seasons = ["Spring", "Summer", "Fall", "Winter", "All Season"];
-const vibes = [
-  "Casual",
-  "Formal",
-  "Athletic",
-  "Streetwear",
-  "Vintage",
-  "Minimalist",
-  "Bold",
-  "Bohemian",
-];
 
 export default function NewOutfitPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [season, setSeason] = useState("");
-  const [selectedVibes, setSelectedVibes] = useState<Set<string>>(new Set());
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
-
-  const handleToggleVibe = (vibe: string) => {
-    const next = new Set(selectedVibes);
-    if (next.has(vibe)) {
-      next.delete(vibe);
-    } else {
-      next.add(vibe);
-    }
-    setSelectedVibes(next);
-  };
 
   const handleItemsSelected = (itemIds: string[]) => {
     setSelectedItems(itemIds);
@@ -54,13 +22,10 @@ export default function NewOutfitPage() {
   };
 
   const handleSubmit = async () => {
-    if (!name) return;
     setSaving(true);
     try {
       const outfit = await createOutfit({
-        name,
-        season: season || undefined,
-        vibe: Array.from(selectedVibes),
+        name: name || undefined,
       });
 
       // Add selected items to the outfit
@@ -94,41 +59,9 @@ export default function NewOutfitPage() {
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Summer beach vibes"
+              placeholder="Auto-named if empty"
               className="text-lg"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Season</Label>
-            <Select value={season} onValueChange={(v) => setSeason(v || "")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Optional" />
-              </SelectTrigger>
-              <SelectContent>
-                {seasons.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Vibe Tags</Label>
-            <div className="flex flex-wrap gap-2">
-              {vibes.map((vibe) => (
-                <Badge
-                  key={vibe}
-                  variant={selectedVibes.has(vibe) ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => handleToggleVibe(vibe)}
-                >
-                  {vibe}
-                </Badge>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -172,7 +105,7 @@ export default function NewOutfitPage() {
           className="w-full"
           size="lg"
           onClick={handleSubmit}
-          disabled={!name || saving}
+          disabled={saving}
         >
           {saving ? "Creating..." : "Create Outfit"}
         </Button>

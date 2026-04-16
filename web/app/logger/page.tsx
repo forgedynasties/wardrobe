@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getOutfitLogs, getOutfits, logOutfitWear, getItems, deleteOutfitLog, addOutfitItem, createOutfit, imageUrl } from "@/lib/api";
+import { getOutfitLogs, getOutfits, logOutfitWear, getItems, deleteOutfitLog, updateOutfitLog, imageUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,15 +41,12 @@ export default function OutfitLoggerPage() {
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showLogSheet, setShowLogSheet] = useState(false);
-  const [logMode, setLogMode] = useState<"outfit" | "items">("outfit");
-  const [selectedOutfit, setSelectedOutfit] = useState<string>("");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveAsOutfit, setSaveAsOutfit] = useState(false);
-  const [outfitName, setOutfitName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ dateStr: string; log: OutfitLog } | null>(null);
+  const [editingLog, setEditingLog] = useState<OutfitLog | null>(null);
 
   useEffect(() => {
     loadData();
@@ -98,18 +95,32 @@ export default function OutfitLoggerPage() {
 
   const handleDateClick = (date: number) => {
     const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), date);
+    const dateStr = newDate.toISOString().split("T")[0];
+    const existingLog = logs.get(dateStr);
+
     setSelectedDate(newDate);
-    setShowLogSheet(true);
     setSaveError(null);
+
+    if (existingLog) {
+      // Load existing log for editing
+      setEditingLog(existingLog);
+      setSelectedItems(new Set((existingLog.items || []).map((item) => item.id)));
+      setNotes(existingLog.notes);
+    } else {
+      // New log
+      setEditingLog(null);
+      setSelectedItems(new Set());
+      setNotes("");
+    }
+
+    setShowLogSheet(true);
   };
 
   const resetForm = () => {
-    setSelectedOutfit("");
     setSelectedItems(new Set());
     setNotes("");
-    setSaveAsOutfit(false);
-    setOutfitName("");
     setSaveError(null);
+    setEditingLog(null);
   };
 
   const handleSaveLog = async () => {
@@ -118,58 +129,35 @@ export default function OutfitLoggerPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const wearDate = new Date(selectedDate);
-      wearDate.setHours(0, 0, 0, 0);
-      const dateString = wearDate.toISOString();
-
-      if (logMode === "outfit" && !selectedOutfit) {
-        setSaveError("Please select an outfit");
-        setSaving(false);
-        return;
-      }
-
-      if (logMode === "items" && selectedItems.size === 0) {
-        setSaveError("Please select at least one item");
-        setSaving(false);
-        return;
-      }
-
-      let outfitIdToLog: string | undefined = selectedOutfit || undefined;
-
-      if (logMode === "items" && saveAsOutfit) {
-        if (!outfitName.trim()) {
-          setSaveError("Please enter an outfit name");
+      if (editingLog) {
+        // Update existing log
+        await updateOutfitLog(editingLog.id, {
+          notes,
+          item_ids: Array.from(selectedItems),
+        });
+      } else {
+        // Create new log
+        if (selectedItems.size === 0) {
+          setSaveError("Please select at least one item");
           setSaving(false);
           return;
         }
 
-        const newOutfit = await createOutfit({ name: outfitName });
-        outfitIdToLog = newOutfit.id;
+        const wearDate = new Date(selectedDate);
+        wearDate.setHours(0, 0, 0, 0);
+        const dateString = wearDate.toISOString();
 
-        for (const itemId of Array.from(selectedItems)) {
-          try {
-            await addOutfitItem(newOutfit.id, itemId);
-          } catch (err) {
-            console.error("Failed to add item to outfit:", err);
-          }
+        const requestData: Record<string, unknown> = {
+          wear_date: dateString,
+          item_ids: Array.from(selectedItems),
+        };
+
+        if (notes) {
+          requestData.notes = notes;
         }
-      }
 
-      const requestData: Record<string, unknown> = {
-        wear_date: dateString,
-      };
-
-      if (outfitIdToLog) {
-        requestData.outfit_id = outfitIdToLog;
+        await logOutfitWear(requestData as any);
       }
-      if (logMode === "items" && selectedItems.size > 0 && !saveAsOutfit) {
-        requestData.item_ids = Array.from(selectedItems);
-      }
-      if (notes) {
-        requestData.notes = notes;
-      }
-
-      await logOutfitWear(requestData as any);
 
       resetForm();
       setShowLogSheet(false);
@@ -343,122 +331,60 @@ export default function OutfitLoggerPage() {
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>
-              Log outfit for {selectedDate?.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              {editingLog ? "Edit log for" : "Log outfit for"} {selectedDate?.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </SheetTitle>
             <SheetDescription>
-              Record what you wore
+              {editingLog ? "Update what you wore" : "Record what you wore"}
             </SheetDescription>
           </SheetHeader>
 
           <div className="space-y-4 px-4 pb-4">
             <div className="space-y-2">
-              <Label>Log Type</Label>
-              <div className="flex gap-2">
-                <Button
-                  variant={logMode === "outfit" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setLogMode("outfit")}
-                >
-                  Existing Outfit
-                </Button>
-                <Button
-                  variant={logMode === "items" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setLogMode("items")}
-                >
-                  Select Items
-                </Button>
+              <Label>Select Items ({selectedItems.size} selected)</Label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto">
+                {items.map((item) => {
+                  const src =
+                    item.image_status === "done" && item.image_url
+                      ? imageUrl(item.image_url)
+                      : item.raw_image_url
+                        ? imageUrl(item.raw_image_url)
+                        : null;
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        const newSelected = new Set(selectedItems);
+                        if (newSelected.has(item.id)) {
+                          newSelected.delete(item.id);
+                        } else {
+                          newSelected.add(item.id);
+                        }
+                        setSelectedItems(newSelected);
+                      }}
+                      className={`rounded-lg border-2 transition-all overflow-hidden aspect-square flex flex-col items-center justify-center ${
+                        selectedItems.has(item.id)
+                          ? "bg-primary/15 border-primary"
+                          : "bg-muted/50 border-border hover:border-primary/50"
+                      }`}
+                    >
+                      {src ? (
+                        <img
+                          src={src}
+                          alt={item.category}
+                          className="w-full h-full object-contain p-1"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-0.5 p-1">
+                          <div className="text-lg">👕</div>
+                          <div className="text-[10px] font-medium">{item.sub_category || item.category}</div>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-
-            {logMode === "outfit" ? (
-              <div className="space-y-2">
-                <Label>Choose Outfit</Label>
-                <Select value={selectedOutfit || ""} onValueChange={(val) => setSelectedOutfit(val || "")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an outfit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {outfits.map((outfit) => (
-                      <SelectItem key={outfit.id} value={outfit.id}>
-                        {outfit.name} ({outfit.items?.length || 0} items)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label>Select Items ({selectedItems.size} selected)</Label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto">
-                  {items.map((item) => {
-                    const src =
-                      item.image_status === "done" && item.image_url
-                        ? imageUrl(item.image_url)
-                        : item.raw_image_url
-                          ? imageUrl(item.raw_image_url)
-                          : null;
-
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          const newSelected = new Set(selectedItems);
-                          if (newSelected.has(item.id)) {
-                            newSelected.delete(item.id);
-                          } else {
-                            newSelected.add(item.id);
-                          }
-                          setSelectedItems(newSelected);
-                        }}
-                        className={`rounded-lg border-2 transition-all overflow-hidden aspect-square flex flex-col items-center justify-center ${
-                          selectedItems.has(item.id)
-                            ? "bg-primary/15 border-primary"
-                            : "bg-muted/50 border-border hover:border-primary/50"
-                        }`}
-                      >
-                        {src ? (
-                          <img
-                            src={src}
-                            alt={item.category}
-                            className="w-full h-full object-contain p-1"
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center gap-0.5 p-1">
-                            <div className="text-lg">👕</div>
-                            <div className="text-[10px] font-medium">{item.sub_category || item.category}</div>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {logMode === "items" && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="save-as-outfit"
-                    checked={saveAsOutfit}
-                    onChange={(e) => setSaveAsOutfit(e.target.checked)}
-                    className="w-4 h-4 rounded border accent-primary"
-                  />
-                  <Label htmlFor="save-as-outfit" className="cursor-pointer">
-                    Save as new outfit
-                  </Label>
-                </div>
-                {saveAsOutfit && (
-                  <Input
-                    value={outfitName}
-                    onChange={(e) => setOutfitName(e.target.value)}
-                    placeholder="Enter outfit name..."
-                  />
-                )}
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label>Notes (optional)</Label>
@@ -479,14 +405,25 @@ export default function OutfitLoggerPage() {
               <Button
                 className="flex-1"
                 onClick={handleSaveLog}
-                disabled={
-                  saving ||
-                  (logMode === "outfit" && !selectedOutfit) ||
-                  (logMode === "items" && selectedItems.size === 0)
-                }
+                disabled={saving || (selectedItems.size === 0 && !editingLog)}
               >
-                {saving ? "Saving..." : "Save Log"}
+                {saving ? "Saving..." : editingLog ? "Update Log" : "Save Log"}
               </Button>
+              {editingLog && (
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => {
+                    if (selectedDate && editingLog) {
+                      const dateStr = selectedDate.toISOString().split("T")[0];
+                      setDeleteTarget({ dateStr, log: editingLog });
+                      setShowLogSheet(false);
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="flex-1"

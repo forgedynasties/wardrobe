@@ -1,0 +1,291 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { getWardrobeStats, imageUrl, getItems, getOutfits } from "@/lib/api";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { WardrobeStats, ClothingItem, Outfit } from "@/lib/types";
+
+export default function StatsPage() {
+  const [stats, setStats] = useState<WardrobeStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Dynamically calculate stats from items and outfits
+  const calculateStats = async () => {
+    try {
+      const [itemsData, outfitsData, apiStats] = await Promise.all([
+        getItems(),
+        getOutfits(),
+        getWardrobeStats(),
+      ]);
+
+      // Calculate basic stats from local data
+      const calculatedStats = { ...apiStats };
+      
+      // Items statistics
+      calculatedStats.total_items = itemsData.length;
+      calculatedStats.never_worn_items = itemsData.filter(item => !item.last_worn).length;
+      
+      // Outfits statistics
+      calculatedStats.total_outfits = outfitsData.length;
+      calculatedStats.never_worn_outfits = outfitsData.filter(outfit => !outfit.last_worn).length;
+      calculatedStats.total_wears = outfitsData.reduce((sum, o) => sum + o.usage_count, 0);
+      calculatedStats.avg_wears_per_outfit = outfitsData.length > 0 
+        ? outfitsData.reduce((sum, o) => sum + o.usage_count, 0) / outfitsData.length
+        : 0;
+
+      // Items by category (dynamically calculated)
+      const categoryMap: { [key: string]: number } = {};
+      itemsData.forEach(item => {
+        categoryMap[item.category] = (categoryMap[item.category] || 0) + 1;
+      });
+      calculatedStats.items_by_category = Object.entries(categoryMap)
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => a.category.localeCompare(b.category));
+
+      setStats(calculatedStats);
+    } catch (err) {
+      console.error("Failed to load stats:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    calculateStats();
+
+    // Reload stats when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        calculateStats();
+      }
+    };
+
+    // Poll for updates every 3 seconds while page is visible
+    const pollInterval = setInterval(() => {
+      if (!document.hidden) {
+        calculateStats();
+      }
+    }, 3000);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      clearInterval(pollInterval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-4 max-w-6xl mx-auto space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="p-4 max-w-6xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2">Stats</h1>
+        <p className="text-muted-foreground">Failed to load statistics</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 max-w-6xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-1">Wardrobe Stats</h1>
+        <p className="text-muted-foreground">Insights into your wardrobe and wearing patterns</p>
+      </div>
+
+      {/* Wardrobe Overview */}
+      <div>
+        <h2 className="text-xl font-semibold mb-3">Wardrobe Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <p className="text-sm text-muted-foreground mb-1">Total Items</p>
+            <p className="text-3xl font-bold">{stats.total_items}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-muted-foreground mb-1">Never Worn</p>
+            <p className="text-3xl font-bold">{stats.never_worn_items}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.total_items > 0
+                ? ((stats.never_worn_items / stats.total_items) * 100).toFixed(1)
+                : 0}
+              %
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-muted-foreground mb-1">Total Outfits</p>
+            <p className="text-3xl font-bold">{stats.total_outfits}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-muted-foreground mb-1">Never Worn Outfits</p>
+            <p className="text-3xl font-bold">{stats.never_worn_outfits}</p>
+          </Card>
+        </div>
+
+        {/* Items by Category */}
+        {stats.items_by_category.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-3">Items by Category</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {stats.items_by_category.map((cat) => (
+                <Card key={cat.category} className="p-4 flex items-center justify-between">
+                  <span className="font-medium capitalize">{cat.category}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-32 h-6 bg-muted/50 rounded overflow-hidden">
+                      <div
+                        className="h-full bg-primary/70 transition-all"
+                        style={{
+                          width: `${(cat.count / (stats.total_items || 1)) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="font-semibold text-right min-w-8">{cat.count}</span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Outfit Stats */}
+      <div>
+        <h2 className="text-xl font-semibold mb-3">Outfit Statistics</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-4">
+            <p className="text-sm text-muted-foreground mb-1">Total Wears</p>
+            <p className="text-3xl font-bold">{stats.total_wears}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-muted-foreground mb-1">Avg Wears/Outfit</p>
+            <p className="text-3xl font-bold">{stats.avg_wears_per_outfit.toFixed(1)}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-muted-foreground mb-1">This Month</p>
+            <p className="text-3xl font-bold">{stats.wears_this_month}</p>
+          </Card>
+        </div>
+      </div>
+
+      {/* Day of Week Distribution */}
+      {stats.wears_by_day_of_week.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-3">Wears by Day of Week</h2>
+          <Card className="p-6">
+            <div className="grid grid-cols-7 gap-3">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => {
+                const dayData = stats.wears_by_day_of_week.find((d) => d.day === idx);
+                const count = dayData?.count || 0;
+                const maxCount = Math.max(1, ...stats.wears_by_day_of_week.map((d) => d.count));
+                const height = ((count / maxCount) * 100) || 5;
+
+                return (
+                  <div key={idx} className="flex flex-col items-center justify-end gap-2">
+                    <div className="w-8 bg-primary/20 rounded-t" style={{ height: `${30 + height}px` }}>
+                      {count > 0 && (
+                        <div
+                          className="w-full bg-primary rounded-t transition-all"
+                          style={{ height: `${height}px` }}
+                        />
+                      )}
+                    </div>
+                    <span className="text-xs font-medium">{day}</span>
+                    <span className="text-xs text-muted-foreground">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Color Palette */}
+      {stats.colors.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-3">Color Palette</h2>
+          <Card className="p-6">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+              {stats.colors.map((color) => (
+                <div key={color} className="flex flex-col items-center gap-2">
+                  <div
+                    className="w-12 h-12 rounded-lg border border-border shadow-sm"
+                    style={{ backgroundColor: color || "#999" }}
+                    title={color}
+                  />
+                  <span className="text-xs text-muted-foreground text-center font-mono">
+                    {color.slice(1).toUpperCase()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Top Worn Items */}
+      {stats.top_worn_items.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-3">Top Worn Items</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {stats.top_worn_items.map((topItem) => {
+              const item = topItem.item;
+              const imgSrc =
+                item.image_status === "done" && item.image_url
+                  ? imageUrl(item.image_url)
+                  : item.raw_image_url
+                    ? imageUrl(item.raw_image_url)
+                    : null;
+
+              return (
+                <Card
+                  key={item.id}
+                  className="overflow-hidden flex flex-col"
+                >
+                  <div className="aspect-square bg-muted/50 flex items-center justify-center relative">
+                    {imgSrc ? (
+                      <img
+                        src={imgSrc}
+                        alt={item.category}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-4xl">👕</div>
+                    )}
+                    <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-sm font-semibold">
+                      {topItem.wear_count} wears
+                    </div>
+                  </div>
+                  <div className="p-3 flex-1 flex flex-col">
+                    <p className="font-medium capitalize">{item.category}</p>
+                    {item.sub_category && (
+                      <p className="text-xs text-muted-foreground capitalize">{item.sub_category}</p>
+                    )}
+                    {item.color_hex && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <div
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: item.color_hex }}
+                        />
+                        <span className="text-xs">{item.color_hex}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -56,7 +56,7 @@ type UpdateItemRequest struct {
 }
 
 type CreateOutfitRequest struct {
-	Name   string   `json:"name" binding:"required"`
+	Name   string   `json:"name"`
 	Season string   `json:"season"`
 	Vibe   []string `json:"vibe"`
 }
@@ -90,4 +90,39 @@ type LogOutfitWearRequest struct {
 type GetOutfitLogsRequest struct {
 	StartDate time.Time `json:"start_date" binding:"required"`
 	EndDate   time.Time `json:"end_date" binding:"required"`
+}
+
+type ItemStats struct {
+	OutfitCount int        `json:"outfit_count"`
+	WearCount   int        `json:"wear_count"`
+	LastWorn    *time.Time `json:"last_worn"`
+}
+
+type CategoryCount struct {
+	Category string `json:"category"`
+	Count    int    `json:"count"`
+}
+
+type DayOfWeekCount struct {
+	Day   int `json:"day"`
+	Count int `json:"count"`
+}
+
+type TopItem struct {
+	Item      ClothingItem `json:"item"`
+	WearCount int          `json:"wear_count"`
+}
+
+type WardrobeStats struct {
+	TotalItems      int              `json:"total_items"`
+	TotalOutfits    int              `json:"total_outfits"`
+	TotalWears      int              `json:"total_wears"`
+	ItemsByCategory []CategoryCount  `json:"items_by_category"`
+	NeverWornItems  int              `json:"never_worn_items"`
+	NeverWornOutfits int             `json:"never_worn_outfits"`
+	AvgWearsPerOutfit float64        `json:"avg_wears_per_outfit"`
+	WearsThisMonth  int              `json:"wears_this_month"`
+	WearsByDayOfWeek []DayOfWeekCount `json:"wears_by_day_of_week"`
+	TopWornItems    []TopItem        `json:"top_worn_items"`
+	Colors          []string         `json:"colors"`
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Trash2, Pencil, ArrowLeft } from "lucide-react";
-import { getItem, updateItem, deleteItem, uploadImage, imageUrl } from "@/lib/api";
+import { getItem, updateItem, deleteItem, uploadImage, imageUrl, getItemStats } from "@/lib/api";
 import { ImageUpload } from "@/components/image-upload";
 import { ColorPicker } from "@/components/color-picker";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ClothingItem } from "@/lib/types";
+import type { ClothingItem, ItemStats } from "@/lib/types";
 
 const categories = ["Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
 
@@ -36,6 +36,7 @@ export default function ItemDetailPage() {
   const id = params.id as string;
 
   const [item, setItem] = useState<ClothingItem | null>(null);
+  const [stats, setStats] = useState<ItemStats | null>(null);
   const [editing, setEditing] = useState(false);
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
@@ -53,6 +54,11 @@ export default function ItemDetailPage() {
       setSubCategory(i.sub_category);
       setColorHex(i.color_hex);
       setMaterial(i.material);
+    });
+    getItemStats(id).then((s) => {
+      setStats(s);
+    }).catch((err) => {
+      console.error("Failed to load stats:", err);
     });
   }, [id]);
 
@@ -255,6 +261,25 @@ export default function ItemDetailPage() {
             <p className="text-xs text-muted-foreground">
               Last worn: {new Date(item.last_worn).toLocaleDateString()}
             </p>
+          )}
+          {stats && (
+            <div className="mt-4 pt-4 border-t space-y-3">
+              <h3 className="font-semibold text-sm">Stats</h3>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-muted/50 rounded p-3 text-center">
+                  <p className="text-2xl font-bold">{stats.outfit_count}</p>
+                  <p className="text-xs text-muted-foreground">Outfits</p>
+                </div>
+                <div className="bg-muted/50 rounded p-3 text-center">
+                  <p className="text-2xl font-bold">{stats.wear_count}</p>
+                  <p className="text-xs text-muted-foreground">Times Worn</p>
+                </div>
+                <div className="bg-muted/50 rounded p-3 text-center">
+                  <p className="text-2xl font-bold">{item.last_worn ? "Yes" : "No"}</p>
+                  <p className="text-xs text-muted-foreground">Worn</p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}

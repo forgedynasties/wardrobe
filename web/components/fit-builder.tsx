@@ -21,10 +21,12 @@ export function FitBuilder({ onSelect, initialItems }: FitBuilderProps) {
   );
   const [filter, setFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     getItems()
       .then(setItems)
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -52,6 +54,20 @@ export function FitBuilder({ onSelect, initialItems }: FitBuilderProps) {
         <span className="text-muted-foreground animate-pulse">
           Loading items...
         </span>
+      </div>
+    );
+  }
+
+  if (error || (!loading && items.length === 0)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg bg-muted/20">
+        <span className="text-4xl mb-4">{error ? "⚠️" : "👕"}</span>
+        <p className="text-muted-foreground font-medium">
+          {error ? "Connection Error" : "Your wardrobe is empty"}
+        </p>
+        <p className="text-sm text-muted-foreground mt-1 text-center px-4">
+          {error ? "The backend might not be reachable. Check the console for details." : "Start by uploading some clothes to your wardrobe!"}
+        </p>
       </div>
     );
   }

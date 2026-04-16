@@ -66,3 +66,38 @@ export interface LogOutfitWearRequest {
   item_ids?: string[];
   notes?: string;
 }
+
+export interface ItemStats {
+  outfit_count: number;
+  wear_count: number;
+  last_worn: string | null;
+}
+
+export interface CategoryCount {
+  category: string;
+  count: number;
+}
+
+export interface DayOfWeekCount {
+  day: number;
+  count: number;
+}
+
+export interface TopItem {
+  item: ClothingItem;
+  wear_count: number;
+}
+
+export interface WardrobeStats {
+  total_items: number;
+  total_outfits: number;
+  total_wears: number;
+  items_by_category: CategoryCount[];
+  never_worn_items: number;
+  never_worn_outfits: number;
+  avg_wears_per_outfit: number;
+  wears_this_month: number;
+  wears_by_day_of_week: DayOfWeekCount[];
+  top_worn_items: TopItem[];
+  colors: string[];
+}
