@@ -10,14 +10,23 @@ interface OutfitCardProps {
   outfit: Outfit;
 }
 
+const categoryOrder = ["Outerwear", "Top", "Bottom", "Shoes", "Accessory"];
+
 export function OutfitCard({ outfit }: OutfitCardProps) {
+  const sortedItems = outfit.items
+    ? [...outfit.items].sort(
+        (a, b) =>
+          categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category),
+      )
+    : [];
+
   return (
     <Link href={`/outfits/${outfit.id}`}>
       <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 cursor-pointer hover:shadow-md">
-        <div className="aspect-square bg-muted/30 flex items-center justify-center relative overflow-hidden">
-          <div className="grid grid-cols-2 gap-1.5 p-3 w-full h-full">
-            {outfit.items && outfit.items.length > 0 ? (
-              outfit.items.slice(0, 4).map((item, idx) => {
+        <div className="aspect-[3/4] bg-muted/30 flex items-center justify-center relative overflow-hidden">
+          {sortedItems.length > 0 ? (
+            <div className="flex flex-col items-center justify-center w-full h-full py-4">
+              {sortedItems.map((item, idx) => {
                 const src =
                   item.image_status === "done" && item.image_url
                     ? imageUrl(item.image_url)
@@ -28,26 +37,25 @@ export function OutfitCard({ outfit }: OutfitCardProps) {
                 return (
                   <div
                     key={idx}
-                    className="bg-muted/50 rounded-md flex items-center justify-center aspect-square overflow-hidden"
+                    className="flex-1 w-3/4 flex items-center justify-center min-h-0"
+                    style={{ marginTop: idx > 0 ? "-12%" : 0 }}
                   >
                     {src ? (
                       <img
                         src={src}
                         alt={item.category}
-                        className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-200"
+                        className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-200"
                       />
                     ) : (
                       <span className="text-xl text-muted-foreground/50">👕</span>
                     )}
                   </div>
                 );
-              })
-            ) : (
-              <div className="col-span-2 flex items-center justify-center">
-                <span className="text-3xl text-muted-foreground/30">✨</span>
-              </div>
-            )}
-          </div>
+              })}
+            </div>
+          ) : (
+            <span className="text-3xl text-muted-foreground/30">✨</span>
+          )}
         </div>
         <div className="px-3 py-2.5 space-y-1.5">
           <h3 className="font-semibold text-sm truncate">{outfit.name}</h3>
