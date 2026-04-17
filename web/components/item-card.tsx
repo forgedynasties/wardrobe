@@ -20,12 +20,13 @@ export function ItemCard({ item }: ItemCardProps) {
   return (
     <Link href={`/items/${item.id}`}>
       <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 cursor-pointer hover:shadow-md">
-        <div className="aspect-square bg-muted/50 flex items-center justify-center relative">
+        <div className="aspect-square bg-card flex items-center justify-center relative">
           {src ? (
             <img
               src={src}
               alt={`${item.category} ${item.sub_category}`}
-              className="object-contain w-full h-full p-3 group-hover:scale-105 transition-transform duration-200"
+              className="object-contain w-full h-full p-3 transition-transform duration-200"
+              style={{ transform: `scale(${item.display_scale ?? 1})` }}
             />
           ) : (
             <span className="text-4xl text-muted-foreground/50">

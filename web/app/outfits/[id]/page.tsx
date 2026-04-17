@@ -255,13 +255,14 @@ export default function OutfitDetailPage() {
                     <div key={item.id} className="relative group">
                       <Link
                         href={`/items/${item.id}`}
-                        className="bg-muted/50 rounded-lg aspect-square flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all block"
+                        className="bg-card rounded-lg aspect-square flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all block"
                       >
                         {src ? (
                           <img
                             src={src}
                             alt={item.category}
                             className="object-contain w-full h-full p-2"
+                            style={{ transform: `scale(${item.display_scale ?? 1})` }}
                           />
                         ) : (
                           <span className="text-3xl text-muted-foreground/50">

@@ -7,17 +7,18 @@ import (
 )
 
 type ClothingItem struct {
-	ID          uuid.UUID  `json:"id"`
-	Category    string     `json:"category"`
-	SubCategory string     `json:"sub_category"`
-	Colors      []string   `json:"colors"`
-	Material    string     `json:"material"`
-	ImageURL    string     `json:"image_url"`
-	RawImageURL string     `json:"raw_image_url"`
-	ImageStatus string     `json:"image_status"`
-	LastWorn    *time.Time `json:"last_worn"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID           uuid.UUID  `json:"id"`
+	Category     string     `json:"category"`
+	SubCategory  string     `json:"sub_category"`
+	Colors       []string   `json:"colors"`
+	Material     string     `json:"material"`
+	ImageURL     string     `json:"image_url"`
+	RawImageURL  string     `json:"raw_image_url"`
+	ImageStatus  string     `json:"image_status"`
+	DisplayScale float64    `json:"display_scale"`
+	LastWorn     *time.Time `json:"last_worn"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 type ImageJob struct {
@@ -65,12 +66,13 @@ type CreateItemRequest struct {
 }
 
 type UpdateItemRequest struct {
-	Category    *string  `json:"category"`
-	SubCategory *string  `json:"sub_category"`
-	Colors      []string `json:"colors"`
-	Material    *string  `json:"material"`
-	ImageURL    *string  `json:"image_url"`
-	RawImageURL *string  `json:"raw_image_url"`
+	Category     *string  `json:"category"`
+	SubCategory  *string  `json:"sub_category"`
+	Colors       []string `json:"colors"`
+	Material     *string  `json:"material"`
+	ImageURL     *string  `json:"image_url"`
+	RawImageURL  *string  `json:"raw_image_url"`
+	DisplayScale *float64 `json:"display_scale"`
 }
 
 type CreateOutfitRequest struct {

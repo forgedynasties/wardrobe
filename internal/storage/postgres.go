@@ -26,7 +26,7 @@ func NewStore(db *sql.DB) *Store {
 
 func (s *Store) ListItems() ([]domain.ClothingItem, error) {
 	rows, err := s.db.Query(`
-		SELECT id, category, sub_category, colors, material, image_url, raw_image_url, image_status, last_worn, created_at, updated_at
+		SELECT id, category, sub_category, colors, material, image_url, raw_image_url, image_status, display_scale, last_worn, created_at, updated_at
 		FROM clothing_items ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (s *Store) ListItems() ([]domain.ClothingItem, error) {
 	for rows.Next() {
 		var item domain.ClothingItem
 		err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -49,10 +49,10 @@ func (s *Store) ListItems() ([]domain.ClothingItem, error) {
 func (s *Store) GetItem(id uuid.UUID) (*domain.ClothingItem, error) {
 	var item domain.ClothingItem
 	err := s.db.QueryRow(`
-		SELECT id, category, sub_category, colors, material, image_url, raw_image_url, image_status, last_worn, created_at, updated_at
+		SELECT id, category, sub_category, colors, material, image_url, raw_image_url, image_status, display_scale, last_worn, created_at, updated_at
 		FROM clothing_items WHERE id = $1`, id).
 		Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -64,10 +64,10 @@ func (s *Store) CreateItem(req domain.CreateItemRequest) (*domain.ClothingItem, 
 	err := s.db.QueryRow(`
 		INSERT INTO clothing_items (category, sub_category, colors, material, image_url, raw_image_url)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, category, sub_category, colors, material, image_url, raw_image_url, image_status, last_worn, created_at, updated_at`,
+		RETURNING id, category, sub_category, colors, material, image_url, raw_image_url, image_status, display_scale, last_worn, created_at, updated_at`,
 		req.Category, req.SubCategory, pq.Array(req.Colors), req.Material, req.ImageURL, req.RawImageURL).
 		Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -84,12 +84,13 @@ func (s *Store) UpdateItem(id uuid.UUID, req domain.UpdateItemRequest) (*domain.
 			material = COALESCE($5, material),
 			image_url = COALESCE($6, image_url),
 			raw_image_url = COALESCE($7, raw_image_url),
+			display_scale = COALESCE($8, display_scale),
 			updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, category, sub_category, colors, material, image_url, raw_image_url, image_status, last_worn, created_at, updated_at`,
-		id, req.Category, req.SubCategory, pq.Array(req.Colors), req.Material, req.ImageURL, req.RawImageURL).
+		RETURNING id, category, sub_category, colors, material, image_url, raw_image_url, image_status, display_scale, last_worn, created_at, updated_at`,
+		id, req.Category, req.SubCategory, pq.Array(req.Colors), req.Material, req.ImageURL, req.RawImageURL, req.DisplayScale).
 		Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +165,7 @@ func (s *Store) ListOutfits() ([]domain.Outfit, error) {
 
 func (s *Store) loadOutfitItems(outfitID uuid.UUID) ([]domain.OutfitItem, error) {
 	rows, err := s.db.Query(`
-		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at,
+		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at,
 			oi.position_x, oi.position_y, oi.scale, oi.z_index
 		FROM clothing_items ci
 		JOIN outfit_items oi ON oi.clothing_item_id = ci.id
@@ -179,7 +180,7 @@ func (s *Store) loadOutfitItems(outfitID uuid.UUID) ([]domain.OutfitItem, error)
 	for rows.Next() {
 		var item domain.OutfitItem
 		if err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt,
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt,
 			&item.PositionX, &item.PositionY, &item.Scale, &item.ZIndex); err != nil {
 			return nil, err
 		}
@@ -541,7 +542,7 @@ func (s *Store) SuggestOutfits(count int) ([]domain.OutfitSuggestion, error) {
 
 func (s *Store) loadStaleItemPools() (map[string][]domain.ClothingItem, error) {
 	rows, err := s.db.Query(`
-		SELECT id, category, sub_category, colors, material, image_url, raw_image_url, image_status, last_worn, created_at, updated_at
+		SELECT id, category, sub_category, colors, material, image_url, raw_image_url, image_status, display_scale, last_worn, created_at, updated_at
 		FROM clothing_items
 		WHERE category IN ('Top', 'Bottom', 'Shoes')
 		ORDER BY last_worn ASC NULLS FIRST`)
@@ -554,7 +555,7 @@ func (s *Store) loadStaleItemPools() (map[string][]domain.ClothingItem, error) {
 	for rows.Next() {
 		var item domain.ClothingItem
 		if err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		pools[item.Category] = append(pools[item.Category], item)
@@ -695,7 +696,7 @@ func (s *Store) LogOutfitWear(req domain.LogOutfitWearRequest) (*domain.OutfitLo
 
 	// Load items from outfit
 	itemRows, err := s.db.Query(`
-		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
 		FROM clothing_items ci
 		JOIN outfit_items oi ON oi.clothing_item_id = ci.id
 		WHERE oi.outfit_id = $1`,
@@ -708,7 +709,7 @@ func (s *Store) LogOutfitWear(req domain.LogOutfitWearRequest) (*domain.OutfitLo
 	for itemRows.Next() {
 		var item domain.ClothingItem
 		err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -742,7 +743,7 @@ func (s *Store) GetOutfitLogs(startDate, endDate time.Time) ([]domain.OutfitLog,
 		if log.OutfitID != nil {
 			// Load items from the outfit
 			itemRows, err := s.db.Query(`
-				SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+				SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
 				FROM clothing_items ci
 				JOIN outfit_items oi ON oi.clothing_item_id = ci.id
 				WHERE oi.outfit_id = $1`, log.OutfitID)
@@ -753,7 +754,7 @@ func (s *Store) GetOutfitLogs(startDate, endDate time.Time) ([]domain.OutfitLog,
 			for itemRows.Next() {
 				var item domain.ClothingItem
 				err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-					&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+					&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 				if err != nil {
 					itemRows.Close()
 					return nil, err
@@ -764,7 +765,7 @@ func (s *Store) GetOutfitLogs(startDate, endDate time.Time) ([]domain.OutfitLog,
 		} else {
 			// Load items from manual log
 			itemRows, err := s.db.Query(`
-				SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+				SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
 				FROM clothing_items ci
 				JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
 				WHERE oli.outfit_log_id = $1`, log.ID)
@@ -775,7 +776,7 @@ func (s *Store) GetOutfitLogs(startDate, endDate time.Time) ([]domain.OutfitLog,
 			for itemRows.Next() {
 				var item domain.ClothingItem
 				err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-					&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+					&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 				if err != nil {
 					itemRows.Close()
 					return nil, err
@@ -805,7 +806,7 @@ func (s *Store) GetOutfitLogByDate(wearDate time.Time) (*domain.OutfitLog, error
 
 	// Load items
 	itemRows, err := s.db.Query(`
-		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
 		FROM clothing_items ci
 		JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
 		WHERE oli.outfit_log_id = $1`, log.ID)
@@ -817,7 +818,7 @@ func (s *Store) GetOutfitLogByDate(wearDate time.Time) (*domain.OutfitLog, error
 	for itemRows.Next() {
 		var item domain.ClothingItem
 		err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -871,7 +872,7 @@ func (s *Store) UpdateOutfitLog(logID uuid.UUID, notes string, itemIDs []uuid.UU
 
 	// Load items from outfit_log_items
 	itemRows, err := s.db.Query(`
-		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at
+		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
 		FROM clothing_items ci
 		JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
 		WHERE oli.outfit_log_id = $1`,
@@ -884,7 +885,7 @@ func (s *Store) UpdateOutfitLog(logID uuid.UUID, notes string, itemIDs []uuid.UU
 	for itemRows.Next() {
 		var item domain.ClothingItem
 		err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
+			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -1213,7 +1214,7 @@ func (s *Store) GetWardrobeStats() (*domain.WardrobeStats, error) {
 
 	// Top worn items
 	rows, err = s.db.Query(`
-		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.last_worn, ci.created_at, ci.updated_at,
+		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at,
 			COUNT(ol.id) as wear_count
 		FROM clothing_items ci
 		LEFT JOIN outfit_log_items oli ON ci.id = oli.clothing_item_id

@@ -42,6 +42,7 @@ export default function ItemDetailPage() {
   const [subCategory, setSubCategory] = useState("");
   const [colors, setColors] = useState<string[]>([]);
   const [material, setMaterial] = useState("");
+  const [displayScale, setDisplayScale] = useState(1);
   const [showRaw, setShowRaw] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -54,6 +55,7 @@ export default function ItemDetailPage() {
       setSubCategory(i.sub_category);
       setColors(i.colors ?? []);
       setMaterial(i.material);
+      setDisplayScale(i.display_scale ?? 1);
     });
     getItemStats(id).then((s) => {
       setStats(s);
@@ -70,6 +72,7 @@ export default function ItemDetailPage() {
         sub_category: subCategory,
         colors,
         material,
+        display_scale: displayScale,
       });
       setItem(updated);
       setEditing(false);
@@ -140,12 +143,13 @@ export default function ItemDetailPage() {
         </div>
       </div>
 
-      <div className="aspect-square bg-muted/50 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden">
+      <div className="aspect-square bg-card rounded-xl mb-4 flex items-center justify-center relative overflow-hidden">
         {imgSrc ? (
           <img
             src={imgSrc}
             alt={`${item.category} ${item.sub_category}`}
-            className="object-contain w-full h-full p-4"
+            className="object-contain w-full h-full p-4 transition-transform"
+            style={{ transform: `scale(${displayScale})` }}
           />
         ) : (
           <ImageUpload onFileSelect={handleReupload} uploading={saving} />
@@ -220,6 +224,22 @@ export default function ItemDetailPage() {
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Display scale: {displayScale.toFixed(2)}x</Label>
+            <input
+              type="range"
+              min="0.4"
+              max="2"
+              step="0.05"
+              value={displayScale}
+              onChange={(e) => setDisplayScale(parseFloat(e.target.value))}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Adjust how big this item appears in outfit previews
+            </p>
           </div>
 
           <div className="flex gap-2">

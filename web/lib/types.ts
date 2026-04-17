@@ -7,6 +7,7 @@ export interface ClothingItem {
   image_url: string;
   raw_image_url: string;
   image_status: string;
+  display_scale: number;
   last_worn: string | null;
   created_at: string;
   updated_at: string;
@@ -49,6 +50,7 @@ export interface UpdateItemRequest {
   sub_category?: string;
   colors?: string[];
   material?: string;
+  display_scale?: number;
 }
 
 export interface CreateOutfitRequest {

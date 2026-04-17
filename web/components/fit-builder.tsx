@@ -114,12 +114,13 @@ export function FitBuilder({ onSelect, initialItems }: FitBuilderProps) {
               onClick={() => handleToggle(item.id)}
             >
               <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="aspect-square bg-muted flex items-center justify-center relative">
+                <div className="aspect-square bg-card flex items-center justify-center relative">
                   {src ? (
                     <img
                       src={src}
                       alt={item.category}
                       className="object-contain w-full h-full p-2"
+                      style={{ transform: `scale(${item.display_scale ?? 1})` }}
                     />
                   ) : (
                     <span className="text-3xl">👕</span>

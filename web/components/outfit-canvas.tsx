@@ -64,6 +64,7 @@ export function OutfitCanvas({ items, className }: Props) {
                   src={src}
                   alt={item.category}
                   className="max-w-[60%] max-h-[60%] object-contain"
+                  style={{ transform: `scale(${item.display_scale ?? 1})` }}
                 />
               ) : (
                 <span className="text-xl text-muted-foreground/50">👕</span>
@@ -90,6 +91,7 @@ export function OutfitCanvas({ items, className }: Props) {
         sorted.map((item, idx) => {
           const src = itemSrc(item);
           const weight = categoryWeight[item.category] ?? 1;
+          const scale = item.display_scale ?? 1;
           return (
             <div
               key={item.id ?? idx}
@@ -104,6 +106,7 @@ export function OutfitCanvas({ items, className }: Props) {
                   src={src}
                   alt={item.category}
                   className="max-w-full max-h-full object-contain"
+                  style={{ transform: `scale(${scale})` }}
                 />
               ) : (
                 <span className="text-xl text-muted-foreground/50">👕</span>
