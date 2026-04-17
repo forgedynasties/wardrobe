@@ -39,11 +39,16 @@ export function ItemCard({ item }: ItemCardProps) {
               </span>
             </div>
           )}
-          {item.color_hex && (
-            <div
-              className="absolute top-2 right-2 w-4 h-4 rounded-full border-2 border-background shadow-sm"
-              style={{ backgroundColor: item.color_hex }}
-            />
+          {item.colors && item.colors.length > 0 && (
+            <div className="absolute top-2 right-2 flex -space-x-1">
+              {item.colors.slice(0, 3).map((c, i) => (
+                <div
+                  key={i}
+                  className="w-4 h-4 rounded-full border-2 border-background shadow-sm"
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
           )}
         </div>
         <div className="px-3 py-2">

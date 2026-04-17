@@ -10,7 +10,7 @@ type ClothingItem struct {
 	ID          uuid.UUID  `json:"id"`
 	Category    string     `json:"category"`
 	SubCategory string     `json:"sub_category"`
-	ColorHex    string     `json:"color_hex"`
+	Colors      []string   `json:"colors"`
 	Material    string     `json:"material"`
 	ImageURL    string     `json:"image_url"`
 	RawImageURL string     `json:"raw_image_url"`
@@ -56,21 +56,21 @@ type UpdateOutfitLayoutRequest struct {
 }
 
 type CreateItemRequest struct {
-	Category    string `json:"category" binding:"required"`
-	SubCategory string `json:"sub_category"`
-	ColorHex    string `json:"color_hex"`
-	Material    string `json:"material"`
-	ImageURL    string `json:"image_url"`
-	RawImageURL string `json:"raw_image_url"`
+	Category    string   `json:"category" binding:"required"`
+	SubCategory string   `json:"sub_category"`
+	Colors      []string `json:"colors"`
+	Material    string   `json:"material"`
+	ImageURL    string   `json:"image_url"`
+	RawImageURL string   `json:"raw_image_url"`
 }
 
 type UpdateItemRequest struct {
-	Category    *string `json:"category"`
-	SubCategory *string `json:"sub_category"`
-	ColorHex    *string `json:"color_hex"`
-	Material    *string `json:"material"`
-	ImageURL    *string `json:"image_url"`
-	RawImageURL *string `json:"raw_image_url"`
+	Category    *string  `json:"category"`
+	SubCategory *string  `json:"sub_category"`
+	Colors      []string `json:"colors"`
+	Material    *string  `json:"material"`
+	ImageURL    *string  `json:"image_url"`
+	RawImageURL *string  `json:"raw_image_url"`
 }
 
 type CreateOutfitRequest struct {

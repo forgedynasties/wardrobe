@@ -2,7 +2,7 @@ export interface ClothingItem {
   id: string;
   category: string;
   sub_category: string;
-  color_hex: string;
+  colors: string[];
   material: string;
   image_url: string;
   raw_image_url: string;
@@ -40,14 +40,14 @@ export interface OutfitItemLayout {
 export interface CreateItemRequest {
   category: string;
   sub_category?: string;
-  color_hex?: string;
+  colors?: string[];
   material?: string;
 }
 
 export interface UpdateItemRequest {
   category?: string;
   sub_category?: string;
-  color_hex?: string;
+  colors?: string[];
   material?: string;
 }
 

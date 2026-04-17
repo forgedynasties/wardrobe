@@ -51,7 +51,7 @@ export function OutfitSuggestions({ suggestions, onRefresh }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {suggestions.map((sug, idx) => (
           <Card key={idx} className="overflow-hidden">
-            <div className="aspect-[3/4] bg-muted/30 flex items-center justify-center relative overflow-hidden">
+            <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
               <OutfitCanvas items={sug.items} />
             </div>
             <div className="px-3 py-2.5 space-y-2">

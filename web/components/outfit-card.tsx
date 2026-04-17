@@ -13,7 +13,7 @@ export function OutfitCard({ outfit }: OutfitCardProps) {
   return (
     <Link href={`/outfits/${outfit.id}`}>
       <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 cursor-pointer hover:shadow-md">
-        <div className="aspect-[3/4] bg-muted/30 flex items-center justify-center relative overflow-hidden">
+        <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
           <OutfitCanvas items={outfit.items ?? []} />
         </div>
         <div className="px-3 py-2.5 space-y-1.5">

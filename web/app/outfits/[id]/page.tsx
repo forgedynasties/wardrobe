@@ -214,7 +214,7 @@ export default function OutfitDetailPage() {
           </div>
 
           {outfit.items && outfit.items.length > 0 && (
-            <div className="aspect-[3/4] w-full max-w-sm mx-auto bg-muted/30 rounded-lg overflow-hidden">
+            <div className="aspect-[3/4] w-full max-w-sm mx-auto bg-muted/30 rounded-lg overflow-hidden relative">
               <OutfitCanvas items={outfit.items} />
             </div>
           )}

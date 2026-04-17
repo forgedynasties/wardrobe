@@ -40,7 +40,7 @@ export default function ItemDetailPage() {
   const [editing, setEditing] = useState(false);
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
-  const [colorHex, setColorHex] = useState("");
+  const [colors, setColors] = useState<string[]>([]);
   const [material, setMaterial] = useState("");
   const [showRaw, setShowRaw] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,7 +52,7 @@ export default function ItemDetailPage() {
       setItem(i);
       setCategory(i.category);
       setSubCategory(i.sub_category);
-      setColorHex(i.color_hex);
+      setColors(i.colors ?? []);
       setMaterial(i.material);
     });
     getItemStats(id).then((s) => {
@@ -68,7 +68,7 @@ export default function ItemDetailPage() {
       const updated = await updateItem(id, {
         category,
         sub_category: subCategory,
-        color_hex: colorHex,
+        colors,
         material,
       });
       setItem(updated);
@@ -210,8 +210,8 @@ export default function ItemDetailPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Color</Label>
-            <ColorPicker value={colorHex || "#000000"} onChange={setColorHex} />
+            <Label>Colors</Label>
+            <ColorPicker values={colors} onChange={setColors} />
           </div>
 
           <div className="space-y-2">
@@ -245,13 +245,17 @@ export default function ItemDetailPage() {
               </span>
             )}
           </div>
-          {item.color_hex && (
-            <div className="flex items-center gap-2">
-              <div
-                className="w-5 h-5 rounded-full border border-border"
-                style={{ backgroundColor: item.color_hex }}
-              />
-              <span className="text-sm font-mono">{item.color_hex}</span>
+          {item.colors && item.colors.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {item.colors.map((c, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  <div
+                    className="w-5 h-5 rounded-full border border-border"
+                    style={{ backgroundColor: c }}
+                  />
+                  <span className="text-sm font-mono">{c}</span>
+                </div>
+              ))}
             </div>
           )}
           {item.material && (

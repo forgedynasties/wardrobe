@@ -270,13 +270,17 @@ export default function StatsPage() {
                     {item.sub_category && (
                       <p className="text-xs text-muted-foreground capitalize">{item.sub_category}</p>
                     )}
-                    {item.color_hex && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <div
-                          className="w-4 h-4 rounded-full border"
-                          style={{ backgroundColor: item.color_hex }}
-                        />
-                        <span className="text-xs">{item.color_hex}</span>
+                    {item.colors && item.colors.length > 0 && (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {item.colors.map((c, ci) => (
+                          <div key={ci} className="flex items-center gap-1">
+                            <div
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: c }}
+                            />
+                            <span className="text-xs">{c}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

@@ -30,7 +30,7 @@ export default function NewItemPage() {
   const router = useRouter();
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
-  const [colorHex, setColorHex] = useState("#000000");
+  const [colors, setColors] = useState<string[]>([]);
   const [material, setMaterial] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export default function NewItemPage() {
       const item = await createItem({
         category,
         sub_category: subCategory,
-        color_hex: colorHex,
+        colors,
         material,
       });
       if (file) {
@@ -124,8 +124,8 @@ export default function NewItemPage() {
         )}
 
         <div className="space-y-2">
-          <Label>Color</Label>
-          <ColorPicker value={colorHex} onChange={setColorHex} />
+          <Label>Colors</Label>
+          <ColorPicker values={colors} onChange={setColors} />
         </div>
 
         <div className="space-y-2">

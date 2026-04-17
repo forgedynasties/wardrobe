@@ -44,7 +44,7 @@ export function OutfitCanvas({ items, className }: Props) {
       return az - bz;
     });
     return (
-      <div className={`relative w-full h-full ${className ?? ""}`}>
+      <div className={`absolute inset-0 isolate ${className ?? ""}`}>
         {sorted.map((item, idx) => {
           const src = itemSrc(item);
           const layout = isOutfitItem(item)

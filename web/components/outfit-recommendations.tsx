@@ -24,7 +24,7 @@ export function OutfitRecommendations({ recommendations }: Props) {
         {recommendations.map((rec) => (
           <Link key={rec.id} href={`/outfits/${rec.id}`}>
             <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all cursor-pointer">
-              <div className="aspect-[3/4] bg-muted/30 flex items-center justify-center relative overflow-hidden">
+              <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
                 <OutfitCanvas items={rec.items ?? []} />
               </div>
               <div className="px-3 py-2.5 space-y-1.5">
