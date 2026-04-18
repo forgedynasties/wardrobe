@@ -1,0 +1,14 @@
+.git
+.gitignore
+README.md
+CLAUDE.md
+AGENTS.md
+web
+node_modules
+uploads
+articles
+docker-compose.yml
+run.sh
+.claude
+ui-ux.yaml
+server
