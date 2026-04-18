@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getOutfitLogs, getOutfits, logOutfitWear, getItems, deleteOutfitLog, updateOutfitLog, imageUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,27 @@ import {
 } from "@/components/ui/select";
 import type { Outfit, ClothingItem, OutfitLog } from "@/lib/types";
 
+const CATEGORY_WEIGHT: Record<string, number> = {
+  outerwear: 5,
+  top: 4,
+  bottom: 3,
+  shoes: 2,
+  accessory: 1,
+};
+
+const itemImgSrc = (item: ClothingItem): string | null => {
+  if (item.image_status === "done" && item.image_url) return imageUrl(item.image_url);
+  if (item.raw_image_url) return imageUrl(item.raw_image_url);
+  return null;
+};
+
+const sortByCategory = (items: ClothingItem[]) =>
+  [...items].sort(
+    (a, b) =>
+      (CATEGORY_WEIGHT[b.category?.toLowerCase() ?? ""] ?? 0) -
+      (CATEGORY_WEIGHT[a.category?.toLowerCase() ?? ""] ?? 0)
+  );
+
 export default function OutfitLoggerPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [logs, setLogs] = useState<Map<string, OutfitLog>>(new Map());
@@ -47,6 +68,23 @@ export default function OutfitLoggerPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ dateStr: string; log: OutfitLog } | null>(null);
   const [editingLog, setEditingLog] = useState<OutfitLog | null>(null);
+  const [peek, setPeek] = useState<{ log: OutfitLog; x: number; y: number } | null>(null);
+  const peekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePeekEnter = (e: React.MouseEvent<HTMLDivElement>, log: OutfitLog | null) => {
+    if (!log) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
+    peekTimerRef.current = setTimeout(() => {
+      setPeek({ log, x: rect.left + rect.width / 2, y: rect.top });
+    }, 400);
+  };
+
+  const handlePeekLeave = () => {
+    if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
+    peekTimerRef.current = null;
+    setPeek(null);
+  };
 
   useEffect(() => {
     loadData();
@@ -262,6 +300,29 @@ export default function OutfitLoggerPage() {
               : null;
             const hasLog = dateStr && logs.has(dateStr);
             const log = dateStr ? logs.get(dateStr) : null;
+            const now = new Date();
+            const isToday =
+              !!day &&
+              currentMonth.getFullYear() === now.getFullYear() &&
+              currentMonth.getMonth() === now.getMonth() &&
+              day === now.getDate();
+
+            const sortedItems = log?.items ? sortByCategory(log.items) : [];
+            const itemCount = sortedItems.length;
+            const displayedCount = itemCount === 1 ? 1 : itemCount <= 3 ? itemCount : 4;
+            const overflow = itemCount - displayedCount;
+
+            const logAt = (i: number): boolean => {
+              const d = days[i];
+              if (!d) return false;
+              const ds = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d)
+                .toISOString()
+                .split("T")[0];
+              return logs.has(ds);
+            };
+            const sameRow = (a: number, b: number) => Math.floor(a / 7) === Math.floor(b / 7);
+            const hasPrevStreak = hasLog && sameRow(idx - 1, idx) && logAt(idx - 1);
+            const hasNextStreak = hasLog && sameRow(idx + 1, idx) && logAt(idx + 1);
 
             return (
               <div
@@ -272,32 +333,58 @@ export default function OutfitLoggerPage() {
                     : hasLog
                       ? "bg-primary/5 border-primary/20 hover:bg-primary/10"
                       : "bg-card border-border hover:border-primary/50"
-                }`}
+                } ${isToday ? "ring-2 ring-primary/60" : ""}`}
                 onClick={() => day && handleDateClick(day)}
+                onMouseEnter={(e) => handlePeekEnter(e, log ?? null)}
+                onMouseLeave={handlePeekLeave}
               >
                 {day && (
                   <>
-                    <div className="absolute top-1 left-1.5 text-[10px] md:text-xs font-medium text-muted-foreground leading-none">
+                    {hasPrevStreak && (
+                      <div className="absolute top-1/2 -left-1 md:-left-2 h-0.5 w-1 md:w-2 bg-primary/50 -translate-y-1/2 pointer-events-none" />
+                    )}
+                    {hasNextStreak && (
+                      <div className="absolute top-1/2 -right-1 md:-right-2 h-0.5 w-1 md:w-2 bg-primary/50 -translate-y-1/2 pointer-events-none" />
+                    )}
+                    <div
+                      className={`absolute top-1 left-1.5 text-[10px] md:text-xs font-medium leading-none ${
+                        isToday ? "text-primary" : "text-muted-foreground"
+                      }`}
+                    >
                       {day}
                     </div>
                     {hasLog && log && (
                       <>
-                        {log.items && log.items.length > 0 ? (
-                          <div className="flex gap-0.5 md:gap-1 flex-wrap justify-center items-center px-1 pt-3">
-                            {log.items.slice(0, 3).map((item) => {
-                              const imgSrc =
-                                item.image_status === "done" && item.image_url
-                                  ? imageUrl(item.image_url)
-                                  : item.raw_image_url
-                                    ? imageUrl(item.raw_image_url)
-                                    : null;
-
-                              return imgSrc ? (
+                        {itemCount === 0 && (
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                        )}
+                        {itemCount === 1 && (() => {
+                          const item = sortedItems[0];
+                          const src = itemImgSrc(item);
+                          return src ? (
+                            <img
+                              src={src}
+                              alt={item.category}
+                              className="w-full h-full object-contain p-2 md:p-3"
+                              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : null;
+                        })()}
+                        {itemCount >= 2 && itemCount <= 3 && (
+                          <div className="flex items-center justify-center pt-2">
+                            {sortedItems.map((item, i) => {
+                              const src = itemImgSrc(item);
+                              return src ? (
                                 <img
                                   key={item.id}
-                                  src={imgSrc}
+                                  src={src}
                                   alt={item.category}
-                                  className="w-5 h-5 md:w-9 md:h-9 rounded object-contain"
+                                  className={`w-8 h-8 md:w-12 md:h-12 rounded object-contain ${
+                                    i > 0 ? "-ml-3 md:-ml-4" : ""
+                                  }`}
+                                  style={{ zIndex: sortedItems.length - i }}
                                   onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                                     e.currentTarget.style.display = "none";
                                   }}
@@ -305,12 +392,32 @@ export default function OutfitLoggerPage() {
                               ) : null;
                             })}
                           </div>
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-primary" />
                         )}
-                        {log.items && log.items.length > 3 && (
+                        {itemCount >= 4 && (
+                          <div className="grid grid-cols-2 gap-0.5 w-full h-full pt-3">
+                            {sortedItems.slice(0, 4).map((item) => {
+                              const src = itemImgSrc(item);
+                              return src ? (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center justify-center overflow-hidden"
+                                >
+                                  <img
+                                    src={src}
+                                    alt={item.category}
+                                    className="max-w-full max-h-full object-contain"
+                                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                      e.currentTarget.style.display = "none";
+                                    }}
+                                  />
+                                </div>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                        {overflow > 0 && (
                           <div className="absolute bottom-1 right-1 text-[9px] md:text-[10px] font-medium text-muted-foreground bg-muted/80 rounded-full px-1.5 py-0.5 leading-none">
-                            +{log.items.length - 3}
+                            +{overflow}
                           </div>
                         )}
                         <button
@@ -461,6 +568,65 @@ export default function OutfitLoggerPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {peek && (
+        <div
+          className="fixed z-50 pointer-events-none animate-in fade-in-0 zoom-in-95 duration-150"
+          style={{
+            left: peek.x,
+            top: peek.y - 8,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          <div className="bg-popover text-popover-foreground border rounded-lg shadow-lg p-3 min-w-56 max-w-72">
+            <div className="space-y-2">
+              {sortByCategory(peek.log.items || []).map((item) => {
+                const src = itemImgSrc(item);
+                return (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-muted/40 rounded flex items-center justify-center flex-shrink-0">
+                      {src ? (
+                        <img
+                          src={src}
+                          alt={item.category}
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-sm">👕</div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium capitalize truncate">
+                        {item.sub_category || item.category}
+                      </div>
+                      {item.colors && item.colors.length > 0 && (
+                        <div className="flex gap-1 mt-0.5">
+                          {item.colors.slice(0, 4).map((c, ci) => (
+                            <div
+                              key={ci}
+                              className="w-2.5 h-2.5 rounded-full border border-border"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {peek.log.notes && (
+              <div className="mt-2 pt-2 border-t text-xs text-muted-foreground italic">
+                &ldquo;{peek.log.notes}&rdquo;
+              </div>
+            )}
+          </div>
+          <div
+            className="w-2 h-2 bg-popover border-r border-b rotate-45 mx-auto -mt-1"
+            style={{ transform: "translateY(-4px) rotate(45deg)" }}
+          />
+        </div>
+      )}
     </div>
   );
 }
