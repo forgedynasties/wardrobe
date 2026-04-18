@@ -9,7 +9,7 @@ Digital wardrobe manager. Catalog clothing, build outfits, log daily wears, trac
 Prerequisites: Go 1.21+, Node 18+, Docker.
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/forgedynasties/wardrobe
 cd wardrobe
 ./run.sh
 ```
