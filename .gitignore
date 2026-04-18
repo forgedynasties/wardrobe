@@ -57,3 +57,4 @@ uploads/clean/
 logs/
 *.log
 *.md
+.claudeignore
