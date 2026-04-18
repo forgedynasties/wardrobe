@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { OutfitCanvas } from "@/components/outfit-canvas";
 import type { Outfit, ClothingItem, OutfitLog } from "@/lib/types";
 
 const CATEGORY_WEIGHT: Record<string, number> = {
@@ -442,20 +443,44 @@ export default function OutfitLoggerPage() {
       </Card>
 
       <Sheet open={showLogSheet} onOpenChange={(open) => { setShowLogSheet(open); if (!open) resetForm(); }}>
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
-          <SheetHeader>
+        <SheetContent side="bottom" className="h-[80vh] flex flex-col">
+          <SheetHeader className="flex-shrink-0">
             <SheetTitle>
               {editingLog ? "Edit log for" : "Log outfit for"} {selectedDate?.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </SheetTitle>
             <SheetDescription>
-              {editingLog ? "Update what you wore" : "Record what you wore"}
+              {selectedItems.size} {selectedItems.size === 1 ? "item" : "items"} selected — tap to add or remove
             </SheetDescription>
           </SheetHeader>
 
-          <div className="space-y-4 px-4 pb-4">
-            <div className="space-y-2">
-              <Label>Select Items ({selectedItems.size} selected)</Label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto">
+          <div className="flex-1 min-h-0 flex flex-col gap-3 px-4 pb-4 overflow-hidden">
+            <div className="flex-1 min-h-0 bg-muted/30 rounded-lg border relative overflow-hidden">
+              {selectedItems.size === 0 ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
+                  <div className="text-4xl opacity-40">✨</div>
+                  <p className="text-xs">Pick items below to build your outfit</p>
+                </div>
+              ) : (
+                <OutfitCanvas
+                  items={items.filter((i) => selectedItems.has(i.id))}
+                  className="p-4"
+                />
+              )}
+            </div>
+
+            <div className="flex-shrink-0 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">Wardrobe</Label>
+                {selectedItems.size > 0 && (
+                  <button
+                    onClick={() => setSelectedItems(new Set())}
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
                 {items.map((item) => {
                   const src =
                     item.image_status === "done" && item.image_url
@@ -463,6 +488,7 @@ export default function OutfitLoggerPage() {
                       : item.raw_image_url
                         ? imageUrl(item.raw_image_url)
                         : null;
+                  const isSelected = selectedItems.has(item.id);
 
                   return (
                     <button
@@ -476,11 +502,12 @@ export default function OutfitLoggerPage() {
                         }
                         setSelectedItems(newSelected);
                       }}
-                      className={`rounded-lg border-2 transition-all overflow-hidden aspect-square flex flex-col items-center justify-center ${
-                        selectedItems.has(item.id)
-                          ? "bg-primary/15 border-primary"
+                      className={`relative flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg border-2 transition-all snap-start ${
+                        isSelected
+                          ? "bg-primary/15 border-primary scale-95"
                           : "bg-muted/50 border-border hover:border-primary/50"
                       }`}
+                      title={item.sub_category || item.category}
                     >
                       {src ? (
                         <img
@@ -489,9 +516,16 @@ export default function OutfitLoggerPage() {
                           className="w-full h-full object-contain p-1"
                         />
                       ) : (
-                        <div className="flex flex-col items-center gap-0.5 p-1">
+                        <div className="flex flex-col items-center justify-center h-full gap-0.5">
                           <div className="text-lg">👕</div>
-                          <div className="text-[10px] font-medium">{item.sub_category || item.category}</div>
+                          <div className="text-[9px] font-medium px-1 truncate">
+                            {item.sub_category || item.category}
+                          </div>
+                        </div>
+                      )}
+                      {isSelected && (
+                        <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
+                          ✓
                         </div>
                       )}
                     </button>
@@ -500,33 +534,30 @@ export default function OutfitLoggerPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Notes (optional)</Label>
-              <Input
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="How did you feel? Any notes?"
-              />
-            </div>
+            <Input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Notes (optional)"
+              className="flex-shrink-0"
+            />
 
             {saveError && (
-              <div className="bg-destructive/10 border border-destructive/50 text-destructive px-3 py-2 rounded-md text-sm">
+              <div className="bg-destructive/10 border border-destructive/50 text-destructive px-3 py-2 rounded-md text-sm flex-shrink-0">
                 {saveError}
               </div>
             )}
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 flex-shrink-0">
               <Button
                 className="flex-1"
                 onClick={handleSaveLog}
                 disabled={saving || (selectedItems.size === 0 && !editingLog)}
               >
-                {saving ? "Saving..." : editingLog ? "Update Log" : "Save Log"}
+                {saving ? "Saving..." : editingLog ? "Update" : "Save"}
               </Button>
               {editingLog && (
                 <Button
                   variant="destructive"
-                  className="flex-1"
                   onClick={() => {
                     if (selectedDate && editingLog) {
                       const dateStr = selectedDate.toISOString().split("T")[0];
@@ -540,7 +571,6 @@ export default function OutfitLoggerPage() {
               )}
               <Button
                 variant="outline"
-                className="flex-1"
                 onClick={() => { setShowLogSheet(false); resetForm(); }}
               >
                 Cancel
