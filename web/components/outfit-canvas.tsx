@@ -1,21 +1,14 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { imageUrl } from "@/lib/api";
+import { outfitConfig } from "@/lib/outfit-config";
 import type { ClothingItem, OutfitItem } from "@/lib/types";
 
 interface Props {
   items: Array<OutfitItem | ClothingItem>;
   className?: string;
 }
-
-const categoryOrder = ["Outerwear", "Top", "Bottom", "Shoes", "Accessory"];
-const categoryWeight: Record<string, number> = {
-  Outerwear: 1.3,
-  Top: 1.1,
-  Bottom: 1.1,
-  Shoes: 0.7,
-  Accessory: 0.5,
-};
 
 function isOutfitItem(i: ClothingItem | OutfitItem): i is OutfitItem {
   return "position_x" in i;
@@ -24,7 +17,7 @@ function isOutfitItem(i: ClothingItem | OutfitItem): i is OutfitItem {
 export function hasCustomLayout(items: Array<OutfitItem | ClothingItem>): boolean {
   return items.some((i) => {
     if (!isOutfitItem(i)) return false;
-    return i.position_x !== 0 || i.position_y !== 0 || i.scale !== 1;
+    return i.position_x !== 0 || i.position_y !== 0;
   });
 }
 
@@ -34,7 +27,28 @@ function itemSrc(item: ClothingItem): string | null {
   return null;
 }
 
+function useOutfitConfig() {
+  return useSyncExternalStore(
+    outfitConfig.subscribe,
+    outfitConfig.get,
+    outfitConfig.getServerSnapshot,
+  );
+}
+
+// Mannequin slots: vertical region each category occupies on the "body"
+// top = % from top of container, height = % of container height
+const mannequinSlots: Record<string, { top: number; height: number; zIndex: number }> = {
+  Outerwear: { top: 0, height: 50, zIndex: 3 },
+  Top:       { top: 2, height: 45, zIndex: 2 },
+  Bottom:    { top: 38, height: 42, zIndex: 1 },
+  Shoes:     { top: 76, height: 24, zIndex: 4 },
+  Accessory: { top: 0, height: 20, zIndex: 5 },
+};
+
+const defaultSlot = { top: 20, height: 40, zIndex: 1 };
+
 export function OutfitCanvas({ items, className }: Props) {
+  const cfg = useOutfitConfig();
   const useCustom = hasCustomLayout(items);
 
   if (useCustom) {
@@ -49,13 +63,13 @@ export function OutfitCanvas({ items, className }: Props) {
           const src = itemSrc(item);
           const layout = isOutfitItem(item)
             ? item
-            : { position_x: 0, position_y: 0, scale: 1, z_index: 0 };
+            : { position_x: 0, position_y: 0, z_index: 0 };
           return (
             <div
               key={item.id ?? idx}
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{
-                transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${layout.scale})`,
+                transform: `translate(${layout.position_x}%, ${layout.position_y}%)`,
                 zIndex: layout.z_index,
               }}
             >
@@ -63,8 +77,7 @@ export function OutfitCanvas({ items, className }: Props) {
                 <img
                   src={src}
                   alt={item.category}
-                  className="max-w-[60%] max-h-[60%] object-contain"
-                  style={{ transform: `scale(${item.display_scale ?? 1})` }}
+                  className="w-full h-full object-contain"
                 />
               ) : (
                 <span className="text-xl text-muted-foreground/50">👕</span>
@@ -76,37 +89,39 @@ export function OutfitCanvas({ items, className }: Props) {
     );
   }
 
+  // Mannequin composition: position each item in its body-region slot
   const sorted = [...items].sort(
-    (a, b) => categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category),
+    (a, b) => cfg.categoryOrder.indexOf(a.category) - cfg.categoryOrder.indexOf(b.category),
   );
-  const overlap = items.length > 2 ? -12 : -6;
 
   return (
     <div
-      className={`flex flex-col items-center justify-center w-full h-full py-2 ${className ?? ""}`}
+      className={`relative w-full h-full ${className ?? ""}`}
     >
       {sorted.length === 0 ? (
-        <span className="text-3xl text-muted-foreground/30">✨</span>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-3xl text-muted-foreground/30">✨</span>
+        </div>
       ) : (
         sorted.map((item, idx) => {
           const src = itemSrc(item);
-          const weight = categoryWeight[item.category] ?? 1;
-          const scale = item.display_scale ?? 1;
+          const slot = mannequinSlots[item.category] ?? defaultSlot;
           return (
             <div
               key={item.id ?? idx}
-              className="w-3/4 flex items-center justify-center min-h-0"
+              className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none"
               style={{
-                flex: `${weight} 1 0%`,
-                marginTop: idx > 0 ? `${overlap}%` : 0,
+                top: `${slot.top}%`,
+                height: `${slot.height}%`,
+                width: "80%",
+                zIndex: slot.zIndex,
               }}
             >
               {src ? (
                 <img
                   src={src}
                   alt={item.category}
-                  className="max-w-full max-h-full object-contain"
-                  style={{ transform: `scale(${scale})` }}
+                  className="w-full h-full object-contain"
                 />
               ) : (
                 <span className="text-xl text-muted-foreground/50">👕</span>

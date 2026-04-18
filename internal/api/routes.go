@@ -62,4 +62,6 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		stats.GET("/utility/stale-data", h.DetectStaleData)
 		stats.POST("/utility/fix-stale-data", h.FixStaleData)
 	}
+
+	api.POST("/admin/recrop-images", h.RecropAllImages)
 }

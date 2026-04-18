@@ -3,7 +3,6 @@
 import { useRef, useState, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import { ChevronUp, ChevronDown, RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { imageUrl, updateOutfitLayout } from "@/lib/api";
 import type { OutfitItem, Outfit, OutfitItemLayout } from "@/lib/types";
 
@@ -16,11 +15,10 @@ interface Props {
 interface Layout {
   position_x: number;
   position_y: number;
-  scale: number;
   z_index: number;
 }
 
-const defaultLayout: Layout = { position_x: 0, position_y: 0, scale: 1, z_index: 0 };
+const defaultLayout: Layout = { position_x: 0, position_y: 0, z_index: 0 };
 
 function itemSrc(item: OutfitItem): string | null {
   if (item.image_status === "done" && item.image_url) return imageUrl(item.image_url);
@@ -37,7 +35,6 @@ export function OutfitLayoutEditor({ outfit, onSave, onCancel }: Props) {
       map[it.id] = {
         position_x: it.position_x,
         position_y: it.position_y,
-        scale: it.scale,
         z_index: it.z_index,
       };
     }
@@ -104,6 +101,7 @@ export function OutfitLayoutEditor({ outfit, onSave, onCancel }: Props) {
       const payload: OutfitItemLayout[] = items.map((it) => ({
         clothing_item_id: it.id,
         ...layouts[it.id],
+        scale: 1,
       }));
       const updated = await updateOutfitLayout(outfit.id, payload);
       onSave(updated);
@@ -156,7 +154,7 @@ export function OutfitLayoutEditor({ outfit, onSave, onCancel }: Props) {
                 isSelected ? "outline outline-2 outline-primary outline-offset-[-4px]" : ""
               }`}
               style={{
-                transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${layout.scale})`,
+                transform: `translate(${layout.position_x}%, ${layout.position_y}%)`,
                 zIndex: layout.z_index + 100,
               }}
             >
@@ -165,7 +163,7 @@ export function OutfitLayoutEditor({ outfit, onSave, onCancel }: Props) {
                   src={src}
                   alt={item.category}
                   draggable={false}
-                  className="max-w-[60%] max-h-[60%] object-contain pointer-events-none"
+                  className="w-full h-full object-contain pointer-events-none"
                 />
               ) : (
                 <span className="text-xl text-muted-foreground/50">👕</span>
@@ -194,20 +192,6 @@ export function OutfitLayoutEditor({ outfit, onSave, onCancel }: Props) {
 
         {selected && selectedId && (
           <div className="space-y-2 p-3 rounded-lg bg-muted/40">
-            <div className="space-y-1">
-              <Label className="text-xs">Scale: {selected.scale.toFixed(2)}x</Label>
-              <input
-                type="range"
-                min="0.4"
-                max="2"
-                step="0.05"
-                value={selected.scale}
-                onChange={(e) =>
-                  updateLayout(selectedId, { scale: parseFloat(e.target.value) })
-                }
-                className="w-full"
-              />
-            </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
                 Layer: {selected.z_index}

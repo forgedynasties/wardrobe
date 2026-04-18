@@ -61,6 +61,10 @@ func (w *Worker) process(job domain.ImageJob) {
 		return
 	}
 
+	if err := CropTransparent(cleanPath, 8); err != nil {
+		log.Printf("[worker] crop failed for %s: %v", job.ItemID, err)
+	}
+
 	err = w.store.UpdateImageStatus(
 		job.ItemID,
 		"done",

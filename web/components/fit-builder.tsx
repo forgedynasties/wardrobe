@@ -120,7 +120,6 @@ export function FitBuilder({ onSelect, initialItems }: FitBuilderProps) {
                       src={src}
                       alt={item.category}
                       className="object-contain w-full h-full p-2"
-                      style={{ transform: `scale(${item.display_scale ?? 1})` }}
                     />
                   ) : (
                     <span className="text-3xl">👕</span>

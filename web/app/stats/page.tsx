@@ -257,7 +257,6 @@ export default function StatsPage() {
                         src={imgSrc}
                         alt={item.category}
                         className="w-full h-full object-cover"
-                        style={{ transform: `scale(${item.display_scale ?? 1})` }}
                       />
                     ) : (
                       <div className="text-4xl">👕</div>

@@ -494,3 +494,24 @@ func (h *Handler) FixStaleData(c *gin.Context) {
 	})
 }
 
+func (h *Handler) RecropAllImages(c *gin.Context) {
+	items, err := h.store.ListItems()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	cropped, failed := 0, 0
+	for _, it := range items {
+		if it.ImageStatus != "done" {
+			continue
+		}
+		path := h.imageStore.CleanPath(it.ID)
+		if err := vision.CropTransparent(path, 8); err != nil {
+			failed++
+			continue
+		}
+		cropped++
+	}
+	c.JSON(http.StatusOK, gin.H{"cropped": cropped, "failed": failed})
+}
+

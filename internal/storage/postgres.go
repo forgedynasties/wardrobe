@@ -1231,7 +1231,7 @@ func (s *Store) GetWardrobeStats() (*domain.WardrobeStats, error) {
 	for rows.Next() {
 		var ti domain.TopItem
 		if err := rows.Scan(&ti.Item.ID, &ti.Item.Category, &ti.Item.SubCategory, pq.Array(&ti.Item.Colors), &ti.Item.Material,
-			&ti.Item.ImageURL, &ti.Item.RawImageURL, &ti.Item.ImageStatus, &ti.Item.LastWorn, &ti.Item.CreatedAt, &ti.Item.UpdatedAt, &ti.WearCount); err != nil {
+			&ti.Item.ImageURL, &ti.Item.RawImageURL, &ti.Item.ImageStatus, &ti.Item.DisplayScale, &ti.Item.LastWorn, &ti.Item.CreatedAt, &ti.Item.UpdatedAt, &ti.WearCount); err != nil {
 			return nil, err
 		}
 		stats.TopWornItems = append(stats.TopWornItems, ti)
