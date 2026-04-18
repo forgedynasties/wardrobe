@@ -348,7 +348,7 @@ export default function OutfitLoggerPage() {
                       <div className="absolute top-1/2 -right-1 md:-right-2 h-0.5 w-1 md:w-2 bg-primary/50 -translate-y-1/2 pointer-events-none" />
                     )}
                     <div
-                      className={`absolute top-1 left-1.5 text-[10px] md:text-xs font-medium leading-none ${
+                      className={`absolute top-1 left-1.5 text-[10px] md:text-xs font-medium leading-none z-20 ${
                         isToday ? "text-primary" : "text-muted-foreground"
                       }`}
                     >
@@ -359,66 +359,14 @@ export default function OutfitLoggerPage() {
                         {itemCount === 0 && (
                           <div className="w-2 h-2 rounded-full bg-primary" />
                         )}
-                        {itemCount === 1 && (() => {
-                          const item = sortedItems[0];
-                          const src = itemImgSrc(item);
-                          return src ? (
-                            <img
-                              src={src}
-                              alt={item.category}
-                              className="w-full h-full object-contain p-2 md:p-3"
-                              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                          ) : null;
-                        })()}
-                        {itemCount >= 2 && itemCount <= 3 && (
-                          <div className="flex items-center justify-center pt-2">
-                            {sortedItems.map((item, i) => {
-                              const src = itemImgSrc(item);
-                              return src ? (
-                                <img
-                                  key={item.id}
-                                  src={src}
-                                  alt={item.category}
-                                  className={`w-8 h-8 md:w-12 md:h-12 rounded object-contain ${
-                                    i > 0 ? "-ml-3 md:-ml-4" : ""
-                                  }`}
-                                  style={{ zIndex: sortedItems.length - i }}
-                                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
-                                />
-                              ) : null;
-                            })}
+                        {itemCount >= 1 && (
+                          <div className="absolute inset-[10px]">
+                            <OutfitCanvas items={sortedItems.slice(0, 4)} />
                           </div>
                         )}
-                        {itemCount >= 4 && (
-                          <div className="grid grid-cols-2 gap-0.5 w-full h-full pt-3">
-                            {sortedItems.slice(0, 4).map((item) => {
-                              const src = itemImgSrc(item);
-                              return src ? (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center justify-center overflow-hidden"
-                                >
-                                  <img
-                                    src={src}
-                                    alt={item.category}
-                                    className="max-w-full max-h-full object-contain"
-                                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                                      e.currentTarget.style.display = "none";
-                                    }}
-                                  />
-                                </div>
-                              ) : null;
-                            })}
-                          </div>
-                        )}
-                        {overflow > 0 && (
-                          <div className="absolute bottom-1 right-1 text-[9px] md:text-[10px] font-medium text-muted-foreground bg-muted/80 rounded-full px-1.5 py-0.5 leading-none">
-                            +{overflow}
+                        {sortedItems.length > 4 && (
+                          <div className="absolute bottom-1 right-1 text-[9px] md:text-[10px] font-medium text-muted-foreground bg-muted/80 rounded-full px-1.5 py-0.5 leading-none z-20">
+                            +{sortedItems.length - 4}
                           </div>
                         )}
                         <button
@@ -428,7 +376,7 @@ export default function OutfitLoggerPage() {
                               setDeleteTarget({ dateStr, log });
                             }
                           }}
-                          className="absolute top-0.5 right-1 text-muted-foreground hover:text-destructive text-xs opacity-0 group-hover:opacity-100 transition-opacity leading-none"
+                          className="absolute top-0.5 right-1 text-muted-foreground hover:text-destructive text-xs opacity-0 group-hover:opacity-100 transition-opacity leading-none z-20"
                         >
                           &times;
                         </button>

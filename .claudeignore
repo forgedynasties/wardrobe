@@ -1,0 +1,27 @@
+# Images
+uploads/
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+
+# Build
+bin/
+dist/
+
+# Dependencies
+vendor/
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
