@@ -25,7 +25,8 @@ export function ItemCard({ item }: ItemCardProps) {
             <img
               src={src}
               alt={`${item.category} ${item.sub_category}`}
-              className="object-contain w-full h-full p-1"
+              className="object-contain w-full h-full"
+              style={{ transform: `scale(${item.display_scale || 1})` }}
             />
           ) : (
             <span className="text-4xl text-muted-foreground/50">

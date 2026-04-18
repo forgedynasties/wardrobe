@@ -35,16 +35,6 @@ function useOutfitConfig() {
   );
 }
 
-// Mannequin slots: vertical region each category occupies on the "body"
-// top = % from top of container, height = % of container height
-const mannequinSlots: Record<string, { top: number; height: number; zIndex: number }> = {
-  Outerwear: { top: 0, height: 50, zIndex: 3 },
-  Top:       { top: 2, height: 45, zIndex: 2 },
-  Bottom:    { top: 38, height: 42, zIndex: 1 },
-  Shoes:     { top: 76, height: 24, zIndex: 4 },
-  Accessory: { top: 0, height: 20, zIndex: 5 },
-};
-
 const defaultSlot = { top: 20, height: 40, zIndex: 1 };
 
 export function OutfitCanvas({ items, className }: Props) {
@@ -69,7 +59,7 @@ export function OutfitCanvas({ items, className }: Props) {
               key={item.id ?? idx}
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{
-                transform: `translate(${layout.position_x}%, ${layout.position_y}%)`,
+                transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${item.display_scale || 1})`,
                 zIndex: layout.z_index,
               }}
             >
@@ -105,16 +95,17 @@ export function OutfitCanvas({ items, className }: Props) {
       ) : (
         sorted.map((item, idx) => {
           const src = itemSrc(item);
-          const slot = mannequinSlots[item.category] ?? defaultSlot;
+          const slot = cfg.mannequinSlots[item.category] ?? defaultSlot;
           return (
             <div
               key={item.id ?? idx}
-              className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none"
+              className="absolute left-1/2 flex items-center justify-center pointer-events-none"
               style={{
                 top: `${slot.top}%`,
                 height: `${slot.height}%`,
                 width: "80%",
                 zIndex: slot.zIndex,
+                transform: `translateX(-50%) scale(${item.display_scale || 1})`,
               }}
             >
               {src ? (

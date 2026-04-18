@@ -145,7 +145,8 @@ export default function ItemDetailPage() {
           <img
             src={imgSrc}
             alt={`${item.category} ${item.sub_category}`}
-            className="object-contain w-full h-full p-4"
+            className="object-contain w-full h-full"
+            style={{ transform: `scale(${item.display_scale || 1})` }}
           />
         ) : (
           <ImageUpload onFileSelect={handleReupload} uploading={saving} />
