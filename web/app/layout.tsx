@@ -4,6 +4,8 @@ import "./globals.css";
 import { NavBar } from "@/components/nav-bar";
 import { OutfitAdminPanel } from "@/components/outfit-admin-panel";
 
+const SHOW_OUTFIT_LAYOUT_ADMIN = false;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -32,7 +34,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <main className="flex-1 pb-20">{children}</main>
         <NavBar />
-        <OutfitAdminPanel />
+        {SHOW_OUTFIT_LAYOUT_ADMIN && <OutfitAdminPanel />}
       </body>
     </html>
   );
