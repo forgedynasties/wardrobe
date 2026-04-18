@@ -829,10 +829,11 @@ func (s *Store) GetOutfitLogByDate(wearDate time.Time) (*domain.OutfitLog, error
 }
 
 func (s *Store) UpdateOutfitLog(logID uuid.UUID, notes string, itemIDs []uuid.UUID) (*domain.OutfitLog, error) {
-	// Update the log
+	// Detach any auto-linked outfit so outfit_log_items becomes authoritative for this log.
+	// Without this, GetOutfitLogs would read items from the linked outfit and ignore updates.
 	_, err := s.db.Exec(`
 		UPDATE outfit_logs
-		SET notes = $1, updated_at = NOW()
+		SET notes = $1, outfit_id = NULL, updated_at = NOW()
 		WHERE id = $2`,
 		notes, logID)
 	if err != nil {
