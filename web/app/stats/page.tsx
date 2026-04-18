@@ -256,7 +256,7 @@ export default function StatsPage() {
                       <img
                         src={imgSrc}
                         alt={item.category}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain p-2"
                       />
                     ) : (
                       <div className="text-4xl">👕</div>

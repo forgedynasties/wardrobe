@@ -295,7 +295,7 @@ export default function OutfitLoggerPage() {
                                   key={item.id}
                                   src={imgSrc}
                                   alt={item.category}
-                                  className="w-5 h-5 md:w-9 md:h-9 rounded object-cover"
+                                  className="w-5 h-5 md:w-9 md:h-9 rounded object-contain"
                                   onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                                     e.currentTarget.style.display = "none";
                                   }}

@@ -1,0 +1,462 @@
+app:
+  name: Wardrobe
+  description: Digital wardrobe manager — catalog clothes, build outfits, track wear history
+  stack:
+    frontend: Next.js (React 18, App Router)
+    backend: Go (Gin framework)
+    database: PostgreSQL
+    styling: Tailwind CSS + Shadcn/ui
+    images: PNG only, background-removed
+  theme: Dark mode (forced)
+  font: Geist (sans + mono)
+  design: Mobile-first, responsive (sm/md breakpoints)
+
+layout:
+  root:
+    structure: |
+      <html dark>
+        <body>
+          <main pb-20>{pages}</main>
+          <NavBar />           # bottom nav, always visible
+          <OutfitAdminPanel /> # hidden gear icon, bottom-left
+        </body>
+      </html>
+
+  navigation:
+    type: Bottom tab bar (fixed)
+    tabs:
+      - label: Wardrobe
+        icon: Shirt
+        route: /wardrobe
+      - label: Outfits
+        icon: Sparkles
+        route: /outfits
+      - label: Logger
+        icon: CalendarDays
+        route: /logger
+      - label: Stats
+        icon: BarChart3
+        route: /stats
+    behavior:
+      active_indicator: Underline + bold text
+      uses_pathname: true
+
+pages:
+
+  home:
+    route: /
+    behavior: Redirects to /wardrobe
+
+  wardrobe:
+    route: /wardrobe
+    purpose: Browse and manage all clothing items
+    layout:
+      - header: "Wardrobe" title + "+ Add" button (top-right)
+      - category_filters: Horizontal badge row (All, Top, Bottom, Outerwear, Shoes, Accessory)
+      - item_grid: Responsive grid (2col mobile, 3col tablet, 4col desktop)
+      - fab: Floating "+ Add" on mobile (bottom-right, above navbar)
+    states:
+      loading: Skeleton grid
+      empty: "No items yet" CTA pointing to add flow
+    components: [ItemGrid, ItemCard, Badge, Button]
+
+  add_item:
+    route: /items/new
+    purpose: Create new clothing item with image
+    layout:
+      - back_button: Arrow back to /wardrobe
+      - image_upload: Drag-drop or click-to-browse area
+      - form:
+          - category: Dropdown (required) — Top, Bottom, Outerwear, Shoes, Accessory
+          - sub_category: Text input (type/style)
+          - colors: ColorPicker (multi-select presets + custom hex)
+          - material: Text input
+      - submit: "Add to wardrobe" button
+    flow: Upload image → fill metadata → POST createItem + uploadImage → redirect to wardrobe
+    components: [ImageUpload, ColorPicker, Select, Input, Label, Button]
+
+  item_detail:
+    route: /items/[id]
+    purpose: View, edit, delete individual item
+    layout:
+      - header: Back button + Edit + Delete icons
+      - image_display:
+          aspect: Square
+          modes: Clean (processed) | Raw toggle via badges
+          scale: Uses item.display_scale transform
+          reupload: Tap image area when no image
+      - processing_overlay: "Processing..." pulse when image_status=processing
+      - metadata_view:
+          - category badge + sub_category text
+          - color swatches with hex codes
+          - material text
+          - last worn date
+      - stats_section:
+          - outfit_count: How many outfits use this item
+          - wear_count: Total times worn
+          - worn_status: Yes/No indicator
+    edit_mode:
+      - category dropdown
+      - sub_category input
+      - color picker
+      - material input
+      - save/cancel buttons
+    delete: Confirmation dialog → redirects to /wardrobe
+    components: [ImageUpload, ColorPicker, Badge, Dialog, Select, Skeleton]
+
+  outfits:
+    route: /outfits
+    purpose: Browse outfits, get recommendations, discover new combos
+    layout:
+      - header: "Outfits" title + "+ New Outfit" button
+      - stats_dashboard: OutfitStats component (total, wears, avg, never-worn, needs-rotation)
+      - recommendations:
+          header: "Recommended" with sparkle icon
+          content: Top 5 algorithm-scored outfits with reason
+      - suggestions:
+          header: "New combos to try" with wand icon
+          content: 3 suggested item combos with shuffle + save buttons
+      - sort_controls: Dropdown (Recent, Most-worn, Least-worn, Last-worn, Never-worn)
+      - outfit_grid: Responsive grid of OutfitCards
+      - fab: Floating "+ New" on mobile
+    states:
+      loading: Skeleton cards
+      empty: "No outfits yet" CTA
+    components: [OutfitCard, OutfitStats, OutfitRecommendations, OutfitSuggestions, Select, Skeleton]
+
+  create_outfit:
+    route: /outfits/new
+    purpose: Build a new outfit from wardrobe items
+    layout:
+      - header: Back button + title
+      - name_input: Optional outfit name (auto-generated if empty)
+      - fit_builder: Full item selection grid with category filters
+      - submit: "Create Outfit" with selected count
+    flow: Name → select items → POST createOutfit → addOutfitItem for each → redirect to outfit detail
+    components: [FitBuilder, Input, Label, Button]
+
+  outfit_detail:
+    route: /outfits/[id]
+    purpose: View outfit, wear it, edit layout, manage items
+    layout:
+      - header: Back button + Edit name + Delete
+      - canvas:
+          aspect: 3:4
+          rendering: OutfitCanvas (mannequin or custom layout)
+      - metadata: Outfit name, item count, usage_count, last_worn
+      - actions:
+          - wear_today: "Wear Today" button → increments usage_count
+          - edit_layout: Opens OutfitLayoutEditor (drag-drop positioning)
+          - reset_layout: Clears custom positions back to mannequin
+          - add_items: Opens FitBuilder in bottom sheet
+      - item_list: Individual items with hover-to-remove (X button)
+    delete: Confirmation dialog → redirect to /outfits
+    components: [OutfitCanvas, OutfitLayoutEditor, FitBuilder, Dialog, Sheet, Skeleton]
+
+  logger:
+    route: /logger
+    purpose: Calendar-based wear tracking
+    layout:
+      - header: "Outfit Logger" title
+      - month_nav: Previous/Next month buttons + "Month Year" label
+      - calendar_grid:
+          - 7-column weekday headers (S M T W T F S)
+          - Day cells with:
+              - date number
+              - item thumbnails (up to 4 shown) if logged
+              - click to open log sheet
+      - log_sheet: Bottom sheet for creating/editing log
+          - date_display: Formatted selected date
+          - outfit_select: Optional outfit dropdown
+          - item_grid: Selectable items with checkmarks
+          - notes_input: Optional text
+          - save/delete buttons
+    states:
+      loading: Skeleton calendar
+    components: [Card, Input, Sheet, Dialog, Select, Skeleton]
+
+  stats:
+    route: /stats
+    purpose: Analytics dashboard for wardrobe insights
+    layout:
+      - header: "Wardrobe Stats" + subtitle
+      - wardrobe_overview:
+          cards: [Total Items, Never Worn (with %), Total Outfits, Never Worn Outfits]
+          grid: 4 columns on desktop
+      - items_by_category:
+          visualization: Horizontal bar chart per category
+          shows: Category name + bar + count
+      - outfit_statistics:
+          cards: [Total Wears, Avg Wears/Outfit, This Month]
+          grid: 3 columns
+      - wears_by_day_of_week:
+          visualization: 7-column vertical bar chart (Sun–Sat)
+          shows: Bar height proportional to count + label + count
+      - color_palette:
+          visualization: Grid of color swatches (4/6/8 columns responsive)
+          shows: Color circle + hex code
+      - top_worn_items:
+          cards: Item image + wear count badge + category + colors
+          grid: 3 columns
+    behavior:
+      auto_refresh: Every 3 seconds
+      visibility_aware: Pauses polling when tab hidden
+    components: [Card, Skeleton]
+
+components:
+
+  item_card:
+    purpose: Clickable item thumbnail in grid
+    features:
+      - Aspect-square image with display_scale transform
+      - Color dot indicators (top-right, max 3)
+      - Processing overlay
+      - Hover ring + shadow
+      - Sub-category label + category/material subtitle
+    links_to: /items/[id]
+
+  item_grid:
+    purpose: Responsive grid container for ItemCards
+    grid: 2col → 3col → 4col
+    states: [loading (skeletons), empty (CTA)]
+
+  outfit_card:
+    purpose: Clickable outfit thumbnail in grid
+    features:
+      - 3:4 aspect OutfitCanvas preview
+      - Outfit name, item count, wear count
+      - Hover ring
+    links_to: /outfits/[id]
+
+  outfit_canvas:
+    purpose: Renders outfit items as composed image
+    modes:
+      mannequin:
+        description: Default mode — positions items on vertical body anchor
+        slots:
+          Outerwear: { top: 0%, height: 50%, z: 3 }
+          Top:       { top: 2%, height: 45%, z: 2 }
+          Bottom:    { top: 38%, height: 42%, z: 1 }
+          Shoes:     { top: 76%, height: 24%, z: 4 }
+          Accessory: { top: 0%, height: 20%, z: 5 }
+        centering: Items at 80% width, centered on vertical midline
+        applies: display_scale per item
+      custom_layout:
+        description: User-positioned items via layout editor
+        positioning: Absolute with translate(x%, y%)
+        z_ordering: Per-item z_index
+        applies: display_scale per item
+    detection: Custom layout if any item has non-zero position_x/position_y
+
+  outfit_layout_editor:
+    purpose: Drag-drop editor for custom item positioning
+    features:
+      - Pointer-event based dragging
+      - Z-index layer controls (up/down buttons)
+      - Category tab selection
+      - Reset individual or all items
+      - Save persists to API
+    canvas: 3:4 aspect ratio, -80% to +80% position clamp
+
+  fit_builder:
+    purpose: Item selection UI for building/editing outfits
+    features:
+      - Category filter tabs
+      - Selectable item grid with checkmark overlay
+      - Sticky header with count
+      - Apply button to confirm
+    states: [loading, error (connection), empty (no items)]
+
+  color_picker:
+    purpose: Multi-color selection with presets
+    presets: 16 colors (Black → Cream)
+    features:
+      - Click to toggle preset colors
+      - Selected chips with remove button
+      - Native color input for custom
+      - Hex text input + Add button
+      - Deduplication
+
+  image_upload:
+    purpose: Drag-drop file upload area
+    features:
+      - Drag-over visual feedback
+      - File picker on click
+      - Preview display
+      - Upload spinner
+      - Accepts images only
+
+  outfit_stats:
+    purpose: Quick stats dashboard for outfits page
+    metrics:
+      - total_outfits
+      - total_wears
+      - avg_wears_per_outfit
+      - never_worn_count
+      - most_worn outfit
+      - needs_rotation (not worn in 7+ days)
+
+  outfit_recommendations:
+    purpose: Algorithm-scored outfit suggestions
+    shows: OutfitCanvas preview + reason + score
+
+  outfit_suggestions:
+    purpose: New item combos to try
+    features:
+      - Shuffle button to refresh
+      - Save button to create outfit from suggestion
+      - Reason badge per suggestion
+
+  outfit_admin_panel:
+    purpose: Hidden config panel for fine-tuning outfit rendering
+    trigger: Gear icon (fixed, bottom-left)
+    panel: Right-side slide-out drawer
+    controls:
+      spacing:
+        - overlap_small: Range -40 to 20%
+        - overlap_large: Range -40 to 20%
+        - overlap_threshold: Range 1 to 6
+      per_category_z_index: Slider per category (0–10)
+      mannequin_slots:
+        per_category:
+          - top: Range 0–90%
+          - height: Range 5–100%
+          - z_index: Range 0–10
+      render_order: Reorderable category list (up/down buttons)
+      reset: Restore all defaults
+    persistence: localStorage
+
+config:
+
+  outfit_config:
+    storage: localStorage (key: wardrobe.outfitConfig.v2)
+    fields:
+      categoryOrder: [Outerwear, Top, Bottom, Shoes, Accessory]
+      categoryZIndex: { Bottom: 1, Top: 2, Outerwear: 3, Shoes: 4, Accessory: 5 }
+      mannequinSlots:
+        Outerwear: { top: 0, height: 50, zIndex: 3 }
+        Top:       { top: 2, height: 45, zIndex: 2 }
+        Bottom:    { top: 38, height: 42, zIndex: 1 }
+        Shoes:     { top: 76, height: 24, zIndex: 4 }
+        Accessory: { top: 0, height: 20, zIndex: 5 }
+      overlapSmall: -6
+      overlapLarge: -12
+      overlapThreshold: 2
+    api:
+      get: Returns current config
+      set: Patch and persist
+      reset: Restore defaults
+      subscribe: React 18 useSyncExternalStore compatible
+      help: Console documentation
+
+api:
+  base_url: NEXT_PUBLIC_API_URL || http://localhost:8081
+
+  items:
+    list:         GET    /api/items
+    get:          GET    /api/items/{id}
+    create:       POST   /api/items
+    update:       PUT    /api/items/{id}
+    delete:       DELETE /api/items/{id}
+    upload_image: POST   /api/items/{id}/image  (FormData)
+    stats:        GET    /api/items/{id}/stats
+
+  outfits:
+    list:            GET    /api/outfits
+    get:             GET    /api/outfits/{id}
+    create:          POST   /api/outfits
+    update:          PUT    /api/outfits/{id}
+    delete:          DELETE /api/outfits/{id}
+    add_item:        POST   /api/outfits/{id}/items
+    remove_item:     DELETE /api/outfits/{id}/items/{itemId}
+    update_layout:   PUT    /api/outfits/{id}/layout
+    wear:            POST   /api/outfits/{id}/wear
+    recommendations: GET    /api/outfits/recommendations?limit=5
+    suggestions:     GET    /api/outfits/suggestions?count=3
+
+  outfit_logs:
+    create:       POST   /api/outfit-logs
+    list:         GET    /api/outfit-logs?start_date=X&end_date=Y
+    get_by_date:  GET    /api/outfit-logs/{date}
+    update:       PUT    /api/outfit-logs/{id}
+    delete:       DELETE /api/outfit-logs/{id}
+
+  stats:
+    wardrobe:   GET  /api/stats
+    stale_data: GET  /api/stats/utility/stale-data
+    fix_stale:  POST /api/stats/utility/fix-stale-data
+
+  admin:
+    recrop: POST /api/admin/recrop-images
+
+data_model:
+
+  clothing_item:
+    id: UUID
+    category: string (Top | Bottom | Outerwear | Shoes | Accessory)
+    sub_category: string
+    colors: string[] (hex)
+    material: string
+    image_url: string (processed, bg-removed)
+    raw_image_url: string (original upload)
+    image_status: string (pending | processing | done)
+    display_scale: number (default 1)
+    last_worn: datetime | null
+    created_at: datetime
+    updated_at: datetime
+
+  outfit:
+    id: UUID
+    name: string
+    usage_count: number
+    last_worn: datetime | null
+    items: OutfitItem[] (clothing items with position data)
+    created_at: datetime
+    updated_at: datetime
+
+  outfit_item:
+    extends: ClothingItem
+    position_x: number (% offset)
+    position_y: number (% offset)
+    scale: number
+    z_index: number
+
+  outfit_log:
+    id: UUID
+    outfit_id: UUID | null
+    wear_date: date
+    notes: string
+    items: ClothingItem[]
+    created_at: datetime
+    updated_at: datetime
+
+ux_patterns:
+
+  image_handling:
+    format: PNG only, background-removed
+    pipeline: Upload raw → async processing → bg removal → done
+    display: Processed preferred, raw fallback, emoji placeholder
+    scaling: display_scale applied everywhere (cards, detail, outfits)
+
+  loading_states:
+    strategy: Skeleton placeholders matching final layout
+    used_in: All list pages, detail pages, stats
+
+  empty_states:
+    strategy: Friendly message + CTA to create first item/outfit
+    used_in: Wardrobe, Outfits, FitBuilder
+
+  error_handling:
+    strategy: Console errors, graceful fallbacks
+    connection_errors: "Can't reach server" message in FitBuilder
+
+  mobile_first:
+    fab: Floating action buttons on wardrobe + outfits pages
+    sheets: Bottom sheets for item selection and log editing
+    touch: Pointer events for drag-drop (works on mobile)
+    navbar: Fixed bottom tab bar
+
+  persistence:
+    outfit_config: localStorage (survives refresh)
+    app_data: PostgreSQL via API
+    images: Local /uploads directory
