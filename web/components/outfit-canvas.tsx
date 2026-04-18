@@ -96,16 +96,19 @@ export function OutfitCanvas({ items, className }: Props) {
         sorted.map((item, idx) => {
           const src = itemSrc(item);
           const slot = cfg.mannequinSlots[item.category] ?? defaultSlot;
+          const hasCustomX = slot.left !== undefined;
+          const slotWidth = slot.width ?? 80;
           return (
             <div
               key={item.id ?? idx}
-              className="absolute left-1/2 flex items-center justify-center pointer-events-none"
+              className="absolute flex items-center justify-center pointer-events-none"
               style={{
                 top: `${slot.top}%`,
+                left: hasCustomX ? `${slot.left}%` : "50%",
                 height: `${slot.height}%`,
-                width: "80%",
+                width: `${slotWidth}%`,
                 zIndex: slot.zIndex,
-                transform: `translateX(-50%) scale(${item.display_scale || 1})`,
+                transform: `${hasCustomX ? "" : "translateX(-50%) "}scale(${item.display_scale || 1})`,
               }}
             >
               {src ? (

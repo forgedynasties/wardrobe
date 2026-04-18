@@ -2,6 +2,8 @@ export interface MannequinSlot {
   top: number;
   height: number;
   zIndex: number;
+  left?: number;
+  width?: number;
 }
 
 export interface OutfitConfig {
@@ -27,7 +29,7 @@ const defaults: OutfitConfig = {
     Top:       { top: 2, height: 45, zIndex: 2 },
     Bottom:    { top: 38, height: 42, zIndex: 1 },
     Shoes:     { top: 76, height: 24, zIndex: 4 },
-    Accessory: { top: 0, height: 20, zIndex: 5 },
+    Accessory: { top: 32, height: 14, zIndex: 5, left: 76, width: 22 },
   },
   overlapSmall: -6,
   overlapLarge: -12,
