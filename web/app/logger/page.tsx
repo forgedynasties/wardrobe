@@ -266,23 +266,25 @@ export default function OutfitLoggerPage() {
             return (
               <div
                 key={idx}
-                className={`min-h-14 md:min-h-24 rounded-lg border flex flex-col items-center justify-start cursor-pointer transition-all p-1 md:p-2 group ${
+                className={`relative min-h-14 md:min-h-24 rounded-lg border flex items-center justify-center cursor-pointer transition-all p-1 md:p-2 group ${
                   !day
                     ? "bg-transparent border-transparent cursor-default"
                     : hasLog
-                      ? "bg-primary/10 border-primary/30 hover:bg-primary/20"
+                      ? "bg-primary/5 border-primary/20 hover:bg-primary/10"
                       : "bg-card border-border hover:border-primary/50"
                 }`}
                 onClick={() => day && handleDateClick(day)}
               >
                 {day && (
                   <>
-                    <div className="text-xs md:text-sm font-medium mb-0.5">{day}</div>
+                    <div className="absolute top-1 left-1.5 text-[10px] md:text-xs font-medium text-muted-foreground leading-none">
+                      {day}
+                    </div>
                     {hasLog && log && (
-                      <div className="flex flex-col items-center gap-0.5 w-full flex-1">
-                        <div className="flex gap-0.5 md:gap-1 flex-wrap justify-center w-full items-center">
-                          {log.items && log.items.length > 0 ? (
-                            log.items.slice(0, 4).map((item) => {
+                      <>
+                        {log.items && log.items.length > 0 ? (
+                          <div className="flex gap-0.5 md:gap-1 flex-wrap justify-center items-center px-1 pt-3">
+                            {log.items.slice(0, 3).map((item) => {
                               const imgSrc =
                                 item.image_status === "done" && item.image_url
                                   ? imageUrl(item.image_url)
@@ -301,11 +303,16 @@ export default function OutfitLoggerPage() {
                                   }}
                                 />
                               ) : null;
-                            })
-                          ) : (
-                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                          )}
-                        </div>
+                            })}
+                          </div>
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                        )}
+                        {log.items && log.items.length > 3 && (
+                          <div className="absolute bottom-1 right-1 text-[9px] md:text-[10px] font-medium text-muted-foreground bg-muted/80 rounded-full px-1.5 py-0.5 leading-none">
+                            +{log.items.length - 3}
+                          </div>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -313,11 +320,11 @@ export default function OutfitLoggerPage() {
                               setDeleteTarget({ dateStr, log });
                             }
                           }}
-                          className="text-muted-foreground hover:text-destructive text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-0.5 right-1 text-muted-foreground hover:text-destructive text-xs opacity-0 group-hover:opacity-100 transition-opacity leading-none"
                         >
                           &times;
                         </button>
-                      </div>
+                      </>
                     )}
                   </>
                 )}
