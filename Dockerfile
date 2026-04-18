@@ -13,7 +13,7 @@ RUN apt-get update \
       libglib2.0-0 libgl1 ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir "rembg[cli]"
+RUN pip install --no-cache-dir "rembg[cli,cpu]"
 
 # Pre-download the default u2net model so first request isn't slow.
 RUN python -c "from rembg import new_session; new_session('u2net')"
