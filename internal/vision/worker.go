@@ -1,7 +1,9 @@
 package vision
 
 import (
+	"io"
 	"log"
+	"os"
 	"os/exec"
 	"sync"
 
@@ -53,25 +55,34 @@ func (w *Worker) run(id int) {
 func (w *Worker) process(job domain.ImageJob) {
 	cleanPath := w.imageStore.CleanPath(job.ItemID)
 
-	cmd := exec.Command("rembg", "i", job.RawPath, cleanPath)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("[worker] rembg failed for %s: %v\n%s", job.ItemID, err, string(output))
-		w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID))
-		return
+	if _, err := exec.LookPath("rembg"); err == nil {
+		cmd := exec.Command("rembg", "i", job.RawPath, cleanPath)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("[worker] rembg failed for %s: %v\n%s", job.ItemID, err, string(output))
+			w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID))
+			return
+		}
+	} else {
+		// rembg unavailable (e.g. on hosted runtime) — assume raw image is already
+		// background-free per project convention and copy it into the clean slot.
+		if err := copyFile(job.RawPath, cleanPath); err != nil {
+			log.Printf("[worker] copy raw→clean failed for %s: %v", job.ItemID, err)
+			w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID))
+			return
+		}
 	}
 
 	if err := CropTransparent(cleanPath, 8); err != nil {
 		log.Printf("[worker] crop failed for %s: %v", job.ItemID, err)
 	}
 
-	err = w.store.UpdateImageStatus(
+	if err := w.store.UpdateImageStatus(
 		job.ItemID,
 		"done",
 		w.imageStore.CleanURL(job.ItemID),
 		w.imageStore.RawURL(job.ItemID),
-	)
-	if err != nil {
+	); err != nil {
 		log.Printf("[worker] db update failed for %s: %v", job.ItemID, err)
 		return
 	}
@@ -84,4 +95,21 @@ func (w *Worker) SubmitJob(itemID uuid.UUID, rawPath string) {
 		ItemID:  itemID,
 		RawPath: rawPath,
 	})
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }
