@@ -3,9 +3,11 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,6 +26,25 @@ type Handler struct {
 
 func NewHandler(store *storage.Store, imageStore *storage.ImageStore, worker *vision.Worker) *Handler {
 	return &Handler{store: store, imageStore: imageStore, worker: worker}
+}
+
+// ServeImage proxies an R2 object through the API so clients inherit the
+// backend's CORS configuration (needed for canvas-based export).
+func (h *Handler) ServeImage(c *gin.Context) {
+	key := strings.TrimPrefix(c.Param("filepath"), "/")
+	if key == "" || (!strings.HasPrefix(key, "raw/") && !strings.HasPrefix(key, "clean/")) {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	body, err := h.imageStore.Fetch(c.Request.Context(), key)
+	if err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	defer body.Close()
+	c.Header("Content-Type", "image/png")
+	c.Header("Cache-Control", "public, max-age=3600")
+	io.Copy(c.Writer, body)
 }
 
 // Items

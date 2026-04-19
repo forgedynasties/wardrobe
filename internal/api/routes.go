@@ -22,6 +22,8 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 
 	api := r.Group("/api")
 
+	api.GET("/image/*filepath", h.ServeImage)
+
 	items := api.Group("/items")
 	{
 		items.GET("", h.ListItems)

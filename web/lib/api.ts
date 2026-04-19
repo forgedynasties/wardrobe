@@ -230,3 +230,12 @@ export function imageUrl(path: string): string {
   const cleanPath = path.startsWith("/uploads/") ? path.slice(9) : path;
   return `${API_BASE}/api/image/${cleanPath}`;
 }
+
+// Canvas-tainting workaround: when we need pixel access (e.g. PNG export),
+// route image fetches through the backend so CORS headers are guaranteed.
+export function proxiedImageUrl(url: string): string {
+  if (!url) return "";
+  const m = url.match(/\/(raw|clean)\/[^?#]+$/);
+  if (!m) return url;
+  return `${API_BASE}/api/image${m[0]}`;
+}

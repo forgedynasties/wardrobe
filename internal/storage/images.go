@@ -129,6 +129,18 @@ func (s *ImageStore) DownloadClean(ctx context.Context, id uuid.UUID) (string, e
 	return tmp.Name(), nil
 }
 
+// Fetch returns a ReadCloser for the object at the given key. Caller must Close it.
+func (s *ImageStore) Fetch(ctx context.Context, key string) (io.ReadCloser, error) {
+	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out.Body, nil
+}
+
 func (s *ImageStore) rawKey(id uuid.UUID) string   { return fmt.Sprintf("raw/%s.png", id) }
 func (s *ImageStore) cleanKey(id uuid.UUID) string { return fmt.Sprintf("clean/%s.png", id) }
 
