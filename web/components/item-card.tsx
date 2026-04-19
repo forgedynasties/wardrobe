@@ -18,8 +18,8 @@ export function ItemCard({ item }: ItemCardProps) {
         : null;
 
   return (
-    <Link href={`/items/${item.id}`}>
-      <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 cursor-pointer hover:shadow-md">
+    <Link href={`/items/${item.id}`} className="block h-full">
+      <Card className="h-full flex flex-col overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 cursor-pointer hover:shadow-md">
         <div className="aspect-square bg-card flex items-center justify-center relative">
           {src ? (
             <img
