@@ -58,12 +58,23 @@ func main() {
 	handler := api.NewHandler(store, imageStore, worker)
 
 	r := gin.Default()
+	// CORS configuration with proper origin handling
+	allowedOrigins := []string{
+		"https://wardrobe.cd4li.space",
+		"http://localhost:3000",
+		"http://localhost:3001",
+	}
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			return true // allow all origins in dev
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					return true
+				}
+			}
+			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Content-Type"},
+		AllowHeaders:     []string{"Content-Type", "X-User"},
 		AllowCredentials: true,
 	}))
 	api.RegisterRoutes(r, handler)

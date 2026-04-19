@@ -7,19 +7,7 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, h *Handler) {
-	// Add CORS middleware to allow the frontend to communicate with the backend
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-User")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
+	// CORS is already handled by the cors middleware in main.go
 
 	// Owner scope: two-user app (Ali / Alishba). Default to "ali" so legacy
 	// clients and the raw-image static handler keep working.
