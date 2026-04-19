@@ -54,8 +54,47 @@ const sortByCategory = (items: ClothingItem[]) =>
       (CATEGORY_WEIGHT[a.category?.toLowerCase() ?? ""] ?? 0)
   );
 
+type View = "week" | "month" | "year";
+
+const toKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+const addDays = (d: Date, n: number) => {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+};
+const startOfWeek = (d: Date) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - x.getDay());
+  return x;
+};
+const startOfMonth = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), 1);
+const endOfMonth = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+function viewRange(view: View, anchor: Date): { start: Date; end: Date } {
+  if (view === "week") {
+    const s = startOfWeek(anchor);
+    return { start: s, end: addDays(s, 6) };
+  }
+  if (view === "month") {
+    return { start: startOfMonth(anchor), end: endOfMonth(anchor) };
+  }
+  return {
+    start: new Date(anchor.getFullYear(), 0, 1),
+    end: new Date(anchor.getFullYear(), 11, 31),
+  };
+}
+
 export default function OutfitLoggerPage() {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [view, setView] = useState<View>("week");
+  const [anchor, setAnchor] = useState(new Date());
   const [logs, setLogs] = useState<Map<string, OutfitLog>>(new Map());
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [items, setItems] = useState<ClothingItem[]>([]);
@@ -92,8 +131,9 @@ export default function OutfitLoggerPage() {
   }, []);
 
   useEffect(() => {
-    loadMonthLogs();
-  }, [currentMonth]);
+    loadLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, anchor]);
 
   const loadData = async () => {
     try {
@@ -111,15 +151,10 @@ export default function OutfitLoggerPage() {
     }
   };
 
-  const loadMonthLogs = async () => {
+  const loadLogs = async () => {
     try {
-      const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-
-      const startDate = firstDay.toISOString().split("T")[0];
-      const endDate = lastDay.toISOString().split("T")[0];
-
-      const logsData = await getOutfitLogs(startDate, endDate);
+      const { start, end } = viewRange(view, anchor);
+      const logsData = await getOutfitLogs(toKey(start), toKey(end));
       const logsMap = new Map(
         logsData.map((log) => {
           const dateKey = log.wear_date.split("T")[0];
@@ -132,27 +167,33 @@ export default function OutfitLoggerPage() {
     }
   };
 
-  const handleDateClick = (date: number) => {
-    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), date);
-    const dateStr = newDate.toISOString().split("T")[0];
+  const handleDateClick = (date: Date) => {
+    const dateStr = toKey(date);
     const existingLog = logs.get(dateStr);
 
-    setSelectedDate(newDate);
+    setSelectedDate(date);
     setSaveError(null);
 
     if (existingLog) {
-      // Load existing log for editing
       setEditingLog(existingLog);
       setSelectedItems(new Set((existingLog.items || []).map((item) => item.id)));
       setNotes(existingLog.notes);
     } else {
-      // New log
       setEditingLog(null);
       setSelectedItems(new Set());
       setNotes("");
     }
 
     setShowLogSheet(true);
+  };
+
+  const shiftAnchor = (dir: -1 | 1) => {
+    setAnchor((prev) => {
+      if (view === "week") return addDays(prev, dir * 7);
+      if (view === "month")
+        return new Date(prev.getFullYear(), prev.getMonth() + dir, 1);
+      return new Date(prev.getFullYear() + dir, 0, 1);
+    });
   };
 
   const resetForm = () => {
@@ -200,7 +241,7 @@ export default function OutfitLoggerPage() {
 
       resetForm();
       setShowLogSheet(false);
-      await loadMonthLogs();
+      await loadLogs();
       await loadData();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to save log";
@@ -215,33 +256,151 @@ export default function OutfitLoggerPage() {
     try {
       await deleteOutfitLog(deleteTarget.log.id);
       setDeleteTarget(null);
-      await loadMonthLogs();
+      await loadLogs();
     } catch (err) {
       console.error(err);
     }
   };
 
-  const getDaysInMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const today = new Date();
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  const buildMonthCells = (year: number, month: number): (Date | null)[] => {
+    const first = new Date(year, month, 1).getDay();
+    const total = new Date(year, month + 1, 0).getDate();
+    const cells: (Date | null)[] = [];
+    for (let i = 0; i < first; i++) cells.push(null);
+    for (let d = 1; d <= total; d++) cells.push(new Date(year, month, d));
+    return cells;
   };
 
-  const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  const buildWeekCells = (d: Date): Date[] => {
+    const s = startOfWeek(d);
+    return Array.from({ length: 7 }, (_, i) => addDays(s, i));
   };
 
-  const daysInMonth = getDaysInMonth(currentMonth);
-  const firstDay = getFirstDayOfMonth(currentMonth);
-  const days: (number | null)[] = [];
+  const rangeTitle = (() => {
+    if (view === "week") {
+      const s = startOfWeek(anchor);
+      const e = addDays(s, 6);
+      const sameMonth = s.getMonth() === e.getMonth();
+      const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+      const left = s.toLocaleDateString("en-US", opts);
+      const right = sameMonth
+        ? e.getDate().toString()
+        : e.toLocaleDateString("en-US", opts);
+      return `${left} – ${right}, ${e.getFullYear()}`;
+    }
+    if (view === "month") {
+      return anchor.toLocaleString("default", { month: "long", year: "numeric" });
+    }
+    return String(anchor.getFullYear());
+  })();
 
-  for (let i = 0; i < firstDay; i++) {
-    days.push(null);
-  }
+  const renderDayCell = (
+    date: Date | null,
+    idx: number,
+    prevHasLog: boolean,
+    nextHasLog: boolean,
+    compact: boolean,
+  ) => {
+    const dateStr = date ? toKey(date) : null;
+    const log = dateStr ? logs.get(dateStr) ?? null : null;
+    const hasLog = !!log;
+    const isToday = !!date && isSameDay(date, today);
+    const sortedItems = log?.items ? sortByCategory(log.items) : [];
+    const itemCount = sortedItems.length;
+    const hasPrevStreak = hasLog && prevHasLog;
+    const hasNextStreak = hasLog && nextHasLog;
 
-  for (let i = 1; i <= daysInMonth; i++) {
-    days.push(i);
-  }
+    if (compact) {
+      return (
+        <div
+          key={idx}
+          className={`relative aspect-square rounded-sm flex items-center justify-center text-[9px] cursor-pointer transition-colors ${
+            !date
+              ? "bg-transparent cursor-default"
+              : hasLog
+                ? "bg-primary/30 hover:bg-primary/50 text-foreground"
+                : "bg-muted/40 hover:bg-muted/70 text-muted-foreground"
+          } ${isToday ? "ring-1 ring-primary" : ""}`}
+          onClick={() => date && handleDateClick(date)}
+          onMouseEnter={(e) => handlePeekEnter(e, log)}
+          onMouseLeave={handlePeekLeave}
+        >
+          {date?.getDate()}
+        </div>
+      );
+    }
 
-  const monthName = currentMonth.toLocaleString("default", { month: "long", year: "numeric" });
+    const sizeClass =
+      view === "week"
+        ? "min-h-24 md:min-h-40"
+        : "min-h-14 md:min-h-24";
+
+    return (
+      <div
+        key={idx}
+        className={`relative ${sizeClass} rounded-lg border flex items-center justify-center cursor-pointer transition-all p-1 md:p-2 group ${
+          !date
+            ? "bg-transparent border-transparent cursor-default"
+            : hasLog
+              ? "bg-primary/5 border-primary/20 hover:bg-primary/10"
+              : "bg-card border-border hover:border-primary/50"
+        } ${isToday ? "ring-2 ring-primary/60" : ""}`}
+        onClick={() => date && handleDateClick(date)}
+        onMouseEnter={(e) => handlePeekEnter(e, log)}
+        onMouseLeave={handlePeekLeave}
+      >
+        {date && (
+          <>
+            {hasPrevStreak && (
+              <div className="absolute top-1/2 -left-1 md:-left-2 h-0.5 w-1 md:w-2 bg-primary/50 -translate-y-1/2 pointer-events-none" />
+            )}
+            {hasNextStreak && (
+              <div className="absolute top-1/2 -right-1 md:-right-2 h-0.5 w-1 md:w-2 bg-primary/50 -translate-y-1/2 pointer-events-none" />
+            )}
+            <div
+              className={`absolute top-1 left-1.5 text-[10px] md:text-xs font-medium leading-none z-20 ${
+                isToday ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              {date.getDate()}
+            </div>
+            {hasLog && log && (
+              <>
+                {itemCount === 0 && (
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                )}
+                {itemCount >= 1 && (
+                  <div className="absolute inset-[10px]">
+                    <OutfitCanvas items={sortedItems.slice(0, 4)} />
+                  </div>
+                )}
+                {sortedItems.length > 4 && (
+                  <div className="absolute bottom-1 right-1 text-[9px] md:text-[10px] font-medium text-muted-foreground bg-muted/80 rounded-full px-1.5 py-0.5 leading-none z-20">
+                    +{sortedItems.length - 4}
+                  </div>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (dateStr) setDeleteTarget({ dateStr, log });
+                  }}
+                  className="absolute top-0.5 right-1 text-muted-foreground hover:text-destructive text-xs opacity-0 group-hover:opacity-100 transition-opacity leading-none z-20"
+                >
+                  &times;
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -265,129 +424,127 @@ export default function OutfitLoggerPage() {
         <p className="text-muted-foreground">Track what you wore each day</p>
       </div>
 
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10"
-          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <h2 className="text-lg md:text-xl font-semibold">{monthName}</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10"
-          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-        >
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10"
+            onClick={() => shiftAnchor(-1)}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <h2 className="text-lg md:text-xl font-semibold min-w-40 text-center">
+            {rangeTitle}
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10"
+            onClick={() => shiftAnchor(1)}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-1 rounded-md border p-0.5 bg-muted/40">
+          {(["week", "month", "year"] as View[]).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-3 py-1 text-xs font-medium rounded capitalize transition-colors ${
+                view === v
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
       </div>
 
       <Card className="p-3 md:p-6">
-        <div className="grid grid-cols-7 gap-1 md:gap-2">
-          {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
-            <div key={i} className="text-center font-semibold text-xs text-muted-foreground py-2">
-              {day}
-            </div>
-          ))}
-
-          {days.map((day, idx) => {
-            const dateStr = day
-              ? new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
-                  .toISOString()
-                  .split("T")[0]
-              : null;
-            const hasLog = dateStr && logs.has(dateStr);
-            const log = dateStr ? logs.get(dateStr) : null;
-            const now = new Date();
-            const isToday =
-              !!day &&
-              currentMonth.getFullYear() === now.getFullYear() &&
-              currentMonth.getMonth() === now.getMonth() &&
-              day === now.getDate();
-
-            const sortedItems = log?.items ? sortByCategory(log.items) : [];
-            const itemCount = sortedItems.length;
-            const displayedCount = itemCount === 1 ? 1 : itemCount <= 3 ? itemCount : 4;
-            const overflow = itemCount - displayedCount;
-
-            const logAt = (i: number): boolean => {
-              const d = days[i];
-              if (!d) return false;
-              const ds = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d)
-                .toISOString()
-                .split("T")[0];
-              return logs.has(ds);
-            };
-            const sameRow = (a: number, b: number) => Math.floor(a / 7) === Math.floor(b / 7);
-            const hasPrevStreak = hasLog && sameRow(idx - 1, idx) && logAt(idx - 1);
-            const hasNextStreak = hasLog && sameRow(idx + 1, idx) && logAt(idx + 1);
-
-            return (
+        {view === "week" && (
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
+            {buildWeekCells(anchor).map((d, i) => (
               <div
-                key={idx}
-                className={`relative min-h-14 md:min-h-24 rounded-lg border flex items-center justify-center cursor-pointer transition-all p-1 md:p-2 group ${
-                  !day
-                    ? "bg-transparent border-transparent cursor-default"
-                    : hasLog
-                      ? "bg-primary/5 border-primary/20 hover:bg-primary/10"
-                      : "bg-card border-border hover:border-primary/50"
-                } ${isToday ? "ring-2 ring-primary/60" : ""}`}
-                onClick={() => day && handleDateClick(day)}
-                onMouseEnter={(e) => handlePeekEnter(e, log ?? null)}
-                onMouseLeave={handlePeekLeave}
+                key={`h-${i}`}
+                className="text-center font-semibold text-xs text-muted-foreground py-2"
               >
-                {day && (
-                  <>
-                    {hasPrevStreak && (
-                      <div className="absolute top-1/2 -left-1 md:-left-2 h-0.5 w-1 md:w-2 bg-primary/50 -translate-y-1/2 pointer-events-none" />
-                    )}
-                    {hasNextStreak && (
-                      <div className="absolute top-1/2 -right-1 md:-right-2 h-0.5 w-1 md:w-2 bg-primary/50 -translate-y-1/2 pointer-events-none" />
-                    )}
-                    <div
-                      className={`absolute top-1 left-1.5 text-[10px] md:text-xs font-medium leading-none z-20 ${
-                        isToday ? "text-primary" : "text-muted-foreground"
-                      }`}
-                    >
-                      {day}
-                    </div>
-                    {hasLog && log && (
-                      <>
-                        {itemCount === 0 && (
-                          <div className="w-2 h-2 rounded-full bg-primary" />
-                        )}
-                        {itemCount >= 1 && (
-                          <div className="absolute inset-[10px]">
-                            <OutfitCanvas items={sortedItems.slice(0, 4)} />
-                          </div>
-                        )}
-                        {sortedItems.length > 4 && (
-                          <div className="absolute bottom-1 right-1 text-[9px] md:text-[10px] font-medium text-muted-foreground bg-muted/80 rounded-full px-1.5 py-0.5 leading-none z-20">
-                            +{sortedItems.length - 4}
-                          </div>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (dateStr && log) {
-                              setDeleteTarget({ dateStr, log });
-                            }
-                          }}
-                          className="absolute top-0.5 right-1 text-muted-foreground hover:text-destructive text-xs opacity-0 group-hover:opacity-100 transition-opacity leading-none z-20"
-                        >
-                          &times;
-                        </button>
-                      </>
-                    )}
-                  </>
-                )}
+                {d.toLocaleDateString("en-US", { weekday: "short" })}
               </div>
-            );
-          })}
-        </div>
+            ))}
+            {buildWeekCells(anchor).map((d, idx, arr) => {
+              const prev = idx > 0 ? logs.has(toKey(arr[idx - 1])) : false;
+              const next = idx < arr.length - 1 ? logs.has(toKey(arr[idx + 1])) : false;
+              return renderDayCell(d, idx, prev, next, false);
+            })}
+          </div>
+        )}
+
+        {view === "month" && (
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <div
+                key={`h-${i}`}
+                className="text-center font-semibold text-xs text-muted-foreground py-2"
+              >
+                {d}
+              </div>
+            ))}
+            {(() => {
+              const cells = buildMonthCells(anchor.getFullYear(), anchor.getMonth());
+              const sameRow = (a: number, b: number) => Math.floor(a / 7) === Math.floor(b / 7);
+              return cells.map((d, idx) => {
+                const prev =
+                  idx > 0 && sameRow(idx - 1, idx) && cells[idx - 1]
+                    ? logs.has(toKey(cells[idx - 1]!))
+                    : false;
+                const next =
+                  idx < cells.length - 1 && sameRow(idx + 1, idx) && cells[idx + 1]
+                    ? logs.has(toKey(cells[idx + 1]!))
+                    : false;
+                return renderDayCell(d, idx, prev, next, false);
+              });
+            })()}
+          </div>
+        )}
+
+        {view === "year" && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 12 }, (_, m) => {
+              const cells = buildMonthCells(anchor.getFullYear(), m);
+              const label = new Date(anchor.getFullYear(), m, 1).toLocaleString(
+                "default",
+                { month: "short" },
+              );
+              return (
+                <div key={m} className="space-y-1.5">
+                  <button
+                    onClick={() => {
+                      setView("month");
+                      setAnchor(new Date(anchor.getFullYear(), m, 1));
+                    }}
+                    className="text-xs font-semibold hover:text-primary transition-colors"
+                  >
+                    {label}
+                  </button>
+                  <div className="grid grid-cols-7 gap-0.5">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                      <div
+                        key={`h-${m}-${i}`}
+                        className="text-center text-[8px] text-muted-foreground"
+                      >
+                        {d}
+                      </div>
+                    ))}
+                    {cells.map((d, idx) => renderDayCell(d, idx, false, false, true))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       <Sheet open={showLogSheet} onOpenChange={(open) => { setShowLogSheet(open); if (!open) resetForm(); }}>
