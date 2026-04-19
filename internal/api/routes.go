@@ -22,9 +22,6 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 
 	api := r.Group("/api")
 
-	// Image serving endpoint - serves images with CORS headers
-	api.GET("/image/*filepath", h.ServeImage)
-
 	items := api.Group("/items")
 	{
 		items.GET("", h.ListItems)

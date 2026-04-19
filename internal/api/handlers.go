@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -57,12 +58,6 @@ func (h *Handler) GetItem(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, item)
-}
-
-func (h *Handler) ServeImage(c *gin.Context) {
-	filePath := c.Param("filepath")
-	imagePath := fmt.Sprintf("./uploads/%s", filePath)
-	c.File(imagePath)
 }
 
 func (h *Handler) CreateItem(c *gin.Context) {
@@ -375,7 +370,7 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	}
 	defer file.Close()
 
-	rawPath, err := h.imageStore.SaveRaw(id, file)
+	rawPath, err := h.imageStore.SaveRaw(c.Request.Context(), id, file)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save image"})
 		return
@@ -560,6 +555,7 @@ func (h *Handler) FixStaleData(c *gin.Context) {
 
 func (h *Handler) RecropAllImages(c *gin.Context) {
 	owner := c.GetString("owner")
+	ctx := c.Request.Context()
 	items, err := h.store.ListItems(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -570,11 +566,22 @@ func (h *Handler) RecropAllImages(c *gin.Context) {
 		if it.ImageStatus != "done" {
 			continue
 		}
-		path := h.imageStore.CleanPath(it.ID)
-		if err := vision.CropTransparent(path, 8); err != nil {
+		tmp, err := h.imageStore.DownloadClean(ctx, it.ID)
+		if err != nil {
 			failed++
 			continue
 		}
+		if err := vision.CropTransparent(tmp, 8); err != nil {
+			os.Remove(tmp)
+			failed++
+			continue
+		}
+		if err := h.imageStore.UploadClean(ctx, it.ID, tmp); err != nil {
+			os.Remove(tmp)
+			failed++
+			continue
+		}
+		os.Remove(tmp)
 		cropped++
 	}
 	c.JSON(http.StatusOK, gin.H{"cropped": cropped, "failed": failed})

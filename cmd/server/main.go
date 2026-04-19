@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"os"
@@ -52,7 +53,16 @@ func main() {
 	log.Println("migrations applied")
 
 	store := storage.NewStore(db)
-	imageStore := storage.NewImageStore("uploads")
+	imageStore, err := storage.NewImageStore(context.Background(), storage.ImageStoreConfig{
+		AccountID: os.Getenv("R2_ACCOUNT_ID"),
+		AccessKey: os.Getenv("R2_ACCESS_KEY_ID"),
+		SecretKey: os.Getenv("R2_SECRET_ACCESS_KEY"),
+		Bucket:    os.Getenv("R2_BUCKET"),
+		PublicURL: os.Getenv("R2_PUBLIC_URL"),
+	})
+	if err != nil {
+		log.Fatalf("failed to init image store: %v", err)
+	}
 	worker := vision.NewWorker(store, imageStore, 3)
 	defer worker.Shutdown()
 	handler := api.NewHandler(store, imageStore, worker)

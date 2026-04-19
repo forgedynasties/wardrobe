@@ -1,10 +1,12 @@
 package vision
 
 import (
+	"context"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 
 	"wardrobe/internal/domain"
@@ -53,10 +55,14 @@ func (w *Worker) run(id int) {
 }
 
 func (w *Worker) process(job domain.ImageJob) {
-	cleanPath := w.imageStore.CleanPath(job.ItemID)
+	ctx := context.Background()
+	defer os.Remove(job.RawPath)
+
+	cleanTmp := filepath.Join(os.TempDir(), "clean-"+job.ItemID.String()+".png")
+	defer os.Remove(cleanTmp)
 
 	if _, err := exec.LookPath("rembg"); err == nil {
-		cmd := exec.Command("rembg", "i", job.RawPath, cleanPath)
+		cmd := exec.Command("rembg", "i", job.RawPath, cleanTmp)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("[worker] rembg failed for %s: %v\n%s", job.ItemID, err, string(output))
@@ -66,15 +72,21 @@ func (w *Worker) process(job domain.ImageJob) {
 	} else {
 		// rembg unavailable (e.g. on hosted runtime) — assume raw image is already
 		// background-free per project convention and copy it into the clean slot.
-		if err := copyFile(job.RawPath, cleanPath); err != nil {
+		if err := copyFile(job.RawPath, cleanTmp); err != nil {
 			log.Printf("[worker] copy raw→clean failed for %s: %v", job.ItemID, err)
 			w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID))
 			return
 		}
 	}
 
-	if err := CropTransparent(cleanPath, 8); err != nil {
+	if err := CropTransparent(cleanTmp, 8); err != nil {
 		log.Printf("[worker] crop failed for %s: %v", job.ItemID, err)
+	}
+
+	if err := w.imageStore.UploadClean(ctx, job.ItemID, cleanTmp); err != nil {
+		log.Printf("[worker] upload clean failed for %s: %v", job.ItemID, err)
+		w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID))
+		return
 	}
 
 	if err := w.store.UpdateImageStatus(
