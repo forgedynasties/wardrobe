@@ -10,6 +10,24 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wardrobe -d wardrobe"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: .
+    container_name: wardrobe-backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://wardrobe:wardrobe@db:5432/wardrobe?sslmode=disable
+      PORT: "8081"
+    ports:
+      - "8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:
