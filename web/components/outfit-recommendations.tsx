@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OutfitCanvas } from "@/components/outfit-canvas";
+import { OutfitExportButton } from "@/components/outfit-export-button";
 import type { OutfitRecommendation } from "@/lib/types";
 
 interface Props {
@@ -26,6 +27,11 @@ export function OutfitRecommendations({ recommendations }: Props) {
             <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all cursor-pointer">
               <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
                 <OutfitCanvas items={rec.items ?? []} />
+                <OutfitExportButton
+                  items={rec.items ?? []}
+                  name={rec.name}
+                  variant="overlay"
+                />
               </div>
               <div className="px-3 py-2.5 space-y-1.5">
                 <h3 className="font-semibold text-sm truncate">{rec.name}</h3>

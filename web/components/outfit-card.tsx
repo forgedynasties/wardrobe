@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { OutfitCanvas } from "@/components/outfit-canvas";
+import { OutfitExportButton } from "@/components/outfit-export-button";
 import type { Outfit } from "@/lib/types";
 
 interface OutfitCardProps {
@@ -15,6 +16,11 @@ export function OutfitCard({ outfit }: OutfitCardProps) {
       <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 cursor-pointer hover:shadow-md">
         <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
           <OutfitCanvas items={outfit.items ?? []} />
+          <OutfitExportButton
+            items={outfit.items ?? []}
+            name={outfit.name}
+            variant="overlay"
+          />
         </div>
         <div className="px-3 py-2.5 space-y-1.5">
           <h3 className="font-semibold text-sm truncate">{outfit.name}</h3>

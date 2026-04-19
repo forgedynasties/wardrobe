@@ -8,6 +8,7 @@ import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, remov
 import { FitBuilder } from "@/components/fit-builder";
 import { OutfitCanvas, hasCustomLayout } from "@/components/outfit-canvas";
 import { OutfitLayoutEditor } from "@/components/outfit-layout-editor";
+import { OutfitExportButton } from "@/components/outfit-export-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -172,6 +173,10 @@ export default function OutfitDetailPage() {
                   {resettingLayout ? "..." : "Reset"}
                 </Button>
               )}
+              <OutfitExportButton
+                items={outfit.items ?? []}
+                name={outfit.name}
+              />
               <Button
                 variant="outline"
                 size="sm"

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OutfitCanvas } from "@/components/outfit-canvas";
+import { OutfitExportButton } from "@/components/outfit-export-button";
 import { addOutfitItem, createOutfit } from "@/lib/api";
 import type { OutfitSuggestion } from "@/lib/types";
 
@@ -50,9 +51,10 @@ export function OutfitSuggestions({ suggestions, onRefresh }: Props) {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {suggestions.map((sug, idx) => (
-          <Card key={idx} className="overflow-hidden">
+          <Card key={idx} className="overflow-hidden group">
             <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
               <OutfitCanvas items={sug.items} />
+              <OutfitExportButton items={sug.items} variant="overlay" />
             </div>
             <div className="px-3 py-2.5 space-y-2">
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
