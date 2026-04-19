@@ -35,6 +35,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setHydrated(true);
   }, []);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    if (user === "alishba") root.classList.add("theme-alishba");
+    else root.classList.remove("theme-alishba");
+  }, [user]);
+
   const setUser = (u: User) => {
     localStorage.setItem(STORAGE_KEY, u);
     currentUserRef = u;
