@@ -33,6 +33,19 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		items.GET("/:id/stats", h.GetItemStats)
 	}
 
+	// Add CORS headers for static file serving
+	r.Use(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/uploads") {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		}
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
 	r.Static("/uploads", "./uploads")
 
 	outfits := api.Group("/outfits")
