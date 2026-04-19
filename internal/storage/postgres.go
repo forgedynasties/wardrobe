@@ -98,7 +98,21 @@ func (s *Store) UpdateItem(id uuid.UUID, req domain.UpdateItemRequest, owner str
 }
 
 func (s *Store) DeleteItem(id uuid.UUID, owner string) error {
-	result, err := s.db.Exec(`DELETE FROM clothing_items WHERE id = $1 AND owner = $2`, id, owner)
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`
+		DELETE FROM outfits
+		WHERE owner = $2
+		AND id IN (SELECT outfit_id FROM outfit_items WHERE clothing_item_id = $1)`,
+		id, owner); err != nil {
+		return err
+	}
+
+	result, err := tx.Exec(`DELETE FROM clothing_items WHERE id = $1 AND owner = $2`, id, owner)
 	if err != nil {
 		return err
 	}
@@ -109,7 +123,8 @@ func (s *Store) DeleteItem(id uuid.UUID, owner string) error {
 	if rows == 0 {
 		return fmt.Errorf("item not found")
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 func (s *Store) WearItem(id uuid.UUID) error {

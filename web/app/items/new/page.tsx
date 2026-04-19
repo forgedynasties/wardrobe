@@ -17,14 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const categories = ["Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
-const subCategories: Record<string, string[]> = {
-  Top: ["T-Shirt", "Hoodie", "Shirt", "Sweater", "Jacket", "Tank", "Crop Top"],
-  Bottom: ["Jeans", "Chinos", "Shorts", "Joggers", "Trousers"],
-  Outerwear: ["Coat", "Bomber", "Parka", "Windbreaker", "Vest"],
-  Shoes: ["Sneakers", "Boots", "Sandals", "Loafers", "Running"],
-  Accessory: ["Hat", "Belt", "Watch", "Bag", "Scarf", "Glasses"],
-};
+import { CATEGORIES as categories, SUB_CATEGORIES as subCategories } from "@/lib/categories";
 
 export default function NewItemPage() {
   const router = useRouter();

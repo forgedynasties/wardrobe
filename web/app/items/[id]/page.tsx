@@ -27,8 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ClothingItem, ItemStats } from "@/lib/types";
-
-const categories = ["Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
+import { CATEGORIES as categories, SUB_CATEGORIES as subCategories } from "@/lib/categories";
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -204,10 +203,22 @@ export default function ItemDetailPage() {
 
           <div className="space-y-2">
             <Label>Type</Label>
-            <Input
+            <Select
               value={subCategory}
-              onChange={(e) => setSubCategory(e.target.value)}
-            />
+              onValueChange={(v) => v && setSubCategory(v)}
+              disabled={!category || !subCategories[category]}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {(subCategories[category] ?? []).map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
