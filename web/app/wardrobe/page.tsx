@@ -5,20 +5,24 @@ import { getItems } from "@/lib/api";
 import { ItemGrid } from "@/components/item-grid";
 import { AddItemButton } from "@/components/add-item-button";
 import { Badge } from "@/components/ui/badge";
+import { useUser } from "@/lib/user-context";
 import type { ClothingItem } from "@/lib/types";
 
 const categories = ["All", "Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
 
 export default function WardrobePage() {
+  const { user, hydrated } = useUser();
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!hydrated || !user) return;
+    setLoading(true);
     getItems()
       .then(setItems)
       .finally(() => setLoading(false));
-  }, []);
+  }, [hydrated, user]);
 
   const filtered =
     filter === "All" ? items : items.filter((i) => i.category === filter);

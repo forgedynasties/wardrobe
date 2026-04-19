@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { Plus, Shirt } from "lucide-react";
+import { Shirt } from "lucide-react";
 import { ItemCard } from "./item-card";
-import { Button } from "@/components/ui/button";
+import { AddItemButton } from "./add-item-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ClothingItem } from "@/lib/types";
 
@@ -35,12 +34,7 @@ export function ItemGrid({ items, loading }: ItemGridProps) {
         </div>
         <p className="text-lg font-medium text-foreground mb-1">Your wardrobe is empty</p>
         <p className="text-sm mb-6">Add your first clothing item to get started</p>
-        <Link href="/items/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add first item
-          </Button>
-        </Link>
+        <AddItemButton />
       </div>
     );
   }
