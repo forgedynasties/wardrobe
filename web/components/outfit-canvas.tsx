@@ -95,7 +95,8 @@ export function OutfitCanvas({ items, className }: Props) {
       ) : (
         sorted.map((item, idx) => {
           const src = itemSrc(item);
-          const slot = cfg.mannequinSlots[item.category] ?? defaultSlot;
+          const subSlot = item.sub_category ? cfg.subcategorySlots[item.sub_category] : undefined;
+          const slot = subSlot ?? cfg.mannequinSlots[item.category] ?? defaultSlot;
           const hasCustomX = slot.left !== undefined;
           const slotWidth = slot.width ?? 80;
           return (

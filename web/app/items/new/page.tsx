@@ -19,7 +19,7 @@ import {
 
 const categories = ["Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
 const subCategories: Record<string, string[]> = {
-  Top: ["T-Shirt", "Hoodie", "Shirt", "Sweater", "Jacket", "Tank"],
+  Top: ["T-Shirt", "Hoodie", "Shirt", "Sweater", "Jacket", "Tank", "Crop Top"],
   Bottom: ["Jeans", "Chinos", "Shorts", "Joggers", "Trousers"],
   Outerwear: ["Coat", "Bomber", "Parka", "Windbreaker", "Vest"],
   Shoes: ["Sneakers", "Boots", "Sandals", "Loafers", "Running"],

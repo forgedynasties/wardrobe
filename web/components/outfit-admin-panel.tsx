@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 const ALL_CATEGORIES = ["Outerwear", "Top", "Bottom", "Shoes", "Accessory"];
+const ALL_SUBCATEGORIES = ["Crop Top"];
 
 function useCfg() {
   return useSyncExternalStore(
@@ -163,6 +164,53 @@ export function OutfitAdminPanel() {
               return (
                 <div key={cat} className="space-y-1.5 pb-3 border-b border-border/40 last:border-0">
                   <span className="text-xs font-medium">{cat}</span>
+                  <SliderRow
+                    label="Top"
+                    value={slot.top}
+                    min={0}
+                    max={90}
+                    step={1}
+                    suffix="%"
+                    onChange={(v) => updateSlot({ top: v })}
+                  />
+                  <SliderRow
+                    label="Height"
+                    value={slot.height}
+                    min={5}
+                    max={100}
+                    step={1}
+                    suffix="%"
+                    onChange={(v) => updateSlot({ height: v })}
+                  />
+                  <SliderRow
+                    label="Z-Index"
+                    value={slot.zIndex}
+                    min={0}
+                    max={10}
+                    step={1}
+                    onChange={(v) => updateSlot({ zIndex: v })}
+                  />
+                </div>
+              );
+            })}
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+              Subcategory overrides
+            </h3>
+            {ALL_SUBCATEGORIES.map((sub) => {
+              const slot = cfg.subcategorySlots?.[sub] ?? { top: 0, height: 40, zIndex: 1 };
+              const updateSlot = (patch: Partial<typeof slot>) =>
+                outfitConfig.set({
+                  subcategorySlots: {
+                    ...cfg.subcategorySlots,
+                    [sub]: { ...slot, ...patch },
+                  },
+                });
+              return (
+                <div key={sub} className="space-y-1.5 pb-3 border-b border-border/40 last:border-0">
+                  <span className="text-xs font-medium">{sub}</span>
                   <SliderRow
                     label="Top"
                     value={slot.top}

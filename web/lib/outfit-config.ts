@@ -10,6 +10,7 @@ export interface OutfitConfig {
   categoryOrder: string[];
   categoryZIndex: Record<string, number>;
   mannequinSlots: Record<string, MannequinSlot>;
+  subcategorySlots: Record<string, MannequinSlot>;
   overlapSmall: number;
   overlapLarge: number;
   overlapThreshold: number;
@@ -31,6 +32,9 @@ const defaults: OutfitConfig = {
     Shoes:     { top: 76, height: 24, zIndex: 4 },
     Accessory: { top: 32, height: 14, zIndex: 5, left: 76, width: 22 },
   },
+  subcategorySlots: {
+    "Crop Top": { top: 4, height: 28, zIndex: 2 },
+  },
   overlapSmall: -6,
   overlapLarge: -12,
   overlapThreshold: 2,
@@ -50,12 +54,19 @@ function load(): OutfitConfig {
         mergedSlots[cat] = { ...defaults.mannequinSlots[cat], ...slot };
       }
     }
+    const mergedSubSlots: Record<string, MannequinSlot> = { ...defaults.subcategorySlots };
+    if (parsed.subcategorySlots) {
+      for (const [sub, slot] of Object.entries(parsed.subcategorySlots)) {
+        mergedSubSlots[sub] = { ...defaults.subcategorySlots[sub], ...slot };
+      }
+    }
     return {
       ...defaults,
       ...parsed,
       categoryZIndex: { ...defaults.categoryZIndex, ...(parsed.categoryZIndex ?? {}) },
       categoryOrder: parsed.categoryOrder ?? defaults.categoryOrder,
       mannequinSlots: mergedSlots,
+      subcategorySlots: mergedSubSlots,
     };
   } catch {
     return structuredClone(defaults);
