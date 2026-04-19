@@ -58,3 +58,4 @@ logs/
 *.log
 *.md
 .claudeignore
+server
