@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Plus } from "lucide-react";
 import { getItems } from "@/lib/api";
 import { ItemGrid } from "@/components/item-grid";
+import { AddItemButton } from "@/components/add-item-button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { ClothingItem } from "@/lib/types";
 
 const categories = ["All", "Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
@@ -29,12 +27,7 @@ export default function WardrobePage() {
     <div className="p-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Wardrobe</h1>
-        <Link href="/items/new">
-          <Button size="sm" className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
-        </Link>
+        <AddItemButton />
       </div>
 
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
@@ -53,11 +46,9 @@ export default function WardrobePage() {
       <ItemGrid items={filtered} loading={loading} />
 
       {!loading && items.length > 0 && (
-        <Link href="/items/new" className="fixed bottom-20 right-4 z-40 md:hidden">
-          <Button size="icon" className="h-14 w-14 rounded-full shadow-lg">
-            <Plus className="h-6 w-6" />
-          </Button>
-        </Link>
+        <div className="fixed bottom-20 right-4 z-40 md:hidden">
+          <AddItemButton variant="fab" />
+        </div>
       )}
     </div>
   );

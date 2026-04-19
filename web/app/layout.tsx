@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/nav-bar";
 import { OutfitAdminPanel } from "@/components/outfit-admin-panel";
+import { TopBar } from "@/components/top-bar";
+import { UserGate } from "@/components/user-gate";
+import { UserProvider } from "@/lib/user-context";
 
 const SHOW_OUTFIT_LAYOUT_ADMIN = false;
 
@@ -32,9 +35,14 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col">
-        <main className="flex-1 pb-20">{children}</main>
-        <NavBar />
-        {SHOW_OUTFIT_LAYOUT_ADMIN && <OutfitAdminPanel />}
+        <UserProvider>
+          <UserGate>
+            <TopBar />
+            <main className="flex-1 pb-20">{children}</main>
+            <NavBar />
+            {SHOW_OUTFIT_LAYOUT_ADMIN && <OutfitAdminPanel />}
+          </UserGate>
+        </UserProvider>
       </body>
     </html>
   );

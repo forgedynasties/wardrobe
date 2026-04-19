@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createItem, uploadImage } from "@/lib/api";
+import { useUser } from "@/lib/user-context";
 import { ImageUpload } from "@/components/image-upload";
 import { ColorPicker } from "@/components/color-picker";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,12 @@ const subCategories: Record<string, string[]> = {
 
 export default function NewItemPage() {
   const router = useRouter();
+  const { user, hydrated } = useUser();
+
+  useEffect(() => {
+    if (hydrated && user === "alishba") router.replace("/wardrobe");
+  }, [hydrated, user, router]);
+
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [colors, setColors] = useState<string[]>([]);

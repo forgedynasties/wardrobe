@@ -1,19 +1,34 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"strings"
+
+	"github.com/gin-gonic/gin"
+)
 
 func RegisterRoutes(r *gin.Engine, h *Handler) {
 	// Add CORS middleware to allow the frontend to communicate with the backend
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-User")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
 
+		c.Next()
+	})
+
+	// Owner scope: two-user app (Ali / Alishba). Default to "ali" so legacy
+	// clients and the raw-image static handler keep working.
+	r.Use(func(c *gin.Context) {
+		owner := strings.ToLower(strings.TrimSpace(c.GetHeader("X-User")))
+		if owner != "alishba" {
+			owner = "ali"
+		}
+		c.Set("owner", owner)
 		c.Next()
 	})
 

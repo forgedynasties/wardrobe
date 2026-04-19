@@ -28,7 +28,8 @@ func NewHandler(store *storage.Store, imageStore *storage.ImageStore, worker *vi
 // Items
 
 func (h *Handler) ListItems(c *gin.Context) {
-	items, err := h.store.ListItems()
+	owner := c.GetString("owner")
+	items, err := h.store.ListItems(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -40,12 +41,13 @@ func (h *Handler) ListItems(c *gin.Context) {
 }
 
 func (h *Handler) GetItem(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	item, err := h.store.GetItem(id)
+	item, err := h.store.GetItem(id, owner)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -58,12 +60,13 @@ func (h *Handler) GetItem(c *gin.Context) {
 }
 
 func (h *Handler) CreateItem(c *gin.Context) {
+	owner := c.GetString("owner")
 	var req domain.CreateItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	item, err := h.store.CreateItem(req)
+	item, err := h.store.CreateItem(req, owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -72,6 +75,7 @@ func (h *Handler) CreateItem(c *gin.Context) {
 }
 
 func (h *Handler) UpdateItem(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
@@ -82,7 +86,7 @@ func (h *Handler) UpdateItem(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	item, err := h.store.UpdateItem(id, req)
+	item, err := h.store.UpdateItem(id, req, owner)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -95,12 +99,13 @@ func (h *Handler) UpdateItem(c *gin.Context) {
 }
 
 func (h *Handler) DeleteItem(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	if err := h.store.DeleteItem(id); err != nil {
+	if err := h.store.DeleteItem(id, owner); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
@@ -110,7 +115,8 @@ func (h *Handler) DeleteItem(c *gin.Context) {
 // Outfits
 
 func (h *Handler) ListOutfits(c *gin.Context) {
-	outfits, err := h.store.ListOutfits()
+	owner := c.GetString("owner")
+	outfits, err := h.store.ListOutfits(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -122,12 +128,13 @@ func (h *Handler) ListOutfits(c *gin.Context) {
 }
 
 func (h *Handler) GetOutfit(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	outfit, err := h.store.GetOutfit(id)
+	outfit, err := h.store.GetOutfit(id, owner)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -140,16 +147,16 @@ func (h *Handler) GetOutfit(c *gin.Context) {
 }
 
 func (h *Handler) CreateOutfit(c *gin.Context) {
+	owner := c.GetString("owner")
 	var req domain.CreateOutfitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Auto-generate name if empty
 	if req.Name == "" {
 		req.Name = domain.RandomOutfitName()
 	}
-	outfit, err := h.store.CreateOutfit(req)
+	outfit, err := h.store.CreateOutfit(req, owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -158,6 +165,7 @@ func (h *Handler) CreateOutfit(c *gin.Context) {
 }
 
 func (h *Handler) UpdateOutfit(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
@@ -168,7 +176,7 @@ func (h *Handler) UpdateOutfit(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	outfit, err := h.store.UpdateOutfit(id, req)
+	outfit, err := h.store.UpdateOutfit(id, req, owner)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -181,12 +189,13 @@ func (h *Handler) UpdateOutfit(c *gin.Context) {
 }
 
 func (h *Handler) DeleteOutfit(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	if err := h.store.DeleteOutfit(id); err != nil {
+	if err := h.store.DeleteOutfit(id, owner); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
@@ -194,14 +203,31 @@ func (h *Handler) DeleteOutfit(c *gin.Context) {
 }
 
 func (h *Handler) AddOutfitItem(c *gin.Context) {
+	owner := c.GetString("owner")
 	outfitID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid outfit id"})
 		return
 	}
+	// Verify outfit belongs to owner before mutating.
+	if _, err := h.store.GetOutfit(outfitID, owner); err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "outfit not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	var req domain.AddOutfitItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// Verify the item also belongs to owner so you can't smuggle foreign items in.
+	if _, err := h.store.GetItem(req.ClothingItemID, owner); err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "item not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	if err := h.store.AddOutfitItem(outfitID, req.ClothingItemID); err != nil {
@@ -212,6 +238,7 @@ func (h *Handler) AddOutfitItem(c *gin.Context) {
 }
 
 func (h *Handler) RemoveOutfitItem(c *gin.Context) {
+	owner := c.GetString("owner")
 	outfitID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid outfit id"})
@@ -222,6 +249,13 @@ func (h *Handler) RemoveOutfitItem(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item id"})
 		return
 	}
+	if _, err := h.store.GetOutfit(outfitID, owner); err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "outfit not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	if err := h.store.RemoveOutfitItem(outfitID, itemID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -230,6 +264,7 @@ func (h *Handler) RemoveOutfitItem(c *gin.Context) {
 }
 
 func (h *Handler) UpdateOutfitLayout(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
@@ -240,7 +275,11 @@ func (h *Handler) UpdateOutfitLayout(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	outfit, err := h.store.UpdateOutfitLayout(id, req.Items)
+	outfit, err := h.store.UpdateOutfitLayout(id, req.Items, owner)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "outfit not found"})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -249,12 +288,13 @@ func (h *Handler) UpdateOutfitLayout(c *gin.Context) {
 }
 
 func (h *Handler) WearOutfit(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	outfit, err := h.store.WearOutfit(id)
+	outfit, err := h.store.WearOutfit(id, owner)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -267,13 +307,14 @@ func (h *Handler) WearOutfit(c *gin.Context) {
 }
 
 func (h *Handler) RecommendOutfits(c *gin.Context) {
+	owner := c.GetString("owner")
 	limit := 5
 	if v := c.Query("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 50 {
 			limit = n
 		}
 	}
-	recs, err := h.store.RecommendOutfits(limit)
+	recs, err := h.store.RecommendOutfits(limit, owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -285,13 +326,14 @@ func (h *Handler) RecommendOutfits(c *gin.Context) {
 }
 
 func (h *Handler) SuggestOutfits(c *gin.Context) {
+	owner := c.GetString("owner")
 	count := 3
 	if v := c.Query("count"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 20 {
 			count = n
 		}
 	}
-	suggestions, err := h.store.SuggestOutfits(count)
+	suggestions, err := h.store.SuggestOutfits(count, owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -305,15 +347,18 @@ func (h *Handler) SuggestOutfits(c *gin.Context) {
 // Image Upload
 
 func (h *Handler) UploadImage(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	// Verify item exists
-	if _, err := h.store.GetItem(id); err == sql.ErrNoRows {
+	if _, err := h.store.GetItem(id, owner); err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "item not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -346,12 +391,13 @@ func (h *Handler) UploadImage(c *gin.Context) {
 // Outfit Logs
 
 func (h *Handler) LogOutfitWear(c *gin.Context) {
+	owner := c.GetString("owner")
 	var req domain.LogOutfitWearRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	log, err := h.store.LogOutfitWear(req)
+	log, err := h.store.LogOutfitWear(req, owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -360,6 +406,7 @@ func (h *Handler) LogOutfitWear(c *gin.Context) {
 }
 
 func (h *Handler) GetOutfitLogs(c *gin.Context) {
+	owner := c.GetString("owner")
 	startDateStr := c.Query("start_date")
 	endDateStr := c.Query("end_date")
 
@@ -375,7 +422,7 @@ func (h *Handler) GetOutfitLogs(c *gin.Context) {
 		return
 	}
 
-	logs, err := h.store.GetOutfitLogs(startDate, endDate)
+	logs, err := h.store.GetOutfitLogs(startDate, endDate, owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -387,6 +434,7 @@ func (h *Handler) GetOutfitLogs(c *gin.Context) {
 }
 
 func (h *Handler) GetOutfitLogByDate(c *gin.Context) {
+	owner := c.GetString("owner")
 	dateStr := c.Param("date")
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
@@ -394,7 +442,7 @@ func (h *Handler) GetOutfitLogByDate(c *gin.Context) {
 		return
 	}
 
-	log, err := h.store.GetOutfitLogByDate(date)
+	log, err := h.store.GetOutfitLogByDate(date, owner)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no log found for this date"})
 		return
@@ -407,12 +455,13 @@ func (h *Handler) GetOutfitLogByDate(c *gin.Context) {
 }
 
 func (h *Handler) DeleteOutfitLog(c *gin.Context) {
+	owner := c.GetString("owner")
 	logID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	if err := h.store.DeleteOutfitLog(logID); err != nil {
+	if err := h.store.DeleteOutfitLog(logID, owner); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
@@ -420,6 +469,7 @@ func (h *Handler) DeleteOutfitLog(c *gin.Context) {
 }
 
 func (h *Handler) UpdateOutfitLog(c *gin.Context) {
+	owner := c.GetString("owner")
 	logID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
@@ -427,15 +477,19 @@ func (h *Handler) UpdateOutfitLog(c *gin.Context) {
 	}
 
 	var req struct {
-		Notes   string        `json:"notes"`
-		ItemIDs []uuid.UUID   `json:"item_ids"`
+		Notes   string      `json:"notes"`
+		ItemIDs []uuid.UUID `json:"item_ids"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	log, err := h.store.UpdateOutfitLog(logID, req.Notes, req.ItemIDs)
+	log, err := h.store.UpdateOutfitLog(logID, req.Notes, req.ItemIDs, owner)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "log not found"})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -446,12 +500,13 @@ func (h *Handler) UpdateOutfitLog(c *gin.Context) {
 // Stats
 
 func (h *Handler) GetItemStats(c *gin.Context) {
+	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
-	stats, err := h.store.GetItemStats(id)
+	stats, err := h.store.GetItemStats(id, owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -460,7 +515,8 @@ func (h *Handler) GetItemStats(c *gin.Context) {
 }
 
 func (h *Handler) GetWardrobeStats(c *gin.Context) {
-	stats, err := h.store.GetWardrobeStats()
+	owner := c.GetString("owner")
+	stats, err := h.store.GetWardrobeStats(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -471,7 +527,8 @@ func (h *Handler) GetWardrobeStats(c *gin.Context) {
 // Utility endpoints
 
 func (h *Handler) DetectStaleData(c *gin.Context) {
-	staleItems, err := h.store.DetectStaleItemData()
+	owner := c.GetString("owner")
+	staleItems, err := h.store.DetectStaleItemData(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -483,7 +540,8 @@ func (h *Handler) DetectStaleData(c *gin.Context) {
 }
 
 func (h *Handler) FixStaleData(c *gin.Context) {
-	fixedCount, err := h.store.FixStaleItemData()
+	owner := c.GetString("owner")
+	fixedCount, err := h.store.FixStaleItemData(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -495,7 +553,8 @@ func (h *Handler) FixStaleData(c *gin.Context) {
 }
 
 func (h *Handler) RecropAllImages(c *gin.Context) {
-	items, err := h.store.ListItems()
+	owner := c.GetString("owner")
+	items, err := h.store.ListItems(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -514,4 +573,3 @@ func (h *Handler) RecropAllImages(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"cropped": cropped, "failed": failed})
 }
-
