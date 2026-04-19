@@ -224,5 +224,7 @@ export function getWardrobeStats(): Promise<WardrobeStats> {
 
 export function imageUrl(path: string): string {
   if (!path) return "";
-  return `${API_BASE}${path}`;
+  // Convert /uploads/path to /api/image/path for proper CORS handling
+  const cleanPath = path.startsWith("/uploads/") ? path.slice(9) : path;
+  return `${API_BASE}/api/image/${cleanPath}`;
 }

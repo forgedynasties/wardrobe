@@ -59,6 +59,12 @@ func (h *Handler) GetItem(c *gin.Context) {
 	c.JSON(http.StatusOK, item)
 }
 
+func (h *Handler) ServeImage(c *gin.Context) {
+	filePath := c.Param("filepath")
+	imagePath := fmt.Sprintf("./uploads/%s", filePath)
+	c.File(imagePath)
+}
+
 func (h *Handler) CreateItem(c *gin.Context) {
 	owner := c.GetString("owner")
 	var req domain.CreateItemRequest

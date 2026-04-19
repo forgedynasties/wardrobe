@@ -9,23 +9,6 @@ import (
 func RegisterRoutes(r *gin.Engine, h *Handler) {
 	// CORS is already handled by the cors middleware in main.go
 
-	// Add CORS headers for static file serving FIRST
-	r.Use(func(c *gin.Context) {
-		if strings.HasPrefix(c.Request.URL.Path, "/uploads") {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		}
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
-
-	// Register static files BEFORE API routes so middleware applies
-	r.Static("/uploads", "./uploads")
-
 	// Owner scope: two-user app (Ali / Alishba). Default to "ali" so legacy
 	// clients and the raw-image static handler keep working.
 	r.Use(func(c *gin.Context) {
@@ -38,6 +21,9 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 	})
 
 	api := r.Group("/api")
+
+	// Image serving endpoint - serves images with CORS headers
+	api.GET("/image/*filepath", h.ServeImage)
 
 	items := api.Group("/items")
 	{
