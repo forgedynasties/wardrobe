@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/nav-bar";
 import { OutfitAdminPanel } from "@/components/outfit-admin-panel";
+import { PwaRegister } from "@/components/pwa-register";
 import { TopBar } from "@/components/top-bar";
 import { UserGate } from "@/components/user-gate";
 import { UserProvider } from "@/lib/user-context";
@@ -22,6 +23,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Wardrobe",
   description: "Digital wardrobe manager",
+  applicationName: "Wardrobe",
+  appleWebApp: {
+    capable: true,
+    title: "Wardrobe",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0908",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -43,6 +59,7 @@ export default function RootLayout({
             {SHOW_OUTFIT_LAYOUT_ADMIN && <OutfitAdminPanel />}
           </UserGate>
         </UserProvider>
+        <PwaRegister />
       </body>
     </html>
   );
