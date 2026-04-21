@@ -223,7 +223,7 @@ export default function OutfitLoggerPage() {
           return;
         }
 
-        const dateString = `${toKey(selectedDate)}T00:00:00`;
+        const dateString = `${toKey(selectedDate)}T00:00:00Z`;
 
         const requestData: Record<string, unknown> = {
           wear_date: dateString,
