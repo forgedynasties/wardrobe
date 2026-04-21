@@ -223,9 +223,7 @@ export default function OutfitLoggerPage() {
           return;
         }
 
-        const wearDate = new Date(selectedDate);
-        wearDate.setHours(0, 0, 0, 0);
-        const dateString = wearDate.toISOString();
+        const dateString = `${toKey(selectedDate)}T00:00:00`;
 
         const requestData: Record<string, unknown> = {
           wear_date: dateString,
