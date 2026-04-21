@@ -155,9 +155,11 @@ export default function OutfitLoggerPage() {
     try {
       const { start, end } = viewRange(view, anchor);
       const logsData = await getOutfitLogs(toKey(start), toKey(end));
+      console.log("[DEBUG] raw wear_dates from server:", logsData.map(l => l.wear_date));
       const logsMap = new Map(
         logsData.map((log) => {
           const dateKey = log.wear_date.split("T")[0];
+          console.log("[DEBUG] mapping wear_date", log.wear_date, "→ key", dateKey);
           return [dateKey, log];
         })
       );
@@ -169,6 +171,7 @@ export default function OutfitLoggerPage() {
 
   const handleDateClick = (date: Date) => {
     const dateStr = toKey(date);
+    console.log("[DEBUG] clicked date:", date.toString(), "→ key:", dateStr);
     const existingLog = logs.get(dateStr);
 
     setSelectedDate(date);
@@ -224,6 +227,7 @@ export default function OutfitLoggerPage() {
         }
 
         const dateString = `${toKey(selectedDate)}T00:00:00Z`;
+        console.log("[DEBUG] saving log for selectedDate:", selectedDate.toString(), "→ dateString:", dateString);
 
         const requestData: Record<string, unknown> = {
           wear_date: dateString,
