@@ -56,6 +56,22 @@ function slugify(s: string): string {
     .slice(0, 40) || "outfit";
 }
 
+function getUiCanvasBackground(ctx: CanvasRenderingContext2D): string {
+  if (typeof document === "undefined") return "#f3f1ee";
+
+  const probe = document.createElement("div");
+  probe.className = "bg-muted/30";
+  probe.style.position = "fixed";
+  probe.style.pointerEvents = "none";
+  probe.style.opacity = "0";
+  document.body.appendChild(probe);
+
+  const backgroundColor = window.getComputedStyle(probe).backgroundColor;
+  probe.remove();
+
+  return backgroundColor || ctx.canvas.ownerDocument?.defaultView?.getComputedStyle(document.body).backgroundColor || "#f3f1ee";
+}
+
 export async function exportOutfitImage(
   items: Item[],
   opts?: { name?: string; filename?: string },
@@ -66,10 +82,7 @@ export async function exportOutfitImage(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no canvas context");
 
-  const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-  grad.addColorStop(0, "#fafafa");
-  grad.addColorStop(1, "#e5e5e5");
-  ctx.fillStyle = grad;
+  ctx.fillStyle = getUiCanvasBackground(ctx);
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
   const cfg = outfitConfig.get();

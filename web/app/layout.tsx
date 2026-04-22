@@ -8,7 +8,7 @@ import { TopBar } from "@/components/top-bar";
 import { UserGate } from "@/components/user-gate";
 import { UserProvider } from "@/lib/user-context";
 
-const SHOW_OUTFIT_LAYOUT_ADMIN = true;
+const SHOW_OUTFIT_LAYOUT_ADMIN = false;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

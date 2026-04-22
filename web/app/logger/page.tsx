@@ -308,6 +308,7 @@ export default function OutfitLoggerPage() {
     prevHasLog: boolean,
     nextHasLog: boolean,
     compact: boolean,
+    showWeekday = false,
   ) => {
     const dateStr = date ? toKey(date) : null;
     const log = dateStr ? logs.get(dateStr) ?? null : null;
@@ -372,6 +373,11 @@ export default function OutfitLoggerPage() {
             >
               {date.getDate()}
             </div>
+            {showWeekday && (
+              <div className="absolute top-1 right-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground z-20">
+                {date.toLocaleDateString("en-US", { weekday: "short" })}
+              </div>
+            )}
             {hasLog && log && (
               <>
                 {itemCount === 0 && (
@@ -467,21 +473,31 @@ export default function OutfitLoggerPage() {
 
       <Card className="p-3 md:p-6">
         {view === "week" && (
-          <div className="grid grid-cols-7 gap-1 md:gap-2">
-            {buildWeekCells(anchor).map((d, i) => (
-              <div
-                key={`h-${i}`}
-                className="text-center font-semibold text-xs text-muted-foreground py-2"
-              >
-                {d.toLocaleDateString("en-US", { weekday: "short" })}
-              </div>
-            ))}
-            {buildWeekCells(anchor).map((d, idx, arr) => {
-              const prev = idx > 0 ? logs.has(toKey(arr[idx - 1])) : false;
-              const next = idx < arr.length - 1 ? logs.has(toKey(arr[idx + 1])) : false;
-              return renderDayCell(d, idx, prev, next, false);
-            })}
-          </div>
+          <>
+            <div className="grid grid-cols-3 gap-2 md:hidden">
+              {buildWeekCells(anchor).map((d, idx, arr) => {
+                const prev = idx > 0 ? logs.has(toKey(arr[idx - 1])) : false;
+                const next = idx < arr.length - 1 ? logs.has(toKey(arr[idx + 1])) : false;
+                return renderDayCell(d, idx, prev, next, false, true);
+              })}
+            </div>
+
+            <div className="hidden md:grid md:grid-cols-7 gap-1 md:gap-2">
+              {buildWeekCells(anchor).map((d, i) => (
+                <div
+                  key={`h-${i}`}
+                  className="text-center font-semibold text-xs text-muted-foreground py-2"
+                >
+                  {d.toLocaleDateString("en-US", { weekday: "short" })}
+                </div>
+              ))}
+              {buildWeekCells(anchor).map((d, idx, arr) => {
+                const prev = idx > 0 ? logs.has(toKey(arr[idx - 1])) : false;
+                const next = idx < arr.length - 1 ? logs.has(toKey(arr[idx + 1])) : false;
+                return renderDayCell(d, idx, prev, next, false);
+              })}
+            </div>
+          </>
         )}
 
         {view === "month" && (
