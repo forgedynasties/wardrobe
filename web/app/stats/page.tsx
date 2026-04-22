@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { getWardrobeStats, imageUrl, getItems, getOutfits } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { WardrobeStats, ClothingItem, Outfit } from "@/lib/types";
+import type { WardrobeStats, ClothingItem } from "@/lib/types";
 
 export default function StatsPage() {
   const [stats, setStats] = useState<WardrobeStats | null>(null);
+  const [neverWornItems, setNeverWornItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Dynamically calculate stats from items and outfits
@@ -24,7 +25,8 @@ export default function StatsPage() {
       
       // Items statistics
       calculatedStats.total_items = itemsData.length;
-      calculatedStats.never_worn_items = itemsData.filter(item => !item.last_worn).length;
+      const neverWorn = itemsData.filter((item) => !item.last_worn);
+      calculatedStats.never_worn_items = neverWorn.length;
       
       // Outfits statistics
       calculatedStats.total_outfits = outfitsData.length;
@@ -44,6 +46,7 @@ export default function StatsPage() {
         .sort((a, b) => a.category.localeCompare(b.category));
 
       setStats(calculatedStats);
+      setNeverWornItems(neverWorn);
     } catch (err) {
       console.error("Failed to load stats:", err);
     } finally {
@@ -107,28 +110,14 @@ export default function StatsPage() {
       {/* Wardrobe Overview */}
       <div>
         <h2 className="text-xl font-semibold mb-3">Wardrobe Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="p-4">
             <p className="text-sm text-muted-foreground mb-1">Total Items</p>
             <p className="text-3xl font-bold">{stats.total_items}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-muted-foreground mb-1">Never Worn</p>
-            <p className="text-3xl font-bold">{stats.never_worn_items}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.total_items > 0
-                ? ((stats.never_worn_items / stats.total_items) * 100).toFixed(1)
-                : 0}
-              %
-            </p>
-          </Card>
-          <Card className="p-4">
             <p className="text-sm text-muted-foreground mb-1">Total Outfits</p>
             <p className="text-3xl font-bold">{stats.total_outfits}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground mb-1">Never Worn Outfits</p>
-            <p className="text-3xl font-bold">{stats.never_worn_outfits}</p>
           </Card>
         </div>
 
@@ -176,38 +165,6 @@ export default function StatsPage() {
           </Card>
         </div>
       </div>
-
-      {/* Day of Week Distribution */}
-      {stats.wears_by_day_of_week.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-3">Wears by Day of Week</h2>
-          <Card className="p-6">
-            <div className="grid grid-cols-7 gap-3">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => {
-                const dayData = stats.wears_by_day_of_week.find((d) => d.day === idx);
-                const count = dayData?.count || 0;
-                const maxCount = Math.max(1, ...stats.wears_by_day_of_week.map((d) => d.count));
-                const height = ((count / maxCount) * 100) || 5;
-
-                return (
-                  <div key={idx} className="flex flex-col items-center justify-end gap-2">
-                    <div className="w-8 bg-primary/20 rounded-t" style={{ height: `${30 + height}px` }}>
-                      {count > 0 && (
-                        <div
-                          className="w-full bg-primary rounded-t transition-all"
-                          style={{ height: `${height}px` }}
-                        />
-                      )}
-                    </div>
-                    <span className="text-xs font-medium">{day}</span>
-                    <span className="text-xs text-muted-foreground">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
-      )}
 
       {/* Color Palette */}
       {stats.colors.length > 0 && (
@@ -290,6 +247,91 @@ export default function StatsPage() {
           </div>
         </div>
       )}
+
+      {neverWornItems.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-3">Never Worn Items</h2>
+          <p className="text-sm text-muted-foreground mb-3">
+            {stats.never_worn_items} item{stats.never_worn_items === 1 ? "" : "s"} still waiting for a first wear.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {neverWornItems.map((item) => {
+              const imgSrc =
+                item.image_status === "done" && item.image_url
+                  ? imageUrl(item.image_url)
+                  : item.raw_image_url
+                    ? imageUrl(item.raw_image_url)
+                    : null;
+
+              return (
+                <Card key={item.id} className="overflow-hidden flex flex-col">
+                  <div className="aspect-square bg-muted/50 flex items-center justify-center">
+                    {imgSrc ? (
+                      <img
+                        src={imgSrc}
+                        alt={item.category}
+                        className="w-full h-full object-contain p-2"
+                      />
+                    ) : (
+                      <div className="text-4xl">👕</div>
+                    )}
+                  </div>
+                  <div className="p-3 flex-1 flex flex-col">
+                    <p className="font-medium capitalize">{item.category}</p>
+                    {item.sub_category && (
+                      <p className="text-xs text-muted-foreground capitalize">{item.sub_category}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-2">Never worn</p>
+                    {item.colors && item.colors.length > 0 && (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {item.colors.map((c, ci) => (
+                          <div key={ci} className="flex items-center gap-1">
+                            <div
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: c }}
+                            />
+                            <span className="text-xs">{c}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h2 className="text-xl font-semibold mb-3">Ideas To Add Next</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="p-4">
+            <p className="font-medium">Cost per wear</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Show which pieces are giving the best value once purchase price is tracked.
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="font-medium">Most repeated combinations</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Highlight the pairs or full outfits you reach for most often.
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="font-medium">Seasonal usage</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Break down which categories and colors dominate each month or season.
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="font-medium">Neglected favorites</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Find items that used to get worn a lot but have recently dropped off.
+            </p>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
