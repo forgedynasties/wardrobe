@@ -73,7 +73,7 @@ export default function WishlistPage() {
   const handleRemove = async (id: string) => {
     try {
       await deleteWishlistItem(id);
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      setItems((prev) => (prev ?? []).filter((item) => item.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to remove wishlist item");
     }
