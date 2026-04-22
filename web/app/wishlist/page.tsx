@@ -58,7 +58,7 @@ export default function WishlistPage() {
         product_url: link.trim(),
         price_pkr: Number(price),
       });
-      setItems((prev) => [created, ...prev]);
+      setItems((prev) => [created, ...(prev ?? [])]);
       setName("");
       setImage("");
       setLink("");
