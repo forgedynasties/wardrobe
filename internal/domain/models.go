@@ -119,6 +119,23 @@ type OutfitSuggestion struct {
 	Reason string         `json:"reason"`
 }
 
+type WishlistItem struct {
+	ID         uuid.UUID `json:"id"`
+	Name       string    `json:"name"`
+	ImageURL   string    `json:"image_url"`
+	ProductURL string    `json:"product_url"`
+	PricePKR   int64     `json:"price_pkr"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type CreateWishlistItemRequest struct {
+	Name       string `json:"name" binding:"required"`
+	ImageURL   string `json:"image_url"`
+	ProductURL string `json:"product_url" binding:"required"`
+	PricePKR   int64  `json:"price_pkr" binding:"required"`
+}
+
 type ItemStats struct {
 	OutfitCount int        `json:"outfit_count"`
 	WearCount   int        `json:"wear_count"`

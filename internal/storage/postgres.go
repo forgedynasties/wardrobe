@@ -148,6 +148,75 @@ func (s *Store) SetImageProcessing(id uuid.UUID, rawImageURL string) error {
 	return err
 }
 
+// Wishlist
+
+func (s *Store) ListWishlistItems(owner string) ([]domain.WishlistItem, error) {
+	rows, err := s.db.Query(`
+		SELECT id, name, image_url, product_url, price_pkr, created_at, updated_at
+		FROM wishlist_items
+		WHERE owner = $1
+		ORDER BY created_at DESC`, owner)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []domain.WishlistItem
+	for rows.Next() {
+		var item domain.WishlistItem
+		if err := rows.Scan(
+			&item.ID,
+			&item.Name,
+			&item.ImageURL,
+			&item.ProductURL,
+			&item.PricePKR,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Store) CreateWishlistItem(req domain.CreateWishlistItemRequest, owner string) (*domain.WishlistItem, error) {
+	var item domain.WishlistItem
+	err := s.db.QueryRow(`
+		INSERT INTO wishlist_items (name, image_url, product_url, price_pkr, owner)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, name, image_url, product_url, price_pkr, created_at, updated_at`,
+		req.Name, req.ImageURL, req.ProductURL, req.PricePKR, owner,
+	).Scan(
+		&item.ID,
+		&item.Name,
+		&item.ImageURL,
+		&item.ProductURL,
+		&item.PricePKR,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (s *Store) DeleteWishlistItem(id uuid.UUID, owner string) error {
+	result, err := s.db.Exec(`DELETE FROM wishlist_items WHERE id = $1 AND owner = $2`, id, owner)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("wishlist item not found")
+	}
+	return nil
+}
+
 // Outfits
 
 func (s *Store) ListOutfits(owner string) ([]domain.Outfit, error) {

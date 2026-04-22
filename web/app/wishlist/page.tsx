@@ -1,59 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ExternalLink, Heart, Trash2 } from "lucide-react";
+import { createWishlistItem, deleteWishlistItem, getWishlistItems } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/lib/user-context";
+import type { WishlistItem } from "@/lib/types";
 
-interface WishlistItem {
-  id: string;
-  name: string;
-  image: string;
-  link: string;
-  price: string;
-  createdAt: string;
-}
-
-function formatPkr(value: string) {
+function formatPkr(value: number) {
   return `PKR ${value}`;
-}
-
-function storageKey(user: string | null) {
-  return `wardrobe-wishlist-${user ?? "guest"}`;
-}
-
-function loadWishlist(key: string) {
-  if (typeof window === "undefined") return [] as WishlistItem[];
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as WishlistItem[]) : [];
-  } catch {
-    return [];
-  }
 }
 
 export default function WishlistPage() {
   const { user, hydrated } = useUser();
+  const [items, setItems] = useState<WishlistItem[] | null>(null);
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
   const [link, setLink] = useState("");
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [, setVersion] = useState(0);
-  const key = storageKey(user);
+  const [saving, setSaving] = useState(false);
 
-  const items = hydrated ? loadWishlist(key) : [];
+  useEffect(() => {
+    if (!hydrated || !user) return;
+    getWishlistItems()
+      .then(setItems)
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load wishlist"));
+  }, [hydrated, user]);
 
-  const persist = (next: WishlistItem[]) => {
-    localStorage.setItem(key, JSON.stringify(next));
-    setVersion((v) => v + 1);
-  };
-
-  const orderedItems = [...items].sort(
-    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+  const orderedItems = [...(items ?? [])].sort(
+    (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
   );
 
   const handleImageUpload = (file: File) => {
@@ -64,38 +43,47 @@ export default function WishlistPage() {
     reader.readAsDataURL(file);
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     setError(null);
     if (!name.trim() || !link.trim() || !price.trim()) {
       setError("Name, link, and price are required.");
       return;
     }
 
-    const nextItem: WishlistItem = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      image: image.trim(),
-      link: link.trim(),
-      price: price.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    persist([nextItem, ...items]);
-    setName("");
-    setImage("");
-    setLink("");
-    setPrice("");
+    setSaving(true);
+    try {
+      const created = await createWishlistItem({
+        name: name.trim(),
+        image_url: image.trim(),
+        product_url: link.trim(),
+        price_pkr: Number(price),
+      });
+      setItems((prev) => [created, ...prev]);
+      setName("");
+      setImage("");
+      setLink("");
+      setPrice("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save wishlist item");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleRemove = (id: string) => {
-    persist(items.filter((item) => item.id !== id));
+  const handleRemove = async (id: string) => {
+    try {
+      await deleteWishlistItem(id);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove wishlist item");
+    }
   };
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-1">Wishlist</h1>
-        <p className="text-muted-foreground">Save pieces you want to buy later with image, link, and price.</p>
+        <p className="text-muted-foreground">Save pieces you want to buy later with image, link, and PKR price.</p>
       </div>
 
       <Card className="p-4 space-y-4">
@@ -110,7 +98,7 @@ export default function WishlistPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Price</Label>
+            <Label>Price (PKR)</Label>
             <Input
               value={price}
               onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))}
@@ -163,10 +151,14 @@ export default function WishlistPage() {
           </div>
         )}
 
-        <Button onClick={handleAdd}>Add to Wishlist</Button>
+        <Button onClick={handleAdd} disabled={saving}>
+          {saving ? "Saving..." : "Add to Wishlist"}
+        </Button>
       </Card>
 
-      {orderedItems.length === 0 ? (
+      {items === null ? (
+        <Card className="p-8 text-center text-muted-foreground">Loading wishlist...</Card>
+      ) : orderedItems.length === 0 ? (
         <Card className="p-8 flex flex-col items-center justify-center text-center">
           <Heart className="h-8 w-8 text-muted-foreground mb-3" />
           <p className="font-medium">No wishlist items yet</p>
@@ -179,9 +171,9 @@ export default function WishlistPage() {
           {orderedItems.map((item) => (
             <Card key={item.id} className="overflow-hidden flex flex-col">
               <div className="aspect-square bg-muted/40 flex items-center justify-center overflow-hidden">
-                {item.image ? (
+                {item.image_url ? (
                   <img
-                    src={item.image}
+                    src={item.image_url}
                     alt={item.name}
                     className="w-full h-full object-cover"
                   />
@@ -192,14 +184,14 @@ export default function WishlistPage() {
               <div className="p-4 flex-1 space-y-3">
                 <div>
                   <p className="font-medium">{item.name}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{formatPkr(item.price)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{formatPkr(item.price_pkr)}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     className="gap-1.5"
-                    onClick={() => window.open(item.link, "_blank", "noopener,noreferrer")}
+                    onClick={() => window.open(item.product_url, "_blank", "noopener,noreferrer")}
                   >
                     <ExternalLink className="h-4 w-4" />
                     Open link

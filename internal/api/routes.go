@@ -35,6 +35,13 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		items.GET("/:id/stats", h.GetItemStats)
 	}
 
+	wishlist := api.Group("/wishlist")
+	{
+		wishlist.GET("", h.ListWishlistItems)
+		wishlist.POST("", h.CreateWishlistItem)
+		wishlist.DELETE("/:id", h.DeleteWishlistItem)
+	}
+
 
 	outfits := api.Group("/outfits")
 	{

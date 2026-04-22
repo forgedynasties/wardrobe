@@ -71,6 +71,16 @@ export interface OutfitSuggestion {
   reason: string;
 }
 
+export interface WishlistItem {
+  id: string;
+  name: string;
+  image_url: string;
+  product_url: string;
+  price_pkr: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OutfitLog {
   id: string;
   outfit_id: string | null;
@@ -86,6 +96,13 @@ export interface LogOutfitWearRequest {
   wear_date: string;
   item_ids?: string[];
   notes?: string;
+}
+
+export interface CreateWishlistItemRequest {
+  name: string;
+  image_url?: string;
+  product_url: string;
+  price_pkr: number;
 }
 
 export interface ItemStats {

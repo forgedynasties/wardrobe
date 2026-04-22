@@ -134,6 +134,48 @@ func (h *Handler) DeleteItem(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
+func (h *Handler) ListWishlistItems(c *gin.Context) {
+	owner := c.GetString("owner")
+	items, err := h.store.ListWishlistItems(owner)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if items == nil {
+		items = []domain.WishlistItem{}
+	}
+	c.JSON(http.StatusOK, items)
+}
+
+func (h *Handler) CreateWishlistItem(c *gin.Context) {
+	owner := c.GetString("owner")
+	var req domain.CreateWishlistItemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	item, err := h.store.CreateWishlistItem(req, owner)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, item)
+}
+
+func (h *Handler) DeleteWishlistItem(c *gin.Context) {
+	owner := c.GetString("owner")
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	if err := h.store.DeleteWishlistItem(id, owner); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 // Outfits
 
 func (h *Handler) ListOutfits(c *gin.Context) {

@@ -12,6 +12,8 @@ import type {
   OutfitItemLayout,
   ItemStats,
   WardrobeStats,
+  WishlistItem,
+  CreateWishlistItemRequest,
 } from "./types";
 import { getCurrentUser } from "./user-context";
 
@@ -220,6 +222,21 @@ export function getItemStats(id: string): Promise<ItemStats> {
 
 export function getWardrobeStats(): Promise<WardrobeStats> {
   return fetcher(`/api/stats`);
+}
+
+export function getWishlistItems(): Promise<WishlistItem[]> {
+  return fetcher("/api/wishlist");
+}
+
+export function createWishlistItem(data: CreateWishlistItemRequest): Promise<WishlistItem> {
+  return fetcher("/api/wishlist", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteWishlistItem(id: string): Promise<void> {
+  return fetcher(`/api/wishlist/${id}`, { method: "DELETE" });
 }
 
 export function imageUrl(path: string): string {
