@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { SunMoon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "wardrobe-theme";
@@ -15,16 +15,14 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [hydrated, setHydrated] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "dark";
+    return localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "dark";
+  });
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const nextTheme: Theme = stored === "light" ? "light" : "dark";
-    applyTheme(nextTheme);
-    setTheme(nextTheme);
-    setHydrated(true);
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   const toggleTheme = () => {
     const nextTheme: Theme = theme === "dark" ? "light" : "dark";
@@ -40,11 +38,10 @@ export function ThemeToggle() {
       size="icon"
       className="h-8 w-8"
       onClick={toggleTheme}
-      aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-      title={theme === "dark" ? "Light theme" : "Dark theme"}
-      disabled={!hydrated}
+      aria-label="Toggle light and dark theme"
+      title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
     >
-      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      <SunMoon className="h-4 w-4" />
     </Button>
   );
 }

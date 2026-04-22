@@ -391,22 +391,21 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	}
 	defer file.Close()
 
-	rawPath, err := h.imageStore.SaveRaw(c.Request.Context(), id, file)
+	_, err = h.imageStore.SaveRaw(c.Request.Context(), id, file)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save image"})
 		return
 	}
 
-	if err := h.store.SetImageProcessing(id, h.imageStore.RawURL(id)); err != nil {
+	rawURL := h.imageStore.RawURL(id)
+	if err := h.store.UpdateImageStatus(id, "done", rawURL, rawURL); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update status"})
 		return
 	}
 
-	h.worker.SubmitJob(id, rawPath)
-
-	c.JSON(http.StatusAccepted, gin.H{
-		"status":        "processing",
-		"raw_image_url": h.imageStore.RawURL(id),
+	c.JSON(http.StatusOK, gin.H{
+		"status":        "done",
+		"raw_image_url": rawURL,
 	})
 }
 

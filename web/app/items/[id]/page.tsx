@@ -116,8 +116,9 @@ export default function ItemDetailPage() {
     : item.image_url
       ? imageUrl(item.image_url)
       : item.raw_image_url
-        ? imageUrl(item.raw_image_url)
+      ? imageUrl(item.raw_image_url)
         : null;
+  const imageStatusLabel = item.image_status === "processing" ? "done" : item.image_status;
 
   return (
     <div className="p-4 max-w-md mx-auto">
@@ -150,11 +151,6 @@ export default function ItemDetailPage() {
         ) : (
           <ImageUpload onFileSelect={handleReupload} uploading={saving} />
         )}
-        {item.image_status === "processing" && (
-          <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-            <span className="animate-pulse">Processing...</span>
-          </div>
-        )}
       </div>
 
       {item.image_url && item.raw_image_url && (
@@ -173,7 +169,7 @@ export default function ItemDetailPage() {
           >
             Raw
           </Badge>
-          <Badge variant="secondary">{item.image_status}</Badge>
+          <Badge variant="secondary">{imageStatusLabel}</Badge>
         </div>
       )}
 

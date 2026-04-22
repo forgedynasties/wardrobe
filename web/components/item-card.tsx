@@ -33,13 +33,6 @@ export function ItemCard({ item }: ItemCardProps) {
               {item.category === "Shoes" ? "👟" : item.category === "Accessory" ? "🎒" : "👕"}
             </span>
           )}
-          {item.image_status === "processing" && (
-            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-              <span className="text-sm text-muted-foreground animate-pulse">
-                Processing...
-              </span>
-            </div>
-          )}
           {item.colors && item.colors.length > 0 && (
             <div className="absolute top-2 right-2 flex -space-x-1">
               {item.colors.slice(0, 3).map((c, i) => (

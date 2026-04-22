@@ -305,29 +305,23 @@ export default function StatsPage() {
 
       <div>
         <h2 className="text-xl font-semibold mb-3">Ideas To Add Next</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-4">
-            <p className="font-medium">Cost per wear</p>
+            <p className="font-medium">Rotation health</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Show which pieces are giving the best value once purchase price is tracked.
+              Score how evenly your wardrobe is being used instead of repeating the same few pieces.
             </p>
           </Card>
           <Card className="p-4">
-            <p className="font-medium">Most repeated combinations</p>
+            <p className="font-medium">Least worn items</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Highlight the pairs or full outfits you reach for most often.
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="font-medium">Seasonal usage</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Break down which categories and colors dominate each month or season.
+              Surface the pieces that have only been worn once or very rarely.
             </p>
           </Card>
           <Card className="p-4">
             <p className="font-medium">Neglected favorites</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Find items that used to get worn a lot but have recently dropped off.
+              Find items that were once frequent picks but have gone quiet lately.
             </p>
           </Card>
         </div>
