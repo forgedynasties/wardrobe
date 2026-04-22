@@ -17,6 +17,10 @@ interface WishlistItem {
   createdAt: string;
 }
 
+function formatPkr(value: string) {
+  return `PKR ${value}`;
+}
+
 function storageKey(user: string | null) {
   return `wardrobe-wishlist-${user ?? "guest"}`;
 }
@@ -109,8 +113,10 @@ export default function WishlistPage() {
             <Label>Price</Label>
             <Input
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="$120"
+              onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))}
+              placeholder="2500"
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
 
@@ -186,7 +192,7 @@ export default function WishlistPage() {
               <div className="p-4 flex-1 space-y-3">
                 <div>
                   <p className="font-medium">{item.name}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{item.price}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{formatPkr(item.price)}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button
