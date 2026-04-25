@@ -17,6 +17,18 @@ const (
 	cookieMaxAge   = 7 * 24 * 60 * 60 // seconds
 )
 
+func setSessionCookie(c *gin.Context, value string, maxAge int) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     sessionCookie,
+		Value:    value,
+		MaxAge:   maxAge,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
+	})
+}
+
 func generateToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -53,7 +65,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie(sessionCookie, token, cookieMaxAge, "/", "", false, true)
+	setSessionCookie(c, token, cookieMaxAge)
 	c.JSON(http.StatusOK, gin.H{
 		"username":     user.Username,
 		"display_name": user.DisplayName,
@@ -66,7 +78,7 @@ func (h *Handler) Logout(c *gin.Context) {
 	if err == nil {
 		h.store.DeleteSession(token)
 	}
-	c.SetCookie(sessionCookie, "", -1, "/", "", false, true)
+	setSessionCookie(c, "", -1)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -118,7 +130,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie(sessionCookie, token, cookieMaxAge, "/", "", false, true)
+	setSessionCookie(c, token, cookieMaxAge)
 	c.JSON(http.StatusCreated, gin.H{
 		"username":     user.Username,
 		"display_name": user.DisplayName,
@@ -229,7 +241,7 @@ func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		if user == nil {
-			c.SetCookie(sessionCookie, "", -1, "/", "", false, true)
+			setSessionCookie(c, "", -1)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "session expired"})
 			return
 		}
