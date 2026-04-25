@@ -1,61 +1,91 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-export type User = "ali" | "alishba";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
 
-const STORAGE_KEY = "wardrobe-user";
-
-// Module-level ref the API fetcher reads synchronously on each request,
-// so it never has to go through React to learn who's making the call.
-let currentUserRef: User | null = null;
-
-export function getCurrentUser(): User | null {
-  return currentUserRef;
+export interface AuthUser {
+  username: string;
+  display_name: string;
+  is_admin: boolean;
 }
 
-type UserContextValue = {
-  user: User | null;
+type AuthContextValue = {
+  user: AuthUser | null;
   hydrated: boolean;
-  setUser: (u: User) => void;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, displayName: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 };
 
-const UserContext = createContext<UserContextValue | null>(null);
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+async function apiFetch(path: string, init?: RequestInit) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...(init?.headers as object) },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || `Error ${res.status}`);
+  return body;
+}
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUserState] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "ali" || stored === "alishba") {
-      setUserState(stored);
-      currentUserRef = stored;
-    }
-    setHydrated(true);
+    apiFetch("/api/auth/me")
+      .then(setUser)
+      .catch(() => setUser(null))
+      .finally(() => setHydrated(true));
   }, []);
 
+  // Apply per-user theme class
   useEffect(() => {
     const root = document.documentElement;
-    if (user === "alishba") root.classList.add("theme-alishba");
+    if (user?.username === "alishba") root.classList.add("theme-alishba");
     else root.classList.remove("theme-alishba");
   }, [user]);
 
-  const setUser = (u: User) => {
-    localStorage.setItem(STORAGE_KEY, u);
-    currentUserRef = u;
-    setUserState(u);
-  };
+  const login = useCallback(async (username: string, password: string) => {
+    const data = await apiFetch("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    setUser(data);
+  }, []);
+
+  const register = useCallback(async (username: string, displayName: string, password: string) => {
+    const data = await apiFetch("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ username, display_name: displayName, password }),
+    });
+    setUser(data);
+  }, []);
+
+  const logout = useCallback(async () => {
+    await apiFetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    setUser(null);
+  }, []);
 
   return (
-    <UserContext.Provider value={{ user, hydrated, setUser }}>
+    <AuthContext.Provider value={{ user, hydrated, login, register, logout }}>
       {children}
-    </UserContext.Provider>
+    </AuthContext.Provider>
   );
 }
 
-export function useUser(): UserContextValue {
-  const ctx = useContext(UserContext);
+export function useUser(): AuthContextValue {
+  const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useUser must be inside <UserProvider>");
   return ctx;
+}
+
+// Legacy compat — getCurrentUser still works for api.ts fetcher
+// (now returns username string, used as owner in X-User header which we've removed,
+//  but kept to avoid breaking other potential callers)
+export function getCurrentUser(): string | null {
+  return null; // cookie-based now, no need to pass header
 }

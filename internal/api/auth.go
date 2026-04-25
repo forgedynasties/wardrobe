@@ -1,0 +1,153 @@
+package api
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"wardrobe/internal/domain"
+)
+
+const (
+	sessionCookie  = "session_token"
+	sessionExpiry  = 7 * 24 * time.Hour
+	cookieMaxAge   = 7 * 24 * 60 * 60 // seconds
+)
+
+func generateToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func (h *Handler) Login(c *gin.Context) {
+	var req domain.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.store.AuthenticateUser(req.Username, req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
+		return
+	}
+
+	token, err := generateToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	if _, err := h.store.CreateSession(user.ID, token, sessionExpiry); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	c.SetCookie(sessionCookie, token, cookieMaxAge, "/", "", false, true)
+	c.JSON(http.StatusOK, gin.H{
+		"username":     user.Username,
+		"display_name": user.DisplayName,
+		"is_admin":     user.IsAdmin,
+	})
+}
+
+func (h *Handler) Logout(c *gin.Context) {
+	token, err := c.Cookie(sessionCookie)
+	if err == nil {
+		h.store.DeleteSession(token)
+	}
+	c.SetCookie(sessionCookie, "", -1, "/", "", false, true)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *Handler) Me(c *gin.Context) {
+	user := c.MustGet("user").(*domain.User)
+	c.JSON(http.StatusOK, gin.H{
+		"username":     user.Username,
+		"display_name": user.DisplayName,
+		"is_admin":     user.IsAdmin,
+	})
+}
+
+func (h *Handler) Register(c *gin.Context) {
+	var req domain.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(req.Password) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 6 characters"})
+		return
+	}
+
+	// Check username not taken
+	existing, err := h.store.GetUserByUsername(req.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if existing != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "username already taken"})
+		return
+	}
+
+	user, err := h.store.CreateUser(req.Username, req.DisplayName, req.Password, false)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	// Log them in immediately
+	token, err := generateToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if _, err := h.store.CreateSession(user.ID, token, sessionExpiry); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	c.SetCookie(sessionCookie, token, cookieMaxAge, "/", "", false, true)
+	c.JSON(http.StatusCreated, gin.H{
+		"username":     user.Username,
+		"display_name": user.DisplayName,
+		"is_admin":     user.IsAdmin,
+	})
+}
+
+// AuthMiddleware validates the session cookie and sets "user" + "owner" in context.
+func (h *Handler) AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token, err := c.Cookie(sessionCookie)
+		if err != nil || token == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
+			return
+		}
+
+		user, err := h.store.GetSessionUser(token)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			return
+		}
+		if user == nil {
+			c.SetCookie(sessionCookie, "", -1, "/", "", false, true)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "session expired"})
+			return
+		}
+
+		c.Set("user", user)
+		c.Set("owner", user.Username)
+		c.Next()
+	}
+}

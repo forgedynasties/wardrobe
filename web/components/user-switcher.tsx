@@ -1,33 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { UserRound, ChevronsUpDown } from "lucide-react";
-
-import { useUser, type User } from "@/lib/user-context";
+import { UserRound, LogOut } from "lucide-react";
+import { useUser } from "@/lib/user-context";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 
-const LABEL: Record<User, string> = { ali: "Ali", alishba: "Alishba" };
-
 export function UserSwitcher() {
-  const { user, setUser } = useUser();
+  const { user, logout } = useUser();
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   if (!user) return null;
 
-  const pick = (u: User) => {
-    if (u !== user) {
-      setUser(u);
-      // Reload so every page refetches against the new owner scope.
-      window.location.reload();
-      return;
-    }
+  const handleLogout = async () => {
+    setLoading(true);
+    await logout();
+    setLoading(false);
     setOpen(false);
   };
 
@@ -40,34 +36,26 @@ export function UserSwitcher() {
         onClick={() => setOpen(true)}
       >
         <UserRound className="h-4 w-4" />
-        <span className="font-medium">{LABEL[user]}</span>
-        <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+        <span className="font-medium">{user.display_name}</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Switch wardrobe</DialogTitle>
-            <DialogDescription>
-              Each person has their own items, outfits, and logs.
-            </DialogDescription>
+            <DialogTitle>{user.display_name}</DialogTitle>
+            <DialogDescription>@{user.username}{user.is_admin ? " · admin" : ""}</DialogDescription>
           </DialogHeader>
-          <div className="mt-2 flex flex-col gap-2">
+          <DialogFooter>
             <Button
-              size="lg"
-              variant={user === "ali" ? "default" : "outline"}
-              onClick={() => pick("ali")}
+              variant="destructive"
+              onClick={handleLogout}
+              disabled={loading}
+              className="gap-2"
             >
-              Ali
+              <LogOut className="h-4 w-4" />
+              {loading ? "Signing out..." : "Sign out"}
             </Button>
-            <Button
-              size="lg"
-              variant={user === "alishba" ? "default" : "outline"}
-              onClick={() => pick("alishba")}
-            >
-              Alishba
-            </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

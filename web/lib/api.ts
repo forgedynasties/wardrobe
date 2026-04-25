@@ -15,8 +15,6 @@ import type {
   CreateWishlistItemRequest,
   Page,
 } from "./types";
-import { getCurrentUser } from "./user-context";
-
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
 
 async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
@@ -24,12 +22,11 @@ async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string> | undefined),
   };
-  const user = getCurrentUser();
-  if (user) headers["X-User"] = user;
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers,
+    credentials: "include",
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -96,13 +93,10 @@ export async function uploadImage(
 ): Promise<{ status: string; raw_image_url: string }> {
   const form = new FormData();
   form.append("image", file);
-  const headers: Record<string, string> = {};
-  const user = getCurrentUser();
-  if (user) headers["X-User"] = user;
   const res = await fetch(`${API_BASE}/api/items/${id}/image`, {
     method: "POST",
-    headers,
     body: form,
+    credentials: "include",
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

@@ -142,6 +142,37 @@ type DayOfWeekCount struct {
 	Count int `json:"count"`
 }
 
+type User struct {
+	ID           uuid.UUID `json:"id"`
+	Username     string    `json:"username"`
+	DisplayName  string    `json:"display_name"`
+	PasswordHash string    `json:"-"`
+	IsAdmin      bool      `json:"is_admin"`
+	IsActive     bool      `json:"is_active"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type Session struct {
+	ID          uuid.UUID `json:"id"`
+	UserID      uuid.UUID `json:"user_id"`
+	TokenHash   string    `json:"-"`
+	ExpiresAt   time.Time `json:"expires_at"`
+	LastUsedAt  time.Time `json:"last_used_at"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type LoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type RegisterRequest struct {
+	Username    string `json:"username" binding:"required"`
+	DisplayName string `json:"display_name" binding:"required"`
+	Password    string `json:"password" binding:"required"`
+}
+
 type TopItem struct {
 	Item      ClothingItem `json:"item"`
 	WearCount int          `json:"wear_count"`
