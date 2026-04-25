@@ -1,3 +1,28 @@
+export interface HeatmapEntry {
+  date: string;   // "2025-04-15"
+  count: number;
+}
+
+export interface ProfileSections {
+  snapshot: boolean;
+  outfits: boolean;
+  calendar: boolean;
+  signature: boolean;
+}
+
+export interface ProfileConfig {
+  sections: ProfileSections;
+}
+
+export interface PublicProfile {
+  display_name: string;
+  username: string;
+  snapshot?: WardrobeStats;
+  outfits?: Outfit[];
+  calendar?: HeatmapEntry[];
+  signature?: TopItem[];
+}
+
 export interface Page<T> {
   data: T[];
   next_cursor?: string;

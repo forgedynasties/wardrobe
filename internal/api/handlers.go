@@ -791,3 +791,96 @@ func (h *Handler) RecropAllImages(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"cropped": cropped, "failed": failed})
 }
+
+// Profile
+
+func (h *Handler) GetWearHeatmap(c *gin.Context) {
+	owner := c.GetString("owner")
+	year := time.Now().Year()
+	if y, err := strconv.Atoi(c.Query("year")); err == nil && y > 2000 {
+		year = y
+	}
+	entries, err := h.store.GetWearHeatmap(owner, year)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if entries == nil {
+		entries = []domain.HeatmapEntry{}
+	}
+	c.JSON(http.StatusOK, entries)
+}
+
+func (h *Handler) GetProfileSettings(c *gin.Context) {
+	owner := c.GetString("owner")
+	cfg, err := h.store.GetProfileConfig(owner)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, cfg)
+}
+
+func (h *Handler) SetProfileSettings(c *gin.Context) {
+	owner := c.GetString("owner")
+	var cfg domain.ProfileConfig
+	if err := c.ShouldBindJSON(&cfg); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.store.SetProfileConfig(owner, cfg); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, cfg)
+}
+
+func (h *Handler) GetPublicProfile(c *gin.Context) {
+	username := c.Param("username")
+
+	user, err := h.store.GetUserByUsername(username)
+	if err != nil || user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "profile not found"})
+		return
+	}
+
+	cfg, err := h.store.GetProfileConfig(username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	profile := domain.PublicProfile{
+		DisplayName: user.DisplayName,
+		Username:    user.Username,
+	}
+
+	s := cfg.Sections
+	if s.Snapshot || s.Signature {
+		if stats, err := h.store.GetWardrobeStats(username); err == nil {
+			if s.Snapshot {
+				profile.Snapshot = stats
+			}
+			if s.Signature {
+				profile.Signature = stats.TopWornItems
+			}
+		}
+	}
+
+	if s.Outfits {
+		if outfits, err := h.store.ListOutfits(username, 50, nil); err == nil {
+			profile.Outfits = outfits
+		}
+	}
+
+	if s.Calendar {
+		if entries, err := h.store.GetWearHeatmap(username, time.Now().Year()); err == nil {
+			profile.Calendar = entries
+			if profile.Calendar == nil {
+				profile.Calendar = []domain.HeatmapEntry{}
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, profile)
+}

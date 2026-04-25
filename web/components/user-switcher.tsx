@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserRound, LogOut, KeyRound, Bell, BellOff, Shield } from "lucide-react";
+import { UserRound, LogOut, KeyRound, Bell, BellOff, Shield, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/user-context";
 import { changePassword } from "@/lib/api";
@@ -104,6 +104,14 @@ export function UserSwitcher() {
 
           {view === "main" && (
             <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => { setOpen(false); router.push("/profile"); }}
+              >
+                <User className="h-4 w-4" />
+                Profile settings
+              </Button>
               {user.is_admin && (
                 <Button
                   variant="outline"

@@ -14,6 +14,9 @@ import type {
   WishlistItem,
   CreateWishlistItemRequest,
   Page,
+  HeatmapEntry,
+  ProfileConfig,
+  PublicProfile,
 } from "./types";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
 
@@ -280,6 +283,24 @@ export function getWishlistShareToken(): Promise<{ token: string }> {
 
 export function getPublicWishlist(token: string): Promise<WishlistItem[]> {
   return fetcher(`/api/wishlist/public/${token}`);
+}
+
+// --- Heatmap & profile ---
+
+export function getWearHeatmap(year: number): Promise<HeatmapEntry[]> {
+  return fetcher(`/api/stats/wear-heatmap?year=${year}`);
+}
+
+export function getProfileSettings(): Promise<ProfileConfig> {
+  return fetcher("/api/profile/settings");
+}
+
+export function setProfileSettings(cfg: ProfileConfig): Promise<ProfileConfig> {
+  return fetcher("/api/profile/settings", { method: "PUT", body: JSON.stringify(cfg) });
+}
+
+export function getPublicProfile(username: string): Promise<PublicProfile> {
+  return fetcher(`/api/profile/public/${username}`);
 }
 
 // --- Currency ---

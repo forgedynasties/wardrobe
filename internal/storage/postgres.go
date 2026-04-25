@@ -3,6 +3,7 @@ package storage
 import (
 	crand "crypto/rand"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -326,6 +327,51 @@ func (s *Store) ListPublicWishlistItems(token string) ([]domain.WishlistItem, er
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+// Profile & heatmap
+
+func (s *Store) GetWearHeatmap(owner string, year int) ([]domain.HeatmapEntry, error) {
+	rows, err := s.db.Query(`
+		SELECT wear_date::text, COUNT(*) AS count
+		FROM outfit_logs
+		WHERE owner = $1 AND EXTRACT(YEAR FROM wear_date) = $2
+		GROUP BY wear_date
+		ORDER BY wear_date`, owner, year)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var entries []domain.HeatmapEntry
+	for rows.Next() {
+		var e domain.HeatmapEntry
+		if err := rows.Scan(&e.Date, &e.Count); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
+func (s *Store) GetProfileConfig(username string) (domain.ProfileConfig, error) {
+	var cfg domain.ProfileConfig
+	cfg.Sections = domain.ProfileSections{} // zero = all false
+	var raw []byte
+	err := s.db.QueryRow(`SELECT profile_config FROM users WHERE username = $1`, username).Scan(&raw)
+	if err != nil {
+		return cfg, err
+	}
+	_ = json.Unmarshal(raw, &cfg)
+	return cfg, nil
+}
+
+func (s *Store) SetProfileConfig(username string, cfg domain.ProfileConfig) error {
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`UPDATE users SET profile_config = $1 WHERE username = $2`, raw, username)
+	return err
 }
 
 // Outfits

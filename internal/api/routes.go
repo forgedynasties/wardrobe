@@ -17,8 +17,9 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		auth.PUT("/password", h.AuthMiddleware(), h.ChangePassword)
 	}
 
-	// Public wishlist share
+	// Public endpoints (no auth)
 	api.GET("/wishlist/public/:token", h.GetPublicWishlist)
+	api.GET("/profile/public/:username", h.GetPublicProfile)
 
 	// All other routes require a valid session
 	protected := api.Group("", h.AuthMiddleware())
@@ -71,8 +72,15 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		stats := protected.Group("/stats")
 		{
 			stats.GET("", h.GetWardrobeStats)
+			stats.GET("/wear-heatmap", h.GetWearHeatmap)
 			stats.GET("/utility/stale-data", h.DetectStaleData)
 			stats.POST("/utility/fix-stale-data", h.FixStaleData)
+		}
+
+		profile := protected.Group("/profile")
+		{
+			profile.GET("/settings", h.GetProfileSettings)
+			profile.PUT("/settings", h.SetProfileSettings)
 		}
 
 		protected.GET("/config/outfit", h.GetOutfitConfig)

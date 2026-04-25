@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getWardrobeStats, imageUrl, getItems } from "@/lib/api";
+import { getWardrobeStats, imageUrl, getItems, getWearHeatmap } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Shirt, Sparkles, Palette, Trophy, PackageX, TrendingUp, Tag } from "lucide-react";
-import type { WardrobeStats, ClothingItem } from "@/lib/types";
+import { RefreshCw, Shirt, Palette, Trophy, PackageX, TrendingUp, Tag, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { WearHeatmap } from "@/components/wear-heatmap";
+import type { WardrobeStats, ClothingItem, HeatmapEntry } from "@/lib/types";
 
 export default function StatsPage() {
   const [stats, setStats] = useState<WardrobeStats | null>(null);
   const [neverWornItems, setNeverWornItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [heatmapYear, setHeatmapYear] = useState(new Date().getFullYear());
+  const [heatmapData, setHeatmapData] = useState<HeatmapEntry[]>([]);
 
   const loadStats = async () => {
     try {
@@ -28,9 +31,11 @@ export default function StatsPage() {
     }
   };
 
+  useEffect(() => { loadStats(); }, []);
+
   useEffect(() => {
-    loadStats();
-  }, []);
+    getWearHeatmap(heatmapYear).then(setHeatmapData);
+  }, [heatmapYear]);
 
   if (loading) {
     return (
@@ -124,6 +129,35 @@ export default function StatsPage() {
             <p className="text-3xl font-bold">{stats.wears_this_month}</p>
           </Card>
         </div>
+      </div>
+
+      {/* Wear Calendar */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-muted-foreground" />Wear Calendar
+          </h2>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7"
+              onClick={() => setHeatmapYear((y) => y - 1)}
+              disabled={heatmapYear < 2023}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium w-12 text-center">{heatmapYear}</span>
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7"
+              onClick={() => setHeatmapYear((y) => y + 1)}
+              disabled={heatmapYear >= new Date().getFullYear()}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <Card className="p-4">
+          <WearHeatmap data={heatmapData} year={heatmapYear} />
+        </Card>
       </div>
 
       {/* Color Palette */}

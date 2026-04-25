@@ -187,6 +187,31 @@ type TopItem struct {
 	WearCount int          `json:"wear_count"`
 }
 
+type HeatmapEntry struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+type ProfileSections struct {
+	Snapshot  bool `json:"snapshot"`
+	Outfits   bool `json:"outfits"`
+	Calendar  bool `json:"calendar"`
+	Signature bool `json:"signature"`
+}
+
+type ProfileConfig struct {
+	Sections ProfileSections `json:"sections"`
+}
+
+type PublicProfile struct {
+	DisplayName string         `json:"display_name"`
+	Username    string         `json:"username"`
+	Snapshot    *WardrobeStats `json:"snapshot,omitempty"`
+	Outfits     []Outfit       `json:"outfits,omitempty"`
+	Calendar    []HeatmapEntry `json:"calendar,omitempty"`
+	Signature   []TopItem      `json:"signature,omitempty"`
+}
+
 type WardrobeStats struct {
 	TotalItems      int              `json:"total_items"`
 	TotalOutfits    int              `json:"total_outfits"`
