@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Wand2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -16,7 +16,7 @@ interface Props {
   onRefresh?: () => void;
 }
 
-export function OutfitSuggestions({ suggestions, onRefresh }: Props) {
+export const OutfitSuggestions = memo(function OutfitSuggestions({ suggestions, onRefresh }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState<number | null>(null);
 
@@ -81,4 +81,4 @@ export function OutfitSuggestions({ suggestions, onRefresh }: Props) {
       </div>
     </div>
   );
-}
+});

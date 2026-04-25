@@ -244,7 +244,6 @@ export default function OutfitLoggerPage() {
       resetForm();
       setShowLogSheet(false);
       await loadLogs();
-      await loadData();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to save log";
       setSaveError(errorMessage);

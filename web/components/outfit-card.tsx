@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { OutfitCanvas } from "@/components/outfit-canvas";
@@ -10,7 +11,7 @@ interface OutfitCardProps {
   outfit: Outfit;
 }
 
-export function OutfitCard({ outfit }: OutfitCardProps) {
+export const OutfitCard = memo(function OutfitCard({ outfit }: OutfitCardProps) {
   return (
     <Link href={`/outfits/${outfit.id}`}>
       <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 cursor-pointer hover:shadow-md">
@@ -32,4 +33,4 @@ export function OutfitCard({ outfit }: OutfitCardProps) {
       </Card>
     </Link>
   );
-}
+});

@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"wardrobe/internal/cache"
 	"wardrobe/internal/domain"
 	"wardrobe/internal/storage"
 	"wardrobe/internal/vision"
@@ -22,10 +23,26 @@ type Handler struct {
 	store      *storage.Store
 	imageStore *storage.ImageStore
 	worker     *vision.Worker
+	statsCache *cache.TTLCache[string, *domain.WardrobeStats]
+	recsCache  *cache.TTLCache[string, []domain.OutfitRecommendation]
 }
 
 func NewHandler(store *storage.Store, imageStore *storage.ImageStore, worker *vision.Worker) *Handler {
-	return &Handler{store: store, imageStore: imageStore, worker: worker}
+	return &Handler{
+		store:      store,
+		imageStore: imageStore,
+		worker:     worker,
+		statsCache: cache.New[string, *domain.WardrobeStats](60 * time.Second),
+		recsCache:  cache.New[string, []domain.OutfitRecommendation](5 * time.Minute),
+	}
+}
+
+func (h *Handler) invalidateOutfitCaches(owner string) {
+	h.statsCache.Delete(owner)
+	// Invalidate all limit variants for this owner
+	for _, limit := range []int{1, 2, 3, 4, 5, 10, 20, 50} {
+		h.recsCache.Delete(fmt.Sprintf("%s:%d", owner, limit))
+	}
 }
 
 // ServeImage proxies an R2 object through the API so clients inherit the
@@ -225,6 +242,7 @@ func (h *Handler) CreateOutfit(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	h.invalidateOutfitCaches(owner)
 	c.JSON(http.StatusCreated, outfit)
 }
 
@@ -263,6 +281,7 @@ func (h *Handler) DeleteOutfit(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+	h.invalidateOutfitCaches(owner)
 	c.JSON(http.StatusNoContent, nil)
 }
 
@@ -343,6 +362,7 @@ func (h *Handler) WearOutfit(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	h.invalidateOutfitCaches(owner)
 	c.JSON(http.StatusOK, outfit)
 }
 
@@ -354,6 +374,11 @@ func (h *Handler) RecommendOutfits(c *gin.Context) {
 			limit = n
 		}
 	}
+	cacheKey := fmt.Sprintf("%s:%d", owner, limit)
+	if cached, ok := h.recsCache.Get(cacheKey); ok {
+		c.JSON(http.StatusOK, cached)
+		return
+	}
 	recs, err := h.store.RecommendOutfits(limit, owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -362,6 +387,7 @@ func (h *Handler) RecommendOutfits(c *gin.Context) {
 	if recs == nil {
 		recs = []domain.OutfitRecommendation{}
 	}
+	h.recsCache.Set(cacheKey, recs)
 	c.JSON(http.StatusOK, recs)
 }
 
@@ -555,11 +581,16 @@ func (h *Handler) GetItemStats(c *gin.Context) {
 
 func (h *Handler) GetWardrobeStats(c *gin.Context) {
 	owner := c.GetString("owner")
+	if cached, ok := h.statsCache.Get(owner); ok {
+		c.JSON(http.StatusOK, cached)
+		return
+	}
 	stats, err := h.store.GetWardrobeStats(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	h.statsCache.Set(owner, stats)
 	c.JSON(http.StatusOK, stats)
 }
 

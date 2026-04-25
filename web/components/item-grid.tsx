@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Shirt } from "lucide-react";
 import { ItemCard } from "./item-card";
 import { AddItemButton } from "./add-item-button";
@@ -11,7 +12,7 @@ interface ItemGridProps {
   loading?: boolean;
 }
 
-export function ItemGrid({ items, loading }: ItemGridProps) {
+export const ItemGrid = memo(function ItemGrid({ items, loading }: ItemGridProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -46,4 +47,4 @@ export function ItemGrid({ items, loading }: ItemGridProps) {
       ))}
     </div>
   );
-}
+});

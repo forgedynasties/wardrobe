@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -12,7 +13,7 @@ interface Props {
   recommendations: OutfitRecommendation[];
 }
 
-export function OutfitRecommendations({ recommendations }: Props) {
+export const OutfitRecommendations = memo(function OutfitRecommendations({ recommendations }: Props) {
   if (recommendations.length === 0) return null;
 
   return (
@@ -45,4 +46,4 @@ export function OutfitRecommendations({ recommendations }: Props) {
       </div>
     </div>
   );
-}
+});

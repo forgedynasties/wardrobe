@@ -229,48 +229,68 @@ func (s *Store) ListOutfits(owner string) ([]domain.Outfit, error) {
 	defer rows.Close()
 
 	var outfits []domain.Outfit
+	var ids []uuid.UUID
 	for rows.Next() {
 		var o domain.Outfit
-		err := rows.Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
-		if err != nil {
+		if err := rows.Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
 		}
-
-		items, err := s.loadOutfitItems(o.ID)
-		if err != nil {
-			return nil, err
-		}
-		o.Items = items
-
 		outfits = append(outfits, o)
+		ids = append(ids, o.ID)
 	}
-	return outfits, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	itemsByOutfit, err := s.loadOutfitItemsBatch(ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range outfits {
+		outfits[i].Items = itemsByOutfit[outfits[i].ID]
+	}
+	return outfits, nil
 }
 
 func (s *Store) loadOutfitItems(outfitID uuid.UUID) ([]domain.OutfitItem, error) {
+	m, err := s.loadOutfitItemsBatch([]uuid.UUID{outfitID})
+	if err != nil {
+		return nil, err
+	}
+	return m[outfitID], nil
+}
+
+// loadOutfitItemsBatch loads items for multiple outfits in a single query.
+// Returns a map of outfitID -> items.
+func (s *Store) loadOutfitItemsBatch(outfitIDs []uuid.UUID) (map[uuid.UUID][]domain.OutfitItem, error) {
+	result := make(map[uuid.UUID][]domain.OutfitItem, len(outfitIDs))
+	if len(outfitIDs) == 0 {
+		return result, nil
+	}
+
 	rows, err := s.db.Query(`
-		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at,
+		SELECT oi.outfit_id, ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at,
 			oi.position_x, oi.position_y, oi.scale, oi.z_index
 		FROM clothing_items ci
 		JOIN outfit_items oi ON oi.clothing_item_id = ci.id
-		WHERE oi.outfit_id = $1
-		ORDER BY oi.z_index ASC, ci.category ASC`, outfitID)
+		WHERE oi.outfit_id = ANY($1)
+		ORDER BY oi.outfit_id, oi.z_index ASC, ci.category ASC`, pq.Array(outfitIDs))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var items []domain.OutfitItem
 	for rows.Next() {
+		var outfitID uuid.UUID
 		var item domain.OutfitItem
-		if err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
+		if err := rows.Scan(&outfitID, &item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
 			&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt,
 			&item.PositionX, &item.PositionY, &item.Scale, &item.ZIndex); err != nil {
 			return nil, err
 		}
-		items = append(items, item)
+		result[outfitID] = append(result[outfitID], item)
 	}
-	return items, rows.Err()
+	return result, rows.Err()
 }
 
 func (s *Store) GetOutfit(id uuid.UUID, owner string) (*domain.Outfit, error) {
@@ -520,12 +540,16 @@ func (s *Store) RecommendOutfits(limit int, owner string) ([]domain.OutfitRecomm
 		return nil, err
 	}
 
+	ids := make([]uuid.UUID, len(recs))
 	for i := range recs {
-		items, err := s.loadOutfitItems(recs[i].ID)
-		if err != nil {
-			return nil, err
-		}
-		recs[i].Items = items
+		ids[i] = recs[i].ID
+	}
+	itemsByOutfit, err := s.loadOutfitItemsBatch(ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range recs {
+		recs[i].Items = itemsByOutfit[recs[i].ID]
 	}
 
 	return recs, nil
@@ -786,63 +810,85 @@ func (s *Store) GetOutfitLogs(startDate, endDate time.Time, owner string) ([]dom
 	defer rows.Close()
 
 	var logs []domain.OutfitLog
+	var outfitIDs []uuid.UUID
+	var manualLogIDs []uuid.UUID
+
 	for rows.Next() {
 		var log domain.OutfitLog
-		err := rows.Scan(&log.ID, &log.OutfitID, &log.WearDate, &log.Notes, &log.CreatedAt, &log.UpdatedAt)
+		if err := rows.Scan(&log.ID, &log.OutfitID, &log.WearDate, &log.Notes, &log.CreatedAt, &log.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if log.OutfitID != nil {
+			outfitIDs = append(outfitIDs, *log.OutfitID)
+		} else {
+			manualLogIDs = append(manualLogIDs, log.ID)
+		}
+		logs = append(logs, log)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Batch-load items from outfits
+	outfitItemsMap := map[uuid.UUID][]domain.ClothingItem{}
+	if len(outfitIDs) > 0 {
+		irows, err := s.db.Query(`
+			SELECT oi.outfit_id, ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
+			FROM clothing_items ci
+			JOIN outfit_items oi ON oi.clothing_item_id = ci.id
+			WHERE oi.outfit_id = ANY($1)`, pq.Array(outfitIDs))
 		if err != nil {
 			return nil, err
 		}
-
-		// Load items based on whether it's an outfit log or manual items log
-		if log.OutfitID != nil {
-			// Load items from the outfit
-			itemRows, err := s.db.Query(`
-				SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
-				FROM clothing_items ci
-				JOIN outfit_items oi ON oi.clothing_item_id = ci.id
-				WHERE oi.outfit_id = $1`, log.OutfitID)
-			if err != nil {
+		defer irows.Close()
+		for irows.Next() {
+			var oid uuid.UUID
+			var item domain.ClothingItem
+			if err := irows.Scan(&oid, &item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
+				&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
 				return nil, err
 			}
-
-			for itemRows.Next() {
-				var item domain.ClothingItem
-				err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-					&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
-				if err != nil {
-					itemRows.Close()
-					return nil, err
-				}
-				log.Items = append(log.Items, item)
-			}
-			itemRows.Close()
-		} else {
-			// Load items from manual log
-			itemRows, err := s.db.Query(`
-				SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
-				FROM clothing_items ci
-				JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
-				WHERE oli.outfit_log_id = $1`, log.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			for itemRows.Next() {
-				var item domain.ClothingItem
-				err := itemRows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-					&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
-				if err != nil {
-					itemRows.Close()
-					return nil, err
-				}
-				log.Items = append(log.Items, item)
-			}
-			itemRows.Close()
+			outfitItemsMap[oid] = append(outfitItemsMap[oid], item)
 		}
-
-		logs = append(logs, log)
+		if err := irows.Err(); err != nil {
+			return nil, err
+		}
 	}
-	return logs, rows.Err()
+
+	// Batch-load items from manual logs
+	manualItemsMap := map[uuid.UUID][]domain.ClothingItem{}
+	if len(manualLogIDs) > 0 {
+		irows, err := s.db.Query(`
+			SELECT oli.outfit_log_id, ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
+			FROM clothing_items ci
+			JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
+			WHERE oli.outfit_log_id = ANY($1)`, pq.Array(manualLogIDs))
+		if err != nil {
+			return nil, err
+		}
+		defer irows.Close()
+		for irows.Next() {
+			var lid uuid.UUID
+			var item domain.ClothingItem
+			if err := irows.Scan(&lid, &item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
+				&item.ImageURL, &item.RawImageURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
+				return nil, err
+			}
+			manualItemsMap[lid] = append(manualItemsMap[lid], item)
+		}
+		if err := irows.Err(); err != nil {
+			return nil, err
+		}
+	}
+
+	for i := range logs {
+		if logs[i].OutfitID != nil {
+			logs[i].Items = outfitItemsMap[*logs[i].OutfitID]
+		} else {
+			logs[i].Items = manualItemsMap[logs[i].ID]
+		}
+	}
+	return logs, nil
 }
 
 func (s *Store) GetOutfitLogByDate(wearDate time.Time, owner string) (*domain.OutfitLog, error) {

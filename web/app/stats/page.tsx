@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getWardrobeStats, imageUrl, getItems, getOutfits } from "@/lib/api";
+import { getWardrobeStats, imageUrl, getItems } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 import type { WardrobeStats, ClothingItem } from "@/lib/types";
 
 export default function StatsPage() {
@@ -11,42 +13,14 @@ export default function StatsPage() {
   const [neverWornItems, setNeverWornItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Dynamically calculate stats from items and outfits
-  const calculateStats = async () => {
+  const loadStats = async () => {
     try {
-      const [itemsData, outfitsData, apiStats] = await Promise.all([
+      const [itemsData, apiStats] = await Promise.all([
         getItems(),
-        getOutfits(),
         getWardrobeStats(),
       ]);
-
-      // Calculate basic stats from local data
-      const calculatedStats = { ...apiStats };
-      
-      // Items statistics
-      calculatedStats.total_items = itemsData.length;
-      const neverWorn = itemsData.filter((item) => !item.last_worn);
-      calculatedStats.never_worn_items = neverWorn.length;
-      
-      // Outfits statistics
-      calculatedStats.total_outfits = outfitsData.length;
-      calculatedStats.never_worn_outfits = outfitsData.filter(outfit => !outfit.last_worn).length;
-      calculatedStats.total_wears = outfitsData.reduce((sum, o) => sum + o.usage_count, 0);
-      calculatedStats.avg_wears_per_outfit = outfitsData.length > 0 
-        ? outfitsData.reduce((sum, o) => sum + o.usage_count, 0) / outfitsData.length
-        : 0;
-
-      // Items by category (dynamically calculated)
-      const categoryMap: { [key: string]: number } = {};
-      itemsData.forEach(item => {
-        categoryMap[item.category] = (categoryMap[item.category] || 0) + 1;
-      });
-      calculatedStats.items_by_category = Object.entries(categoryMap)
-        .map(([category, count]) => ({ category, count }))
-        .sort((a, b) => a.category.localeCompare(b.category));
-
-      setStats(calculatedStats);
-      setNeverWornItems(neverWorn);
+      setStats(apiStats);
+      setNeverWornItems(itemsData.filter((item) => !item.last_worn));
     } catch (err) {
       console.error("Failed to load stats:", err);
     } finally {
@@ -55,27 +29,7 @@ export default function StatsPage() {
   };
 
   useEffect(() => {
-    calculateStats();
-
-    // Reload stats when tab becomes visible
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        calculateStats();
-      }
-    };
-
-    // Poll for updates every 3 seconds while page is visible
-    const pollInterval = setInterval(() => {
-      if (!document.hidden) {
-        calculateStats();
-      }
-    }, 3000);
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      clearInterval(pollInterval);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    loadStats();
   }, []);
 
   if (loading) {
@@ -102,9 +56,15 @@ export default function StatsPage() {
 
   return (
     <div className="p-4 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-1">Wardrobe Stats</h1>
-        <p className="text-muted-foreground">Insights into your wardrobe and wearing patterns</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-1">Wardrobe Stats</h1>
+          <p className="text-muted-foreground">Insights into your wardrobe and wearing patterns</p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={loadStats} className="gap-1.5 mt-1">
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </Button>
       </div>
 
       {/* Wardrobe Overview */}
