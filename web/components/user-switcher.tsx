@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { UserRound, LogOut, KeyRound } from "lucide-react";
+import { useState, useEffect } from "react";
+import { UserRound, LogOut, KeyRound, Bell, BellOff } from "lucide-react";
 import { useUser } from "@/lib/user-context";
 import { changePassword } from "@/lib/api";
+import { useOutfitReminder } from "@/components/outfit-reminder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,8 @@ type View = "main" | "change-password";
 
 export function UserSwitcher() {
   const { user, logout } = useUser();
+  const { isEnabled, enable, disable } = useOutfitReminder();
+  const [reminderOn, setReminderOn] = useState(false);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("main");
   const [loading, setLoading] = useState(false);
@@ -29,7 +32,21 @@ export function UserSwitcher() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  useEffect(() => {
+    setReminderOn(isEnabled());
+  }, [open]);
+
   if (!user) return null;
+
+  const handleToggleReminder = async () => {
+    if (reminderOn) {
+      disable();
+      setReminderOn(false);
+    } else {
+      const result = await enable();
+      setReminderOn(result === "granted");
+    }
+  };
 
   const handleClose = (val: boolean) => {
     setOpen(val);
@@ -85,6 +102,14 @@ export function UserSwitcher() {
 
           {view === "main" && (
             <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleToggleReminder}
+              >
+                {reminderOn ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+                {reminderOn ? "Disable daily reminder" : "Enable daily reminder"}
+              </Button>
               <Button
                 variant="outline"
                 className="w-full gap-2"

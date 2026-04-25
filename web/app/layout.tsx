@@ -5,6 +5,7 @@ import { NavBar } from "@/components/nav-bar";
 import { OutfitAdminPanel } from "@/components/outfit-admin-panel";
 import { PwaRegister } from "@/components/pwa-register";
 import { TopBar } from "@/components/top-bar";
+import { OutfitReminder } from "@/components/outfit-reminder";
 import { UserGate } from "@/components/user-gate";
 import { UserProvider } from "@/lib/user-context";
 
@@ -56,6 +57,7 @@ export default function RootLayout({
             <TopBar />
             <main className="flex-1 pb-20">{children}</main>
             <NavBar />
+            <OutfitReminder />
             {SHOW_OUTFIT_LAYOUT_ADMIN && <OutfitAdminPanel />}
           </UserGate>
         </UserProvider>
