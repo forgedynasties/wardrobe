@@ -18,6 +18,7 @@ export interface ProfileConfig {
 export interface PublicProfile {
   display_name: string;
   username: string;
+  avatar_colors: string[];
   snapshot?: WardrobeStats;
   outfits?: Outfit[];
   calendar?: HeatmapEntry[];

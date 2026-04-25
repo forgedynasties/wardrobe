@@ -868,8 +868,13 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 	}
 
 	profile := domain.PublicProfile{
-		DisplayName: user.DisplayName,
-		Username:    user.Username,
+		DisplayName:  user.DisplayName,
+		Username:     user.Username,
+		AvatarColors: []string{},
+	}
+
+	if colors, err := h.store.GetAvatarColors(username); err == nil {
+		profile.AvatarColors = colors
 	}
 
 	s := cfg.Sections

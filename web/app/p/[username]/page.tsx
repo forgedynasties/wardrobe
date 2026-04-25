@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WearHeatmap } from "@/components/wear-heatmap";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { OutfitCard } from "@/components/outfit-card";
-import { Lock, User, ExternalLink, Star } from "lucide-react";
+import { Lock, ExternalLink, Star } from "lucide-react";
+import { WardrobeAvatar } from "@/components/wardrobe-avatar";
 import type { PublicProfile } from "@/lib/types";
 import Link from "next/link";
 
@@ -60,8 +61,8 @@ export default function PublicProfilePage() {
     <div className="p-4 max-w-4xl mx-auto space-y-8">
       {/* header */}
       <div className="flex items-center gap-3">
-        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center shrink-0">
-          <User className="h-7 w-7 text-muted-foreground" />
+        <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
+          <WardrobeAvatar colors={profile.avatar_colors ?? []} username={profile.username} size={56} />
         </div>
         <div>
           <h1 className="text-2xl font-bold">{profile.display_name}</h1>

@@ -336,6 +336,27 @@ func (s *Store) SetProfileConfig(username string, cfg domain.ProfileConfig) erro
 	return err
 }
 
+func (s *Store) GetAvatarColors(owner string) ([]string, error) {
+	rows, err := s.db.Query(`
+		SELECT DISTINCT unnest(colors) AS c
+		FROM clothing_items
+		WHERE owner = $1 AND array_length(colors, 1) > 0
+		LIMIT 8`, owner)
+	if err != nil {
+		return []string{}, err
+	}
+	defer rows.Close()
+	colors := []string{}
+	for rows.Next() {
+		var c string
+		if err := rows.Scan(&c); err != nil {
+			continue
+		}
+		colors = append(colors, c)
+	}
+	return colors, nil
+}
+
 // Outfits
 
 func (s *Store) ListOutfits(owner string, limit int, after *time.Time) ([]domain.Outfit, error) {

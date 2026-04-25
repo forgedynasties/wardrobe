@@ -12,7 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WearHeatmap } from "@/components/wear-heatmap";
 import { OutfitCard } from "@/components/outfit-card";
 import { ShimmerImg } from "@/components/shimmer-img";
-import { Settings, Share2, Check, Lock, User, ExternalLink, Star } from "lucide-react";
+import { WardrobeAvatar } from "@/components/wardrobe-avatar";
+import { Settings, Share2, Check, Lock, ExternalLink, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem } from "@/lib/types";
@@ -86,8 +87,8 @@ export default function ProfilePage() {
       {/* header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center shrink-0">
-            <User className="h-7 w-7 text-muted-foreground" />
+          <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
+            <WardrobeAvatar colors={stats?.colors ?? []} username={user.username} size={56} />
           </div>
           <div>
             <h1 className="text-2xl font-bold">{user.display_name}</h1>
