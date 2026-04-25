@@ -3,6 +3,7 @@
 import { useSyncExternalStore, useState } from "react";
 import { Settings2, RotateCcw, X } from "lucide-react";
 import { outfitConfig } from "@/lib/outfit-config";
+import { useUser } from "@/lib/user-context";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
@@ -51,8 +52,11 @@ function SliderRow({ label, value, min, max, step, onChange, suffix }: SliderRow
 }
 
 export function OutfitAdminPanel() {
+  const { user } = useUser();
   const [open, setOpen] = useState(false);
   const cfg = useCfg();
+
+  if (!user?.is_admin) return null;
 
   return (
     <>

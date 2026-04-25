@@ -9,8 +9,6 @@ import { OutfitReminder } from "@/components/outfit-reminder";
 import { UserGate } from "@/components/user-gate";
 import { UserProvider } from "@/lib/user-context";
 
-const SHOW_OUTFIT_LAYOUT_ADMIN = false;
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -58,7 +56,7 @@ export default function RootLayout({
             <main className="flex-1 pb-20">{children}</main>
             <NavBar />
             <OutfitReminder />
-            {SHOW_OUTFIT_LAYOUT_ADMIN && <OutfitAdminPanel />}
+            <OutfitAdminPanel />
           </UserGate>
         </UserProvider>
         <PwaRegister />
