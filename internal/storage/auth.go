@@ -53,6 +53,22 @@ func (s *Store) AuthenticateUser(username, password string) (*domain.User, error
 	return u, nil
 }
 
+func (s *Store) ChangePassword(username, currentPassword, newPassword string) error {
+	u, err := s.GetUserByUsername(username)
+	if err != nil || u == nil {
+		return fmt.Errorf("user not found")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(currentPassword)); err != nil {
+		return fmt.Errorf("invalid current password")
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE username = $2`, string(hash), username)
+	return err
+}
+
 func (s *Store) CreateSession(userID uuid.UUID, token string, expiry time.Duration) (*domain.Session, error) {
 	h := sha256.Sum256([]byte(token))
 	tokenHash := fmt.Sprintf("%x", h)

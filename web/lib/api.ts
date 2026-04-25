@@ -52,6 +52,13 @@ async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
 
 // Items
 
+export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return fetcher("/api/auth/password", {
+    method: "PUT",
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+}
+
 export function getItems(): Promise<ClothingItem[]> {
   return fetcher("/api/items");
 }

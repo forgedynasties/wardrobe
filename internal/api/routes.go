@@ -14,6 +14,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		auth.POST("/logout", h.Logout)
 		auth.POST("/register", h.Register)
 		auth.GET("/me", h.AuthMiddleware(), h.Me)
+		auth.PUT("/password", h.AuthMiddleware(), h.ChangePassword)
 	}
 
 	// All other routes require a valid session
