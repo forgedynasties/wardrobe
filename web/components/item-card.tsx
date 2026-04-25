@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import type { ClothingItem } from "@/lib/types";
@@ -13,18 +14,25 @@ export function ItemCard({ item }: ItemCardProps) {
   const src = item.image_status === "done" || item.raw_image_url
     ? thumbnailUrl(item)
     : null;
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
     <Link href={`/items/${item.id}`} className="block h-full">
       <Card className="h-full flex flex-col overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 cursor-pointer hover:shadow-md">
         <div className="aspect-square bg-card flex items-center justify-center relative">
           {src ? (
-            <img
-              src={src}
-              alt={`${item.category} ${item.sub_category}`}
-              className="object-contain w-full h-full"
-              style={{ transform: `scale(${item.display_scale || 1})` }}
-            />
+            <>
+              {!imgLoaded && (
+                <div className="absolute inset-0 bg-muted animate-pulse rounded-t" />
+              )}
+              <img
+                src={src}
+                alt={`${item.category} ${item.sub_category}`}
+                className="object-contain w-full h-full"
+                style={{ transform: `scale(${item.display_scale || 1})`, opacity: imgLoaded ? 1 : 0, transition: "opacity 0.2s" }}
+                onLoad={() => setImgLoaded(true)}
+              />
+            </>
           ) : (
             <span className="text-4xl text-muted-foreground/50">
               {item.category === "Shoes" ? "👟" : item.category === "Accessory" ? "🎒" : "👕"}
