@@ -263,8 +263,50 @@ export function createWishlistItem(data: CreateWishlistItemRequest): Promise<Wis
   });
 }
 
+export function updateWishlistItem(id: string, data: { priority?: number; notes?: string; bought?: boolean }): Promise<WishlistItem> {
+  return fetcher(`/api/wishlist/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 export function deleteWishlistItem(id: string): Promise<void> {
   return fetcher(`/api/wishlist/${id}`, { method: "DELETE" });
+}
+
+export function getWishlistShareToken(): Promise<{ token: string }> {
+  return fetcher("/api/wishlist/share-token");
+}
+
+export function getPublicWishlist(token: string): Promise<WishlistItem[]> {
+  return fetcher(`/api/wishlist/public/${token}`);
+}
+
+// --- Currency ---
+
+export type CurrencyRates = Record<string, number>;
+
+const RATES_CACHE_KEY = "currency_rates_cache";
+const RATES_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+export async function getExchangeRates(): Promise<CurrencyRates> {
+  try {
+    const cached = localStorage.getItem(RATES_CACHE_KEY);
+    if (cached) {
+      const { ts, rates } = JSON.parse(cached);
+      if (Date.now() - ts < RATES_TTL_MS) return rates;
+    }
+  } catch {}
+
+  const res = await fetch("https://open.er-api.com/v6/latest/PKR");
+  const json = await res.json();
+  const rates: CurrencyRates = { PKR: 1, ...json.rates };
+
+  try {
+    localStorage.setItem(RATES_CACHE_KEY, JSON.stringify({ ts: Date.now(), rates }));
+  } catch {}
+
+  return rates;
 }
 
 // thumbnailUrl returns the thumbnail URL for grid display.

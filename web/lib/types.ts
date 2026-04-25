@@ -76,6 +76,9 @@ export interface WishlistItem {
   image_url: string;
   product_url: string;
   price_pkr: number;
+  priority: number;
+  notes: string;
+  bought_at: string | null;
   created_at: string;
   updated_at: string;
 }

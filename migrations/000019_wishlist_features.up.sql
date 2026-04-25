@@ -1,0 +1,7 @@
+ALTER TABLE wishlist_items
+    ADD COLUMN IF NOT EXISTS priority   INT          NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS notes      TEXT         NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS bought_at  TIMESTAMPTZ;
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS wishlist_share_token TEXT UNIQUE;

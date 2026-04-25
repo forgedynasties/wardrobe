@@ -110,13 +110,16 @@ type OutfitSuggestion struct {
 }
 
 type WishlistItem struct {
-	ID         uuid.UUID `json:"id"`
-	Name       string    `json:"name"`
-	ImageURL   string    `json:"image_url"`
-	ProductURL string    `json:"product_url"`
-	PricePKR   int64     `json:"price_pkr"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         uuid.UUID  `json:"id"`
+	Name       string     `json:"name"`
+	ImageURL   string     `json:"image_url"`
+	ProductURL string     `json:"product_url"`
+	PricePKR   int64      `json:"price_pkr"`
+	Priority   int        `json:"priority"`
+	Notes      string     `json:"notes"`
+	BoughtAt   *time.Time `json:"bought_at"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
 }
 
 type CreateWishlistItemRequest struct {
@@ -124,6 +127,12 @@ type CreateWishlistItemRequest struct {
 	ImageURL   string `json:"image_url"`
 	ProductURL string `json:"product_url" binding:"required"`
 	PricePKR   int64  `json:"price_pkr" binding:"required"`
+}
+
+type UpdateWishlistItemRequest struct {
+	Priority *int    `json:"priority"`
+	Notes    *string `json:"notes"`
+	Bought   *bool   `json:"bought"`
 }
 
 type ItemStats struct {

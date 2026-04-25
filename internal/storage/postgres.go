@@ -1,6 +1,7 @@
 package storage
 
 import (
+	crand "crypto/rand"
 	"database/sql"
 	"fmt"
 	"math/rand"
@@ -178,16 +179,26 @@ func (s *Store) SetImageProcessing(id uuid.UUID, rawImageURL string) error {
 
 // Wishlist
 
+const wishlistCols = `id, name, image_url, product_url, price_pkr, priority, notes, bought_at, created_at, updated_at`
+
+func scanWishlistItem(row interface{ Scan(...any) error }) (domain.WishlistItem, error) {
+	var item domain.WishlistItem
+	err := row.Scan(
+		&item.ID, &item.Name, &item.ImageURL, &item.ProductURL,
+		&item.PricePKR, &item.Priority, &item.Notes, &item.BoughtAt,
+		&item.CreatedAt, &item.UpdatedAt,
+	)
+	return item, err
+}
+
 func (s *Store) ListWishlistItems(owner string, limit int, after *time.Time) ([]domain.WishlistItem, error) {
 	var q string
 	var args []any
 	if after != nil {
-		q = `SELECT id, name, image_url, product_url, price_pkr, created_at, updated_at
-			FROM wishlist_items WHERE owner = $1 AND created_at < $2 ORDER BY created_at DESC`
+		q = `SELECT ` + wishlistCols + ` FROM wishlist_items WHERE owner = $1 AND created_at < $2 ORDER BY created_at DESC`
 		args = []any{owner, after}
 	} else {
-		q = `SELECT id, name, image_url, product_url, price_pkr, created_at, updated_at
-			FROM wishlist_items WHERE owner = $1 ORDER BY created_at DESC`
+		q = `SELECT ` + wishlistCols + ` FROM wishlist_items WHERE owner = $1 ORDER BY created_at DESC`
 		args = []any{owner}
 	}
 	if limit > 0 {
@@ -201,16 +212,8 @@ func (s *Store) ListWishlistItems(owner string, limit int, after *time.Time) ([]
 
 	var items []domain.WishlistItem
 	for rows.Next() {
-		var item domain.WishlistItem
-		if err := rows.Scan(
-			&item.ID,
-			&item.Name,
-			&item.ImageURL,
-			&item.ProductURL,
-			&item.PricePKR,
-			&item.CreatedAt,
-			&item.UpdatedAt,
-		); err != nil {
+		item, err := scanWishlistItem(rows)
+		if err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -219,21 +222,54 @@ func (s *Store) ListWishlistItems(owner string, limit int, after *time.Time) ([]
 }
 
 func (s *Store) CreateWishlistItem(req domain.CreateWishlistItemRequest, owner string) (*domain.WishlistItem, error) {
-	var item domain.WishlistItem
-	err := s.db.QueryRow(`
+	row := s.db.QueryRow(`
 		INSERT INTO wishlist_items (name, image_url, product_url, price_pkr, owner)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, name, image_url, product_url, price_pkr, created_at, updated_at`,
+		RETURNING `+wishlistCols,
 		req.Name, req.ImageURL, req.ProductURL, req.PricePKR, owner,
-	).Scan(
-		&item.ID,
-		&item.Name,
-		&item.ImageURL,
-		&item.ProductURL,
-		&item.PricePKR,
-		&item.CreatedAt,
-		&item.UpdatedAt,
 	)
+	item, err := scanWishlistItem(row)
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (s *Store) UpdateWishlistItem(id uuid.UUID, owner string, req domain.UpdateWishlistItemRequest) (*domain.WishlistItem, error) {
+	setClauses := []string{}
+	args := []any{}
+	argN := 1
+
+	if req.Priority != nil {
+		setClauses = append(setClauses, fmt.Sprintf("priority = $%d", argN))
+		args = append(args, *req.Priority)
+		argN++
+	}
+	if req.Notes != nil {
+		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argN))
+		args = append(args, *req.Notes)
+		argN++
+	}
+	if req.Bought != nil {
+		if *req.Bought {
+			setClauses = append(setClauses, fmt.Sprintf("bought_at = $%d", argN))
+			args = append(args, time.Now())
+		} else {
+			setClauses = append(setClauses, "bought_at = NULL")
+		}
+		argN++
+	}
+	if len(setClauses) == 0 {
+		return nil, fmt.Errorf("no fields to update")
+	}
+	setClauses = append(setClauses, "updated_at = NOW()")
+	q := fmt.Sprintf(
+		"UPDATE wishlist_items SET %s WHERE id = $%d AND owner = $%d RETURNING %s",
+		strings.Join(setClauses, ", "), argN, argN+1, wishlistCols,
+	)
+	args = append(args, id, owner)
+	row := s.db.QueryRow(q, args...)
+	item, err := scanWishlistItem(row)
 	if err != nil {
 		return nil, err
 	}
@@ -253,6 +289,43 @@ func (s *Store) DeleteWishlistItem(id uuid.UUID, owner string) error {
 		return fmt.Errorf("wishlist item not found")
 	}
 	return nil
+}
+
+func (s *Store) GetOrCreateWishlistShareToken(username string) (string, error) {
+	var token string
+	err := s.db.QueryRow(`SELECT wishlist_share_token FROM users WHERE username = $1`, username).Scan(&token)
+	if err == nil && token != "" {
+		return token, nil
+	}
+	b := make([]byte, 16)
+	if _, err := crand.Read(b); err != nil {
+		return "", err
+	}
+	token = fmt.Sprintf("%x", b)
+	_, err = s.db.Exec(`UPDATE users SET wishlist_share_token = $1 WHERE username = $2`, token, username)
+	return token, err
+}
+
+func (s *Store) ListPublicWishlistItems(token string) ([]domain.WishlistItem, error) {
+	rows, err := s.db.Query(`
+		SELECT w.`+wishlistCols+`
+		FROM wishlist_items w
+		JOIN users u ON u.username = w.owner
+		WHERE u.wishlist_share_token = $1 AND w.bought_at IS NULL
+		ORDER BY w.priority DESC, w.created_at DESC`, token)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []domain.WishlistItem
+	for rows.Next() {
+		item, err := scanWishlistItem(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 // Outfits

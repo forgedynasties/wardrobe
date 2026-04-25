@@ -17,6 +17,9 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		auth.PUT("/password", h.AuthMiddleware(), h.ChangePassword)
 	}
 
+	// Public wishlist share
+	api.GET("/wishlist/public/:token", h.GetPublicWishlist)
+
 	// All other routes require a valid session
 	protected := api.Group("", h.AuthMiddleware())
 	{
@@ -37,7 +40,9 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		{
 			wishlist.GET("", h.ListWishlistItems)
 			wishlist.POST("", h.CreateWishlistItem)
+			wishlist.PATCH("/:id", h.UpdateWishlistItem)
 			wishlist.DELETE("/:id", h.DeleteWishlistItem)
+			wishlist.GET("/share-token", h.GetWishlistShareToken)
 		}
 
 		outfits := protected.Group("/outfits")
