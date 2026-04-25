@@ -295,6 +295,14 @@ export function getPublicProfile(username: string): Promise<PublicProfile> {
   return fetcher(`/api/profile/public/${username}`);
 }
 
+export function getPublicItem(username: string, id: string): Promise<ClothingItem> {
+  return fetcher(`/api/profile/public/${username}/items/${id}`);
+}
+
+export function getPublicOutfit(username: string, id: string): Promise<Outfit> {
+  return fetcher(`/api/profile/public/${username}/outfits/${id}`);
+}
+
 // --- Currency ---
 
 export type CurrencyRates = Record<string, number>;

@@ -2,131 +2,228 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@/lib/user-context";
-import { getProfileSettings, setProfileSettings } from "@/lib/api";
+import {
+  getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap, imageUrl, thumbnailUrl,
+} from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Check, ExternalLink, BarChart3, Sparkles, CalendarDays, Trophy, Settings } from "lucide-react";
-import type { ProfileConfig, ProfileSections } from "@/lib/types";
+import { WearHeatmap } from "@/components/wear-heatmap";
+import { OutfitCard } from "@/components/outfit-card";
+import { ShimmerImg } from "@/components/shimmer-img";
+import { Settings, Share2, Check, Lock, User } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig } from "@/lib/types";
 
-const SECTION_META: { key: keyof ProfileSections; label: string; desc: string; icon: React.ElementType }[] = [
-  { key: "snapshot", label: "Style Snapshot", desc: "Wardrobe size, categories, and color palette", icon: BarChart3 },
-  { key: "outfits", label: "Outfit Gallery", desc: "Grid of outfits you've created", icon: Sparkles },
-  { key: "calendar", label: "Wear Calendar", desc: "Heatmap of days you wore outfits", icon: CalendarDays },
-  { key: "signature", label: "Signature Pieces", desc: "Your most-worn clothing items", icon: Trophy },
-];
+function PrivateBadge() {
+  return (
+    <Badge variant="secondary" className="gap-1 text-xs font-normal">
+      <Lock className="h-3 w-3" />
+      Private
+    </Badge>
+  );
+}
+
+async function doShare(title: string, url: string, onCopied: () => void) {
+  if (typeof navigator === "undefined") return;
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); return; } catch {}
+  }
+  await navigator.clipboard.writeText(url);
+  onCopied();
+}
 
 export default function ProfilePage() {
   const { user, hydrated } = useUser();
+  const router = useRouter();
+
   const [config, setConfig] = useState<ProfileConfig | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [stats, setStats] = useState<WardrobeStats | null>(null);
+  const [outfits, setOutfits] = useState<Outfit[]>([]);
+  const [heatmap, setHeatmap] = useState<HeatmapEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const year = new Date().getFullYear();
 
   useEffect(() => {
     if (!hydrated || !user) return;
-    getProfileSettings().then(setConfig);
+    Promise.all([
+      getProfileSettings(),
+      getWardrobeStats(),
+      getOutfitsPage(50),
+      getWearHeatmap(year),
+    ]).then(([cfg, s, page, hm]) => {
+      setConfig(cfg);
+      setStats(s);
+      setOutfits(page.data);
+      setHeatmap(hm);
+    }).finally(() => setLoading(false));
   }, [hydrated, user]);
 
-  const toggle = (key: keyof ProfileSections) => {
-    setConfig((prev) =>
-      prev
-        ? { ...prev, sections: { ...prev.sections, [key]: !prev.sections[key] } }
-        : prev
-    );
-    setSaved(false);
+  const handleShare = () => {
+    if (!user) return;
+    const url = `${window.location.origin}/p/${user.username}`;
+    doShare(`${user.display_name}'s Wardrobe`, url, () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
-
-  const handleSave = async () => {
-    if (!config) return;
-    setSaving(true);
-    try {
-      await setProfileSettings(config);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const isPublic = config ? Object.values(config.sections).some(Boolean) : false;
-  const publicUrl = user ? `${typeof window !== "undefined" ? window.location.origin : ""}/p/${user.username}` : "";
 
   if (!hydrated || !user) return null;
 
+  const sec = config?.sections;
+  const isPublic = sec ? Object.values(sec).some(Boolean) : false;
+
   return (
-    <div className="p-4 max-w-lg mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <User className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-bold">Profile</h1>
+    <div className="p-4 max-w-4xl mx-auto space-y-8 pb-24">
+
+      {/* header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center shrink-0">
+            <User className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">{user.display_name}</h1>
+            <p className="text-sm text-muted-foreground">@{user.username}</p>
+          </div>
         </div>
-        <Settings className="h-5 w-5 text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          {isPublic && (
+            <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleShare}>
+              {copied
+                ? <><Check className="h-4 w-4 text-green-500" />Copied</>
+                : <><Share2 className="h-4 w-4" />Share</>}
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={() => router.push("/profile/settings")}>
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
-      {/* identity */}
-      <Card className="p-4 space-y-1">
-        <p className="text-lg font-semibold">{user.display_name}</p>
-        <p className="text-sm text-muted-foreground">@{user.username}</p>
-      </Card>
-
-      {/* public url */}
-      <Card className="p-4 space-y-2">
-        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Public URL</p>
-        <div className="flex items-center justify-between gap-3">
-          <code className="text-sm bg-muted px-2 py-1 rounded flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-            /p/{user.username}
-          </code>
-          {isPublic && (
-            <Link href={`/p/${user.username}`} target="_blank">
-              <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
-                <ExternalLink className="h-3.5 w-3.5" />
-                Preview
-              </Button>
-            </Link>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {isPublic
-            ? "Your profile is visible. Only enabled sections appear."
-            : "Enable at least one section to make your profile visible."}
-        </p>
-      </Card>
-
-      {/* section toggles */}
-      {config === null ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+      {loading ? (
+        <div className="space-y-6">
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-48 rounded-xl" />
         </div>
       ) : (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Visible sections</p>
-          {SECTION_META.map(({ key, label, desc, icon: Icon }) => (
-            <Card key={key} className="p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div>
-                    <Label htmlFor={`section-${key}`} className="font-medium cursor-pointer">{label}</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-                  </div>
+        <>
+          {/* snapshot */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Style Snapshot</h2>
+              {!sec?.snapshot && <PrivateBadge />}
+            </div>
+            {stats && (
+              <>
+                <div className="grid grid-cols-3 gap-3">
+                  <Card className="p-4 text-center">
+                    <p className="text-3xl font-bold">{stats.total_items}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Items</p>
+                  </Card>
+                  <Card className="p-4 text-center">
+                    <p className="text-3xl font-bold">{stats.total_outfits}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Outfits</p>
+                  </Card>
+                  <Card className="p-4 text-center">
+                    <p className="text-3xl font-bold">{stats.total_wears}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Wears</p>
+                  </Card>
                 </div>
-                <Switch
-                  id={`section-${key}`}
-                  checked={config.sections[key]}
-                  onCheckedChange={() => toggle(key)}
-                />
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+                {stats.colors.length > 0 && (
+                  <Card className="p-4">
+                    <p className="text-sm font-medium mb-3">Color Palette</p>
+                    <div className="flex flex-wrap gap-2">
+                      {stats.colors.map((c) => (
+                        <div key={c} className="w-8 h-8 rounded-full border border-border shadow-sm" style={{ backgroundColor: c }} title={c} />
+                      ))}
+                    </div>
+                  </Card>
+                )}
+                {stats.items_by_category.length > 0 && (
+                  <Card className="p-4">
+                    <p className="text-sm font-medium mb-3">Categories</p>
+                    <div className="space-y-2">
+                      {stats.items_by_category.map((cat) => (
+                        <div key={cat.category} className="flex items-center gap-3">
+                          <span className="text-sm capitalize w-24 shrink-0">{cat.category}</span>
+                          <div className="flex-1 h-2 bg-muted/50 rounded overflow-hidden">
+                            <div className="h-full bg-primary/70 rounded" style={{ width: `${(cat.count / (stats.total_items || 1)) * 100}%` }} />
+                          </div>
+                          <span className="text-sm font-medium w-6 text-right">{cat.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </>
+            )}
+          </section>
 
-      <Button onClick={handleSave} disabled={saving || config === null} className="w-full gap-2">
-        {saved ? <><Check className="h-4 w-4" />Saved</> : saving ? "Saving..." : "Save"}
-      </Button>
+          {/* outfit gallery */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Outfit Gallery</h2>
+              {!sec?.outfits && <PrivateBadge />}
+            </div>
+            {outfits.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No outfits yet.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {outfits.map((o) => <OutfitCard key={o.id} outfit={o} />)}
+              </div>
+            )}
+          </section>
+
+          {/* wear calendar */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Wear Calendar</h2>
+              {!sec?.calendar && <PrivateBadge />}
+            </div>
+            <Card className="p-4">
+              <WearHeatmap data={heatmap} year={year} />
+            </Card>
+          </section>
+
+          {/* signature pieces */}
+          {stats && stats.top_worn_items.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">Signature Pieces</h2>
+                {!sec?.signature && <PrivateBadge />}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {stats.top_worn_items.map(({ item, wear_count }) => {
+                  const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
+                  return (
+                    <Link key={item.id} href={`/items/${item.id}`}>
+                      <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
+                        <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
+                          {src
+                            ? <ShimmerImg src={src} alt={item.category} className="w-full h-full object-contain" />
+                            : <span className="text-3xl">👕</span>}
+                          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-medium">
+                            {wear_count}×
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          <p className="text-sm font-medium capitalize">{item.sub_category || item.category}</p>
+                        </div>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </div>
   );
 }

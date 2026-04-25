@@ -769,6 +769,46 @@ func (h *Handler) RecropAllImages(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cropped": cropped, "failed": failed})
 }
 
+// Public item / outfit share
+
+func (h *Handler) GetPublicItem(c *gin.Context) {
+	username := c.Param("username")
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	item, err := h.store.GetItem(id, username)
+	if err == sql.ErrNoRows || item == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, item)
+}
+
+func (h *Handler) GetPublicOutfit(c *gin.Context) {
+	username := c.Param("username")
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	outfit, err := h.store.GetOutfit(id, username)
+	if err == sql.ErrNoRows || outfit == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, outfit)
+}
+
 // Profile
 
 func (h *Handler) GetWearHeatmap(c *gin.Context) {

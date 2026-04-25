@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, Check, Plus, X } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Check, Plus, X, Share2 } from "lucide-react";
 import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, imageUrl, thumbnailUrl } from "@/lib/api";
 import { FitBuilder } from "@/components/fit-builder";
 import { OutfitCanvas } from "@/components/outfit-canvas";
@@ -27,14 +27,17 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { useUser } from "@/lib/user-context";
 import type { Outfit } from "@/lib/types";
 
 export default function OutfitDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useUser();
   const id = params.id as string;
 
   const [outfit, setOutfit] = useState<Outfit | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -127,25 +130,25 @@ export default function OutfitDetailPage() {
         <div className="flex gap-2">
           {!editing && (
             <>
-              <OutfitExportButton
-                items={outfit.items ?? []}
-                name={outfit.name}
-              />
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditing(true)}
-                className="gap-1.5"
+                variant="ghost" size="sm"
+                onClick={async () => {
+                  if (!user) return;
+                  const url = `${window.location.origin}/p/${user.username}/outfits/${id}`;
+                  if (navigator.share) { try { await navigator.share({ url }); return; } catch {} }
+                  await navigator.clipboard.writeText(url);
+                  setShareCopied(true);
+                  setTimeout(() => setShareCopied(false), 2000);
+                }}
               >
+                {shareCopied ? <Check className="h-4 w-4 text-green-500" /> : <Share2 className="h-4 w-4" />}
+              </Button>
+              <OutfitExportButton items={outfit.items ?? []} name={outfit.name} />
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5">
                 <Pencil className="h-3.5 w-3.5" />
                 Edit
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-destructive hover:text-destructive"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setShowDeleteDialog(true)} className="text-destructive hover:text-destructive">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </>

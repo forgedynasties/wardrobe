@@ -19,6 +19,8 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 
 	// Public endpoints (no auth)
 	api.GET("/profile/public/:username", h.GetPublicProfile)
+	api.GET("/profile/public/:username/items/:id", h.GetPublicItem)
+	api.GET("/profile/public/:username/outfits/:id", h.GetPublicOutfit)
 
 	// All other routes require a valid session
 	protected := api.Group("", h.AuthMiddleware())
