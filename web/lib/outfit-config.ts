@@ -73,11 +73,58 @@ function load(): OutfitConfig {
   }
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+
 function persist(cfg: OutfitConfig) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
   } catch {}
+}
+
+async function pushToServer(cfg: OutfitConfig) {
+  try {
+    await fetch(`${API_BASE}/api/config/outfit`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cfg),
+    });
+  } catch {}
+}
+
+async function fetchFromServer(): Promise<OutfitConfig | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/config/outfit`, { credentials: "include" });
+    if (res.status === 204 || !res.ok) return null;
+    const data = await res.json() as Partial<OutfitConfig>;
+    return merge(data);
+  } catch {
+    return null;
+  }
+}
+
+function merge(parsed: Partial<OutfitConfig>): OutfitConfig {
+  const mergedSlots: Record<string, MannequinSlot> = { ...defaults.mannequinSlots };
+  if (parsed.mannequinSlots) {
+    for (const [cat, slot] of Object.entries(parsed.mannequinSlots)) {
+      mergedSlots[cat] = { ...defaults.mannequinSlots[cat], ...slot };
+    }
+  }
+  const mergedSubSlots: Record<string, MannequinSlot> = { ...defaults.subcategorySlots };
+  if (parsed.subcategorySlots) {
+    for (const [sub, slot] of Object.entries(parsed.subcategorySlots)) {
+      mergedSubSlots[sub] = { ...defaults.subcategorySlots[sub], ...slot };
+    }
+  }
+  return {
+    ...defaults,
+    ...parsed,
+    categoryZIndex: { ...defaults.categoryZIndex, ...(parsed.categoryZIndex ?? {}) },
+    categoryOrder: parsed.categoryOrder ?? defaults.categoryOrder,
+    mannequinSlots: mergedSlots,
+    subcategorySlots: mergedSubSlots,
+  };
 }
 
 let current: OutfitConfig = load();
@@ -88,6 +135,17 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+// Hydrate from server on boot — replaces localStorage value if server has one
+if (typeof window !== "undefined") {
+  fetchFromServer().then((serverCfg) => {
+    if (serverCfg) {
+      current = serverCfg;
+      persist(current);
+      listeners.forEach((l) => l());
+    }
+  });
+}
+
 export const outfitConfig = {
   get(): OutfitConfig {
     return current;
@@ -95,10 +153,12 @@ export const outfitConfig = {
   set(patch: Partial<OutfitConfig>) {
     current = { ...current, ...patch };
     emit();
+    pushToServer(current);
   },
   reset() {
     current = structuredClone(defaults);
     emit();
+    pushToServer(current);
   },
   getServerSnapshot(): OutfitConfig {
     return defaults;

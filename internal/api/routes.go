@@ -70,6 +70,9 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 			stats.POST("/utility/fix-stale-data", h.FixStaleData)
 		}
 
+		protected.GET("/config/outfit", h.GetOutfitConfig)
+		protected.PUT("/config/outfit", h.SetOutfitConfig)
+
 		admin := protected.Group("/admin")
 		{
 			admin.POST("/recrop-images", h.RecropAllImages)
