@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WearHeatmap } from "@/components/wear-heatmap";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { OutfitCard } from "@/components/outfit-card";
-import { Lock, User } from "lucide-react";
+import { Lock, User, ExternalLink, Star } from "lucide-react";
 import type { PublicProfile } from "@/lib/types";
 import Link from "next/link";
 
@@ -42,7 +42,7 @@ export default function PublicProfilePage() {
   }
 
   const hasAnything = !!(
-    profile.snapshot || profile.outfits?.length || profile.calendar || profile.signature?.length
+    profile.snapshot || profile.outfits?.length || profile.calendar || profile.signature?.length || profile.wishlist?.length
   );
 
   if (!hasAnything) {
@@ -175,6 +175,32 @@ export default function PublicProfilePage() {
                 </Card>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* wishlist */}
+      {profile.wishlist && profile.wishlist.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold border-b pb-2">Wishlist</h2>
+          <div className="space-y-2">
+            {[...profile.wishlist].sort((a, b) => b.priority - a.priority).map((item) => (
+              <Card key={item.id} className="p-3 flex items-center gap-3">
+                {item.priority === 1 && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{item.name}</p>
+                  {item.notes && <p className="text-xs text-muted-foreground truncate">{item.notes}</p>}
+                </div>
+                {item.price_pkr > 0 && (
+                  <span className="text-sm font-medium shrink-0">PKR {item.price_pkr.toLocaleString()}</span>
+                )}
+                {item.product_url && (
+                  <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </Card>
+            ))}
           </div>
         </div>
       )}

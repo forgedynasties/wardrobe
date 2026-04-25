@@ -8,6 +8,7 @@ export interface ProfileSections {
   outfits: boolean;
   calendar: boolean;
   signature: boolean;
+  wishlist: boolean;
 }
 
 export interface ProfileConfig {
@@ -21,6 +22,7 @@ export interface PublicProfile {
   outfits?: Outfit[];
   calendar?: HeatmapEntry[];
   signature?: TopItem[];
+  wishlist?: WishlistItem[];
 }
 
 export interface Page<T> {

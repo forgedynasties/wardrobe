@@ -197,6 +197,7 @@ type ProfileSections struct {
 	Outfits   bool `json:"outfits"`
 	Calendar  bool `json:"calendar"`
 	Signature bool `json:"signature"`
+	Wishlist  bool `json:"wishlist"`
 }
 
 type ProfileConfig struct {
@@ -204,12 +205,13 @@ type ProfileConfig struct {
 }
 
 type PublicProfile struct {
-	DisplayName string         `json:"display_name"`
-	Username    string         `json:"username"`
-	Snapshot    *WardrobeStats `json:"snapshot,omitempty"`
-	Outfits     []Outfit       `json:"outfits,omitempty"`
-	Calendar    []HeatmapEntry `json:"calendar,omitempty"`
-	Signature   []TopItem      `json:"signature,omitempty"`
+	DisplayName string          `json:"display_name"`
+	Username    string          `json:"username"`
+	Snapshot    *WardrobeStats  `json:"snapshot,omitempty"`
+	Outfits     []Outfit        `json:"outfits,omitempty"`
+	Calendar    []HeatmapEntry  `json:"calendar,omitempty"`
+	Signature   []TopItem       `json:"signature,omitempty"`
+	Wishlist    []WishlistItem  `json:"wishlist,omitempty"`
 }
 
 type WardrobeStats struct {

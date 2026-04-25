@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@/lib/user-context";
 import {
-  getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap, imageUrl, thumbnailUrl,
+  getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap, getWishlistItems, imageUrl, thumbnailUrl,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WearHeatmap } from "@/components/wear-heatmap";
 import { OutfitCard } from "@/components/outfit-card";
 import { ShimmerImg } from "@/components/shimmer-img";
-import { Settings, Share2, Check, Lock, User } from "lucide-react";
+import { Settings, Share2, Check, Lock, User, ExternalLink, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig } from "@/lib/types";
+import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem } from "@/lib/types";
 
 function PrivateBadge() {
   return (
@@ -43,6 +43,7 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<WardrobeStats | null>(null);
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapEntry[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -55,11 +56,13 @@ export default function ProfilePage() {
       getWardrobeStats(),
       getOutfitsPage(50),
       getWearHeatmap(year),
-    ]).then(([cfg, s, page, hm]) => {
+      getWishlistItems(),
+    ]).then(([cfg, s, page, hm, wl]) => {
       setConfig(cfg);
       setStats(s);
       setOutfits(page.data);
       setHeatmap(hm);
+      setWishlist(wl.filter(w => !w.bought_at));
     }).finally(() => setLoading(false));
   }, [hydrated, user]);
 
@@ -222,6 +225,37 @@ export default function ProfilePage() {
               </div>
             </section>
           )}
+
+          {/* wishlist */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Wishlist</h2>
+              {!sec?.wishlist && <PrivateBadge />}
+            </div>
+            {wishlist.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No wishlist items yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {[...wishlist].sort((a, b) => b.priority - a.priority).map((item) => (
+                  <Card key={item.id} className="p-3 flex items-center gap-3">
+                    {item.priority === 1 && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      {item.notes && <p className="text-xs text-muted-foreground truncate">{item.notes}</p>}
+                    </div>
+                    {item.price_pkr > 0 && (
+                      <span className="text-sm font-medium shrink-0">PKR {item.price_pkr.toLocaleString()}</span>
+                    )}
+                    {item.product_url && (
+                      <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
         </>
       )}
     </div>

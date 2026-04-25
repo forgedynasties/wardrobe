@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Check, ExternalLink, BarChart3, Sparkles, CalendarDays, Trophy } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, BarChart3, Sparkles, CalendarDays, Trophy, Heart } from "lucide-react";
 import type { ProfileConfig, ProfileSections } from "@/lib/types";
 import Link from "next/link";
 
@@ -17,6 +17,7 @@ const SECTION_META: { key: keyof ProfileSections; label: string; desc: string; i
   { key: "outfits", label: "Outfit Gallery", desc: "Grid of outfits you've created", icon: Sparkles },
   { key: "calendar", label: "Wear Calendar", desc: "Heatmap of days you wore outfits", icon: CalendarDays },
   { key: "signature", label: "Signature Pieces", desc: "Your most-worn clothing items", icon: Trophy },
+  { key: "wishlist", label: "Wishlist", desc: "Items you want to get (unbought only)", icon: Heart },
 ];
 
 export default function ProfilePage() {

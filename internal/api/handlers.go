@@ -899,5 +899,20 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 		}
 	}
 
+	if s.Wishlist {
+		if all, err := h.store.ListWishlistItems(username, 0, nil); err == nil {
+			var visible []domain.WishlistItem
+			for _, w := range all {
+				if w.BoughtAt == nil {
+					visible = append(visible, w)
+				}
+			}
+			if visible == nil {
+				visible = []domain.WishlistItem{}
+			}
+			profile.Wishlist = visible
+		}
+	}
+
 	c.JSON(http.StatusOK, profile)
 }
