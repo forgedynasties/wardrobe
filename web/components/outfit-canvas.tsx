@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { thumbnailUrl } from "@/lib/api";
 import { outfitConfig } from "@/lib/outfit-config";
+import { ShimmerImg } from "@/components/shimmer-img";
 import type { ClothingItem, OutfitItem } from "@/lib/types";
 
 interface Props {
@@ -63,7 +64,7 @@ export function OutfitCanvas({ items, className }: Props) {
               }}
             >
               {src ? (
-                <img
+                <ShimmerImg
                   src={src}
                   alt={item.category}
                   className="w-full h-full object-contain"
@@ -112,7 +113,7 @@ export function OutfitCanvas({ items, className }: Props) {
               }}
             >
               {src ? (
-                <img
+                <ShimmerImg
                   src={src}
                   alt={item.category}
                   className="w-full h-full object-contain"

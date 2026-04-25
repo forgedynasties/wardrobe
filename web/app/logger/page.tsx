@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShimmerImg } from "@/components/shimmer-img";
 import {
   Sheet,
   SheetContent,
@@ -632,7 +633,7 @@ export default function OutfitLoggerPage() {
                       title={item.sub_category || item.category}
                     >
                       {src ? (
-                        <img
+                        <ShimmerImg
                           src={src}
                           alt={item.category}
                           className="w-full h-full object-contain p-1"
@@ -738,7 +739,7 @@ export default function OutfitLoggerPage() {
                   <div key={item.id} className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-muted/40 rounded flex items-center justify-center flex-shrink-0">
                       {src ? (
-                        <img
+                        <ShimmerImg
                           src={src}
                           alt={item.category}
                           className="max-w-full max-h-full object-contain"
