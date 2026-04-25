@@ -2,20 +2,35 @@
 
 import { useMemo } from "react";
 
-function hashUsername(s: string): number {
+function hash(s: string): number {
   let h = 5381;
   for (let i = 0; i < s.length; i++) {
     h = (((h << 5) + h) ^ s.charCodeAt(i)) & 0x7fffffff;
   }
-  return h;
+  return h >>> 0;
 }
 
-function hashToGradient(username: string): [string, string] {
-  const h = hashUsername(username);
+function seededRng(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+function hashToColors(username: string): string[] {
+  const h = hash(username);
   const hue1 = h % 360;
   const hue2 = (hue1 + 137) % 360;
-  return [`hsl(${hue1},60%,55%)`, `hsl(${hue2},60%,55%)`];
+  const hue3 = (hue1 + 74) % 360;
+  return [
+    `hsl(${hue1},60%,55%)`,
+    `hsl(${hue2},60%,55%)`,
+    `hsl(${hue3},55%,45%)`,
+  ];
 }
+
+const GRID = 8;
 
 interface Props {
   colors: string[];
@@ -25,61 +40,37 @@ interface Props {
 }
 
 export function WardrobeAvatar({ colors, username = "", size = 48, className }: Props) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const strokeWidth = size * 0.3;
-  const r = (size - strokeWidth) / 2;
-  const circ = 2 * Math.PI * r;
+  const palette = colors.length > 0 ? [...new Set(colors)].slice(0, 10) : hashToColors(username);
 
-  const displayColors = useMemo(() => [...new Set(colors)].slice(0, 8), [colors]);
+  const cells = useMemo(() => {
+    const rand = seededRng(hash(username || "x"));
+    return Array.from({ length: GRID * GRID }, () => palette[Math.floor(rand() * palette.length)]);
+  }, [username, palette.join(",")]);
 
-  const gradId = `wa-${username.replace(/[^a-z0-9]/gi, "") || "x"}`;
-
-  if (displayColors.length === 0) {
-    const [c1, c2] = hashToGradient(username);
-    return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={className}>
-        <defs>
-          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={c1} />
-            <stop offset="100%" stopColor={c2} />
-          </linearGradient>
-        </defs>
-        <circle cx={cx} cy={cy} r={cx} fill={`url(#${gradId})`} />
-      </svg>
-    );
-  }
-
-  if (displayColors.length === 1) {
-    return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={className}>
-        <circle cx={cx} cy={cy} r={cx} fill={displayColors[0]} />
-      </svg>
-    );
-  }
-
-  const n = displayColors.length;
-  const gapPx = Math.max(1.5, size * 0.03);
-  const segLen = circ / n - gapPx;
+  const cell = size / GRID;
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={className}>
-      <g transform={`rotate(-90, ${cx}, ${cy})`}>
-        {displayColors.map((color, i) => (
-          <circle
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className={className}
+      shapeRendering="crispEdges"
+    >
+      {cells.map((color, i) => {
+        const col = i % GRID;
+        const row = Math.floor(i / GRID);
+        return (
+          <rect
             key={i}
-            cx={cx}
-            cy={cy}
-            r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeDasharray={`${segLen} ${circ - segLen}`}
-            strokeDashoffset={-(i * (circ / n))}
-            strokeLinecap="butt"
+            x={col * cell}
+            y={row * cell}
+            width={cell}
+            height={cell}
+            fill={color}
           />
-        ))}
-      </g>
+        );
+      })}
     </svg>
   );
 }
