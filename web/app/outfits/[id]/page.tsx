@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, Trash2, Check, Plus, X } from "lucide-react";
-import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, imageUrl } from "@/lib/api";
+import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, imageUrl, thumbnailUrl } from "@/lib/api";
 import { FitBuilder } from "@/components/fit-builder";
 import { OutfitCanvas } from "@/components/outfit-canvas";
 import { OutfitExportButton } from "@/components/outfit-export-button";
@@ -228,12 +228,7 @@ export default function OutfitDetailPage() {
             {outfit.items && outfit.items.length > 0 ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-3">
                 {outfit.items.map((item) => {
-                  const src =
-                    item.image_status === "done" && item.image_url
-                      ? imageUrl(item.image_url)
-                      : item.raw_image_url
-                        ? imageUrl(item.raw_image_url)
-                        : null;
+                  const src = thumbnailUrl(item) || null;
 
                   return (
                     <div key={item.id} className="relative group">

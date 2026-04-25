@@ -14,6 +14,7 @@ type ClothingItem struct {
 	Material     string     `json:"material"`
 	ImageURL     string     `json:"image_url"`
 	RawImageURL  string     `json:"raw_image_url"`
+	ThumbnailURL string     `json:"thumbnail_url"`
 	ImageStatus  string     `json:"image_status"`
 	DisplayScale float64    `json:"display_scale"`
 	LastWorn     *time.Time `json:"last_worn"`

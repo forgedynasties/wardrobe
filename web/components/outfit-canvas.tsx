@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { imageUrl } from "@/lib/api";
+import { thumbnailUrl } from "@/lib/api";
 import { outfitConfig } from "@/lib/outfit-config";
 import type { ClothingItem, OutfitItem } from "@/lib/types";
 
@@ -22,9 +22,8 @@ function hasCustomLayout(items: Array<OutfitItem | ClothingItem>): boolean {
 }
 
 function itemSrc(item: ClothingItem): string | null {
-  if (item.image_status === "done" && item.image_url) return imageUrl(item.image_url);
-  if (item.raw_image_url) return imageUrl(item.raw_image_url);
-  return null;
+  const url = thumbnailUrl(item);
+  return url || null;
 }
 
 function useOutfitConfig() {

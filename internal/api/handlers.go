@@ -435,14 +435,25 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	}
 	defer file.Close()
 
-	_, err = h.imageStore.SaveRaw(c.Request.Context(), id, file)
+	tmpPath, err := h.imageStore.SaveRaw(c.Request.Context(), id, file)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save image"})
 		return
 	}
+	defer os.Remove(tmpPath)
 
 	rawURL := h.imageStore.RawURL(id)
-	if err := h.store.UpdateImageStatus(id, "done", rawURL, rawURL); err != nil {
+
+	thumbURL := ""
+	thumbTmp := os.TempDir() + "/thumb-" + id.String() + ".png"
+	if err := vision.GenerateThumbnail(tmpPath, thumbTmp, 400); err == nil {
+		defer os.Remove(thumbTmp)
+		if err := h.imageStore.UploadThumb(c.Request.Context(), id, thumbTmp); err == nil {
+			thumbURL = h.imageStore.ThumbURL(id)
+		}
+	}
+
+	if err := h.store.UpdateImageStatus(id, "done", rawURL, rawURL, thumbURL); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update status"})
 		return
 	}

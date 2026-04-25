@@ -6,6 +6,7 @@ export interface ClothingItem {
   material: string;
   image_url: string;
   raw_image_url: string;
+  thumbnail_url: string;
   image_status: string;
   display_scale: number;
   last_worn: string | null;

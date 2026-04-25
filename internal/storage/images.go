@@ -143,6 +143,7 @@ func (s *ImageStore) Fetch(ctx context.Context, key string) (io.ReadCloser, erro
 
 func (s *ImageStore) rawKey(id uuid.UUID) string   { return fmt.Sprintf("raw/%s.png", id) }
 func (s *ImageStore) cleanKey(id uuid.UUID) string { return fmt.Sprintf("clean/%s.png", id) }
+func (s *ImageStore) thumbKey(id uuid.UUID) string { return fmt.Sprintf("thumb/%s.png", id) }
 
 func (s *ImageStore) RawURL(id uuid.UUID) string {
 	return fmt.Sprintf("%s/%s", s.publicURL, s.rawKey(id))
@@ -150,4 +151,27 @@ func (s *ImageStore) RawURL(id uuid.UUID) string {
 
 func (s *ImageStore) CleanURL(id uuid.UUID) string {
 	return fmt.Sprintf("%s/%s", s.publicURL, s.cleanKey(id))
+}
+
+func (s *ImageStore) ThumbURL(id uuid.UUID) string {
+	return fmt.Sprintf("%s/%s", s.publicURL, s.thumbKey(id))
+}
+
+// UploadThumb uploads localPath to R2 under thumb/<id>.png.
+func (s *ImageStore) UploadThumb(ctx context.Context, id uuid.UUID, localPath string) error {
+	f, err := os.Open(localPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(s.thumbKey(id)),
+		Body:        f,
+		ContentType: aws.String("image/png"),
+	})
+	if err != nil {
+		return fmt.Errorf("upload thumb: %w", err)
+	}
+	return nil
 }

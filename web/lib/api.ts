@@ -228,6 +228,15 @@ export function deleteWishlistItem(id: string): Promise<void> {
   return fetcher(`/api/wishlist/${id}`, { method: "DELETE" });
 }
 
+// thumbnailUrl returns the thumbnail URL for grid display.
+// Falls back to imageUrl if no thumbnail is available.
+export function thumbnailUrl(item: { thumbnail_url?: string; image_url?: string; raw_image_url?: string }): string {
+  if (item.thumbnail_url) return imageUrl(item.thumbnail_url);
+  if (item.image_url) return imageUrl(item.image_url);
+  if (item.raw_image_url) return imageUrl(item.raw_image_url);
+  return "";
+}
+
 export function imageUrl(path: string): string {
   if (!path) return "";
   if (path.startsWith("http://") || path.startsWith("https://")) return path;

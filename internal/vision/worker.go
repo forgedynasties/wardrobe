@@ -66,15 +66,14 @@ func (w *Worker) process(job domain.ImageJob) {
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("[worker] rembg failed for %s: %v\n%s", job.ItemID, err, string(output))
-			w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID))
+			w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID), "")
 			return
 		}
 	} else {
-		// rembg unavailable (e.g. on hosted runtime) — assume raw image is already
-		// background-free per project convention and copy it into the clean slot.
+		// rembg unavailable — assume raw image is already background-free.
 		if err := copyFile(job.RawPath, cleanTmp); err != nil {
 			log.Printf("[worker] copy raw→clean failed for %s: %v", job.ItemID, err)
-			w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID))
+			w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID), "")
 			return
 		}
 	}
@@ -85,8 +84,21 @@ func (w *Worker) process(job domain.ImageJob) {
 
 	if err := w.imageStore.UploadClean(ctx, job.ItemID, cleanTmp); err != nil {
 		log.Printf("[worker] upload clean failed for %s: %v", job.ItemID, err)
-		w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID))
+		w.store.UpdateImageStatus(job.ItemID, "failed", "", w.imageStore.RawURL(job.ItemID), "")
 		return
+	}
+
+	thumbURL := ""
+	thumbTmp := filepath.Join(os.TempDir(), "thumb-"+job.ItemID.String()+".png")
+	defer os.Remove(thumbTmp)
+	if err := GenerateThumbnail(cleanTmp, thumbTmp, 400); err == nil {
+		if err := w.imageStore.UploadThumb(ctx, job.ItemID, thumbTmp); err == nil {
+			thumbURL = w.imageStore.ThumbURL(job.ItemID)
+		} else {
+			log.Printf("[worker] upload thumb failed for %s: %v", job.ItemID, err)
+		}
+	} else {
+		log.Printf("[worker] generate thumb failed for %s: %v", job.ItemID, err)
 	}
 
 	if err := w.store.UpdateImageStatus(
@@ -94,6 +106,7 @@ func (w *Worker) process(job domain.ImageJob) {
 		"done",
 		w.imageStore.CleanURL(job.ItemID),
 		w.imageStore.RawURL(job.ItemID),
+		thumbURL,
 	); err != nil {
 		log.Printf("[worker] db update failed for %s: %v", job.ItemID, err)
 		return

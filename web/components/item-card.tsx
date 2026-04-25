@@ -3,19 +3,16 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import type { ClothingItem } from "@/lib/types";
-import { imageUrl } from "@/lib/api";
+import { thumbnailUrl } from "@/lib/api";
 
 interface ItemCardProps {
   item: ClothingItem;
 }
 
 export function ItemCard({ item }: ItemCardProps) {
-  const src =
-    item.image_status === "done" && item.image_url
-      ? imageUrl(item.image_url)
-      : item.raw_image_url
-        ? imageUrl(item.raw_image_url)
-        : null;
+  const src = item.image_status === "done" || item.raw_image_url
+    ? thumbnailUrl(item)
+    : null;
 
   return (
     <Link href={`/items/${item.id}`} className="block h-full">
