@@ -5,7 +5,7 @@ import { getWardrobeStats, imageUrl, getItems } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Shirt, Sparkles, Palette, Trophy, PackageX, TrendingUp, Tag } from "lucide-react";
 import type { WardrobeStats, ClothingItem } from "@/lib/types";
 
 export default function StatsPage() {
@@ -69,7 +69,7 @@ export default function StatsPage() {
 
       {/* Wardrobe Overview */}
       <div>
-        <h2 className="text-xl font-semibold mb-3">Wardrobe Overview</h2>
+        <h2 className="text-xl font-semibold mb-3 flex items-center gap-2"><Shirt className="h-5 w-5 text-muted-foreground" />Wardrobe Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="p-4">
             <p className="text-sm text-muted-foreground mb-1">Total Items</p>
@@ -84,7 +84,7 @@ export default function StatsPage() {
         {/* Items by Category */}
         {stats.items_by_category.length > 0 && (
           <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-3">Items by Category</h3>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2"><Tag className="h-4 w-4 text-muted-foreground" />Items by Category</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {stats.items_by_category.map((cat) => (
                 <Card key={cat.category} className="p-4 flex items-center justify-between">
@@ -109,7 +109,7 @@ export default function StatsPage() {
 
       {/* Outfit Stats */}
       <div>
-        <h2 className="text-xl font-semibold mb-3">Outfit Statistics</h2>
+        <h2 className="text-xl font-semibold mb-3 flex items-center gap-2"><TrendingUp className="h-5 w-5 text-muted-foreground" />Outfit Statistics</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-4">
             <p className="text-sm text-muted-foreground mb-1">Total Wears</p>
@@ -129,7 +129,7 @@ export default function StatsPage() {
       {/* Color Palette */}
       {stats.colors.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold mb-3">Color Palette</h2>
+          <h2 className="text-xl font-semibold mb-3 flex items-center gap-2"><Palette className="h-5 w-5 text-muted-foreground" />Color Palette</h2>
           <Card className="p-6">
             <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
               {stats.colors.map((color) => (
@@ -152,7 +152,7 @@ export default function StatsPage() {
       {/* Top Worn Items */}
       {stats.top_worn_items.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold mb-3">Top Worn Items</h2>
+          <h2 className="text-xl font-semibold mb-3 flex items-center gap-2"><Trophy className="h-5 w-5 text-muted-foreground" />Top Worn Items</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {stats.top_worn_items.map((topItem) => {
               const item = topItem.item;
@@ -210,7 +210,7 @@ export default function StatsPage() {
 
       {neverWornItems.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold mb-3">Never Worn Items</h2>
+          <h2 className="text-xl font-semibold mb-3 flex items-center gap-2"><PackageX className="h-5 w-5 text-muted-foreground" />Never Worn Items</h2>
           <p className="text-sm text-muted-foreground mb-3">
             {stats.never_worn_items} item{stats.never_worn_items === 1 ? "" : "s"} still waiting for a first wear.
           </p>
@@ -263,29 +263,6 @@ export default function StatsPage() {
         </div>
       )}
 
-      <div>
-        <h2 className="text-xl font-semibold mb-3">Ideas To Add Next</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-4">
-            <p className="font-medium">Rotation health</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Score how evenly your wardrobe is being used instead of repeating the same few pieces.
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="font-medium">Least worn items</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Surface the pieces that have only been worn once or very rarely.
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="font-medium">Neglected favorites</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Find items that were once frequent picks but have gone quiet lately.
-            </p>
-          </Card>
-        </div>
-      </div>
     </div>
   );
 }

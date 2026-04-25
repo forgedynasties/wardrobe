@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, ArrowUpDown } from "lucide-react";
 import { getOutfitsPage, getOutfitRecommendations, getOutfitSuggestions } from "@/lib/api";
 import { OutfitCard } from "@/components/outfit-card";
 import { OutfitStats } from "@/components/outfit-stats";
@@ -133,7 +133,7 @@ export default function OutfitsPage() {
           <OutfitSuggestions suggestions={suggestions} onRefresh={handleShuffle} />
 
           <div className="flex gap-2 items-center">
-            <span className="text-sm font-medium">Sort by:</span>
+            <span className="text-sm font-medium flex items-center gap-1.5"><ArrowUpDown className="h-3.5 w-3.5" />Sort by:</span>
             <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
               <SelectTrigger className="w-48">
                 <SelectValue />

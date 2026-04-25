@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, RotateCcw, UserX, UserCheck } from "lucide-react";
+import { Shield, RotateCcw, UserX, UserCheck, Users } from "lucide-react";
 import { adminListUsers, adminResetPassword, adminSetUserActive } from "@/lib/api";
 import { useUser } from "@/lib/user-context";
 import type { AuthUser } from "@/lib/user-context";
@@ -57,7 +57,7 @@ export default function AdminPage() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Users</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2"><Users className="h-4 w-4" />Users</h2>
 
         {users === null ? (
           Array.from({ length: 3 }).map((_, i) => (

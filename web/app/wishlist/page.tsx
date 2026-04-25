@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ExternalLink, Heart, Trash2 } from "lucide-react";
+import { ExternalLink, Heart, Trash2, Plus, Link2, DollarSign, Image, Tag } from "lucide-react";
 import { createWishlistItem, deleteWishlistItem, getWishlistPage } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -97,14 +97,14 @@ export default function WishlistPage() {
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-1">Wishlist</h1>
+        <h1 className="text-3xl font-bold mb-1 flex items-center gap-2"><Heart className="h-7 w-7" />Wishlist</h1>
         <p className="text-muted-foreground">Save pieces you want to buy later with image, link, and PKR price.</p>
       </div>
 
       <Card className="p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Item name</Label>
+            <Label className="flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" />Item name</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -113,7 +113,7 @@ export default function WishlistPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Price (PKR)</Label>
+            <Label className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" />Price (PKR)</Label>
             <Input
               value={price}
               onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))}
@@ -124,7 +124,7 @@ export default function WishlistPage() {
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label>Product link</Label>
+            <Label className="flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" />Product link</Label>
             <Input
               value={link}
               onChange={(e) => setLink(e.target.value)}
@@ -133,7 +133,7 @@ export default function WishlistPage() {
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label>Item image</Label>
+            <Label className="flex items-center gap-1.5"><Image className="h-3.5 w-3.5" />Item image</Label>
             <div className="flex flex-col gap-3 md:flex-row">
               <Input
                 value={image}
@@ -166,7 +166,8 @@ export default function WishlistPage() {
           </div>
         )}
 
-        <Button onClick={handleAdd} disabled={saving}>
+        <Button onClick={handleAdd} disabled={saving} className="gap-2">
+          <Plus className="h-4 w-4" />
           {saving ? "Saving..." : "Add to Wishlist"}
         </Button>
       </Card>

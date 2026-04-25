@@ -1,10 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Shirt, ArrowDown, Wind, Footprints, Watch } from "lucide-react";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { thumbnailUrl } from "@/lib/api";
 import type { ClothingItem } from "@/lib/types";
+
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  Top: Shirt,
+  Bottom: ArrowDown,
+  Outerwear: Wind,
+  Shoes: Footprints,
+  Accessory: Watch,
+};
 
 interface CategoryStripProps {
   category: string;
@@ -51,11 +59,13 @@ function StripCard({ item }: { item: ClothingItem }) {
 
 export function CategoryStrip({ category, items, onSeeAll }: CategoryStripProps) {
   if (items.length === 0) return null;
+  const Icon = CATEGORY_ICONS[category];
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
           <h2 className="font-semibold text-base">{category}</h2>
           <span className="text-xs text-muted-foreground">{items.length}</span>
         </div>
