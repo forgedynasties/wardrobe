@@ -380,48 +380,6 @@ func (s *Store) WearOutfit(id uuid.UUID, owner string) (*domain.Outfit, error) {
 	return &o, nil
 }
 
-func (s *Store) UpdateOutfitLayout(outfitID uuid.UUID, layouts []domain.OutfitItemLayout, owner string) (*domain.Outfit, error) {
-	tx, err := s.db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	for _, l := range layouts {
-		res, err := tx.Exec(`
-			UPDATE outfit_items
-			SET position_x = $3, position_y = $4, scale = $5, z_index = $6
-			WHERE outfit_id = $1 AND clothing_item_id = $2`,
-			outfitID, l.ClothingItemID, l.PositionX, l.PositionY, l.Scale, l.ZIndex)
-		if err != nil {
-			return nil, err
-		}
-		n, err := res.RowsAffected()
-		if err != nil {
-			return nil, err
-		}
-		if n == 0 {
-			return nil, fmt.Errorf("item %s not in outfit", l.ClothingItemID)
-		}
-	}
-	res, err := tx.Exec(`UPDATE outfits SET updated_at = NOW() WHERE id = $1 AND owner = $2`, outfitID, owner)
-	if err != nil {
-		return nil, err
-	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return nil, err
-	}
-	if n == 0 {
-		return nil, sql.ErrNoRows
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return s.GetOutfit(outfitID, owner)
-}
-
 // Helper function to find or create an outfit by items
 func (s *Store) FindOrCreateOutfitByItems(itemIDs []uuid.UUID, owner string) (*domain.Outfit, error) {
 	if len(itemIDs) == 0 {

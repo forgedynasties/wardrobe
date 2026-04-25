@@ -14,7 +14,7 @@ function isOutfitItem(i: ClothingItem | OutfitItem): i is OutfitItem {
   return "position_x" in i;
 }
 
-export function hasCustomLayout(items: Array<OutfitItem | ClothingItem>): boolean {
+function hasCustomLayout(items: Array<OutfitItem | ClothingItem>): boolean {
   return items.some((i) => {
     if (!isOutfitItem(i)) return false;
     return i.position_x !== 0 || i.position_y !== 0;

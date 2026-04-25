@@ -53,7 +53,6 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		outfits.PUT("/:id", h.UpdateOutfit)
 		outfits.DELETE("/:id", h.DeleteOutfit)
 		outfits.POST("/:id/wear", h.WearOutfit)
-		outfits.PUT("/:id/layout", h.UpdateOutfitLayout)
 		outfits.POST("/:id/items", h.AddOutfitItem)
 		outfits.DELETE("/:id/items/:itemId", h.RemoveOutfitItem)
 	}

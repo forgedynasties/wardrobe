@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, Check, Plus, X, LayoutGrid, RotateCcw } from "lucide-react";
-import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, updateOutfitLayout, imageUrl } from "@/lib/api";
+import { ArrowLeft, Pencil, Trash2, Check, Plus, X } from "lucide-react";
+import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, imageUrl } from "@/lib/api";
 import { FitBuilder } from "@/components/fit-builder";
-import { OutfitCanvas, hasCustomLayout } from "@/components/outfit-canvas";
-import { OutfitLayoutEditor } from "@/components/outfit-layout-editor";
+import { OutfitCanvas } from "@/components/outfit-canvas";
 import { OutfitExportButton } from "@/components/outfit-export-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,14 +36,12 @@ export default function OutfitDetailPage() {
 
   const [outfit, setOutfit] = useState<Outfit | null>(null);
   const [editing, setEditing] = useState(false);
-  const [editingLayout, setEditingLayout] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showItemPicker, setShowItemPicker] = useState(false);
   const [removingItem, setRemovingItem] = useState<string | null>(null);
-  const [resettingLayout, setResettingLayout] = useState(false);
 
   useEffect(() => {
     getOutfit(id).then((o) => {
@@ -94,26 +91,6 @@ export default function OutfitDetailPage() {
     setShowItemPicker(false);
   };
 
-  const handleResetLayout = async () => {
-    if (!outfit?.items) return;
-    setResettingLayout(true);
-    try {
-      const updated = await updateOutfitLayout(
-        id,
-        outfit.items.map((it) => ({
-          clothing_item_id: it.id,
-          position_x: 0,
-          position_y: 0,
-          scale: 1,
-          z_index: 0,
-        })),
-      );
-      setOutfit(updated);
-    } finally {
-      setResettingLayout(false);
-    }
-  };
-
   const handleRemoveItem = async (itemId: string) => {
     setRemovingItem(itemId);
     try {
@@ -148,31 +125,8 @@ export default function OutfitDetailPage() {
           Outfits
         </Button>
         <div className="flex gap-2">
-          {!editing && !editingLayout && (
+          {!editing && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditingLayout(true)}
-                className="gap-1.5"
-                disabled={!outfit.items || outfit.items.length === 0}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Layout
-              </Button>
-              {outfit.items && hasCustomLayout(outfit.items) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResetLayout}
-                  disabled={resettingLayout}
-                  className="gap-1.5"
-                  title="Reset to auto-stack layout"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  {resettingLayout ? "..." : "Reset"}
-                </Button>
-              )}
               <OutfitExportButton
                 items={outfit.items ?? []}
                 name={outfit.name}
@@ -199,16 +153,7 @@ export default function OutfitDetailPage() {
         </div>
       </div>
 
-      {editingLayout ? (
-        <OutfitLayoutEditor
-          outfit={outfit}
-          onSave={(updated) => {
-            setOutfit(updated);
-            setEditingLayout(false);
-          }}
-          onCancel={() => setEditingLayout(false)}
-        />
-      ) : editing ? (
+      {editing ? (
         <div className="space-y-6">
           <div className="space-y-2">
             <Label>Outfit Name</Label>

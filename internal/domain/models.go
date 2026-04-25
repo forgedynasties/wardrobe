@@ -44,17 +44,6 @@ type Outfit struct {
 	UpdatedAt  time.Time    `json:"updated_at"`
 }
 
-type OutfitItemLayout struct {
-	ClothingItemID uuid.UUID `json:"clothing_item_id" binding:"required"`
-	PositionX      float64   `json:"position_x"`
-	PositionY      float64   `json:"position_y"`
-	Scale          float64   `json:"scale"`
-	ZIndex         int       `json:"z_index"`
-}
-
-type UpdateOutfitLayoutRequest struct {
-	Items []OutfitItemLayout `json:"items" binding:"required"`
-}
 
 type CreateItemRequest struct {
 	Category    string   `json:"category" binding:"required"`

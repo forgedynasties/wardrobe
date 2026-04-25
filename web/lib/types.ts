@@ -30,13 +30,6 @@ export interface Outfit {
   updated_at: string;
 }
 
-export interface OutfitItemLayout {
-  clothing_item_id: string;
-  position_x: number;
-  position_y: number;
-  scale: number;
-  z_index: number;
-}
 
 export interface CreateItemRequest {
   category: string;

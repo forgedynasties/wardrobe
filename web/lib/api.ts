@@ -9,7 +9,6 @@ import type {
   UpdateItemRequest,
   CreateOutfitRequest,
   UpdateOutfitRequest,
-  OutfitItemLayout,
   ItemStats,
   WardrobeStats,
   WishlistItem,
@@ -152,16 +151,6 @@ export function removeOutfitItem(
 ): Promise<void> {
   return fetcher(`/api/outfits/${outfitId}/items/${itemId}`, {
     method: "DELETE",
-  });
-}
-
-export function updateOutfitLayout(
-  id: string,
-  items: OutfitItemLayout[],
-): Promise<Outfit> {
-  return fetcher(`/api/outfits/${id}/layout`, {
-    method: "PUT",
-    body: JSON.stringify({ items }),
   });
 }
 
