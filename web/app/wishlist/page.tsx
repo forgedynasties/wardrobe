@@ -1,18 +1,46 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ExternalLink, Heart, Trash2, Plus, Link2, DollarSign, Image, Tag } from "lucide-react";
+import { ExternalLink, Heart, Trash2, Plus, Link2, DollarSign, Image, Tag, Coins } from "lucide-react";
 import { createWishlistItem, deleteWishlistItem, getWishlistPage } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useUser } from "@/lib/user-context";
 import type { WishlistItem } from "@/lib/types";
 
-function formatPkr(value: number) {
-  return `PKR ${value}`;
+type Currency = "PKR" | "USD" | "EUR" | "GBP" | "AED";
+
+const RATES: Record<Currency, number> = {
+  PKR: 1,
+  USD: 1 / 279,
+  EUR: 1 / 305,
+  GBP: 1 / 356,
+  AED: 1 / 76,
+};
+
+const SYMBOLS: Record<Currency, string> = {
+  PKR: "PKR",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  AED: "AED",
+};
+
+function formatAmount(pkr: number, currency: Currency) {
+  const converted = pkr * RATES[currency];
+  const sym = SYMBOLS[currency];
+  if (currency === "PKR") return `${sym} ${Math.round(converted).toLocaleString()}`;
+  return `${sym}${converted.toFixed(2)}`;
 }
 
 export default function WishlistPage() {
@@ -26,6 +54,12 @@ export default function WishlistPage() {
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [currency, setCurrency] = useState<Currency>("PKR");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("wishlist_currency") as Currency | null;
+    if (saved && saved in RATES) setCurrency(saved);
+  }, []);
 
   useEffect(() => {
     if (!hydrated || !user) return;
@@ -33,6 +67,13 @@ export default function WishlistPage() {
       .then((page) => { setItems(page.data); setNextCursor(page.next_cursor); })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load wishlist"));
   }, [hydrated, user]);
+
+  const handleCurrencyChange = (val: string | null) => {
+    if (!val) return;
+    const c = val as Currency;
+    setCurrency(c);
+    localStorage.setItem("wishlist_currency", c);
+  };
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return;
@@ -49,6 +90,8 @@ export default function WishlistPage() {
   const orderedItems = [...(items ?? [])].sort(
     (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
   );
+
+  const totalPkr = (items ?? []).reduce((sum, i) => sum + i.price_pkr, 0);
 
   const handleImageUpload = (file: File) => {
     const reader = new FileReader();
@@ -96,9 +139,32 @@ export default function WishlistPage() {
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-1 flex items-center gap-2"><Heart className="h-7 w-7" />Wishlist</h1>
-        <p className="text-muted-foreground">Save pieces you want to buy later with image, link, and PKR price.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold mb-1 flex items-center gap-2"><Heart className="h-7 w-7" />Wishlist</h1>
+          <p className="text-muted-foreground">Save pieces you want to buy later with image, link, and price.</p>
+        </div>
+        <div className="flex flex-col items-end gap-1.5">
+          <Select value={currency} onValueChange={handleCurrencyChange}>
+            <SelectTrigger className="w-28 h-8 text-xs">
+              <Coins className="h-3.5 w-3.5 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PKR">PKR</SelectItem>
+              <SelectItem value="USD">USD</SelectItem>
+              <SelectItem value="EUR">EUR</SelectItem>
+              <SelectItem value="GBP">GBP</SelectItem>
+              <SelectItem value="AED">AED</SelectItem>
+            </SelectContent>
+          </Select>
+          {items !== null && items.length > 0 && (
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Total ({items.length} items)</p>
+              <p className="text-xl font-bold">{formatAmount(totalPkr, currency)}</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <Card className="p-4 space-y-4">
@@ -212,7 +278,7 @@ export default function WishlistPage() {
               <div className="p-4 flex-1 space-y-3">
                 <div>
                   <p className="font-medium">{item.name}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{formatPkr(item.price_pkr)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{formatAmount(item.price_pkr, currency)}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button
