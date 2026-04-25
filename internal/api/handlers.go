@@ -55,6 +55,40 @@ func (h *Handler) etagCheck(c *gin.Context, owner string) bool {
 	return false
 }
 
+// parsePage reads ?limit and ?after (RFC3339 timestamp cursor) from the request.
+// limit=0 means no limit (all rows). after=nil means start from the beginning.
+func parsePage(c *gin.Context) (limit int, after *time.Time) {
+	if v := c.Query("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if v := c.Query("after"); v != "" {
+		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
+			after = &t
+		}
+	}
+	return
+}
+
+// pageResponse returns items as a plain array (no limit) or a paginated envelope.
+// No limit → plain array, preserving backward compat with existing frontend calls.
+// With limit → { data: [...], next_cursor: "..." } when more pages exist.
+func pageResponse[T any](items []T, limit int, createdAt func(int) time.Time) any {
+	if limit == 0 {
+		return items
+	}
+	type envelope struct {
+		Data       []T    `json:"data"`
+		NextCursor string `json:"next_cursor,omitempty"`
+	}
+	env := envelope{Data: items}
+	if len(items) == limit {
+		env.NextCursor = createdAt(len(items) - 1).UTC().Format(time.RFC3339Nano)
+	}
+	return env
+}
+
 func (h *Handler) invalidateOutfitCaches(owner string) {
 	h.statsCache.Delete(owner)
 	// Invalidate all limit variants for this owner
@@ -89,7 +123,8 @@ func (h *Handler) ListItems(c *gin.Context) {
 	if h.etagCheck(c, owner) {
 		return
 	}
-	items, err := h.store.ListItems(owner)
+	limit, after := parsePage(c)
+	items, err := h.store.ListItems(owner, limit, after)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -97,7 +132,7 @@ func (h *Handler) ListItems(c *gin.Context) {
 	if items == nil {
 		items = []domain.ClothingItem{}
 	}
-	c.JSON(http.StatusOK, items)
+	c.JSON(http.StatusOK, pageResponse(items, limit, func(i int) time.Time { return items[i].CreatedAt }))
 }
 
 func (h *Handler) GetItem(c *gin.Context) {
@@ -174,7 +209,8 @@ func (h *Handler) DeleteItem(c *gin.Context) {
 
 func (h *Handler) ListWishlistItems(c *gin.Context) {
 	owner := c.GetString("owner")
-	items, err := h.store.ListWishlistItems(owner)
+	limit, after := parsePage(c)
+	items, err := h.store.ListWishlistItems(owner, limit, after)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -182,7 +218,7 @@ func (h *Handler) ListWishlistItems(c *gin.Context) {
 	if items == nil {
 		items = []domain.WishlistItem{}
 	}
-	c.JSON(http.StatusOK, items)
+	c.JSON(http.StatusOK, pageResponse(items, limit, func(i int) time.Time { return items[i].CreatedAt }))
 }
 
 func (h *Handler) CreateWishlistItem(c *gin.Context) {
@@ -221,7 +257,8 @@ func (h *Handler) ListOutfits(c *gin.Context) {
 	if h.etagCheck(c, owner) {
 		return
 	}
-	outfits, err := h.store.ListOutfits(owner)
+	limit, after := parsePage(c)
+	outfits, err := h.store.ListOutfits(owner, limit, after)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -229,7 +266,7 @@ func (h *Handler) ListOutfits(c *gin.Context) {
 	if outfits == nil {
 		outfits = []domain.Outfit{}
 	}
-	c.JSON(http.StatusOK, outfits)
+	c.JSON(http.StatusOK, pageResponse(outfits, limit, func(i int) time.Time { return outfits[i].CreatedAt }))
 }
 
 func (h *Handler) GetOutfit(c *gin.Context) {
@@ -681,7 +718,7 @@ func (h *Handler) FixStaleData(c *gin.Context) {
 func (h *Handler) RecropAllImages(c *gin.Context) {
 	owner := c.GetString("owner")
 	ctx := c.Request.Context()
-	items, err := h.store.ListItems(owner)
+	items, err := h.store.ListItems(owner, 0, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

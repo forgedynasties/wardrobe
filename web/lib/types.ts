@@ -1,3 +1,8 @@
+export interface Page<T> {
+  data: T[];
+  next_cursor?: string;
+}
+
 export interface ClothingItem {
   id: string;
   category: string;

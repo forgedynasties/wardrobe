@@ -13,6 +13,7 @@ import type {
   WardrobeStats,
   WishlistItem,
   CreateWishlistItemRequest,
+  Page,
 } from "./types";
 import { getCurrentUser } from "./user-context";
 
@@ -56,6 +57,12 @@ async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function getItems(): Promise<ClothingItem[]> {
   return fetcher("/api/items");
+}
+
+export function getItemsPage(limit: number, after?: string): Promise<Page<ClothingItem>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (after) params.set("after", after);
+  return fetcher(`/api/items?${params}`);
 }
 
 export function getItem(id: string): Promise<ClothingItem> {
@@ -108,6 +115,12 @@ export async function uploadImage(
 
 export function getOutfits(): Promise<Outfit[]> {
   return fetcher("/api/outfits");
+}
+
+export function getOutfitsPage(limit: number, after?: string): Promise<Page<Outfit>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (after) params.set("after", after);
+  return fetcher(`/api/outfits?${params}`);
 }
 
 export function getOutfit(id: string): Promise<Outfit> {
@@ -215,6 +228,12 @@ export function getWardrobeStats(): Promise<WardrobeStats> {
 
 export function getWishlistItems(): Promise<WishlistItem[]> {
   return fetcher("/api/wishlist");
+}
+
+export function getWishlistPage(limit: number, after?: string): Promise<Page<WishlistItem>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (after) params.set("after", after);
+  return fetcher(`/api/wishlist?${params}`);
 }
 
 export function createWishlistItem(data: CreateWishlistItemRequest): Promise<WishlistItem> {

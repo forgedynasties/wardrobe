@@ -36,10 +36,27 @@ func (s *Store) LatestUpdatedAt(owner string) (time.Time, error) {
 	return t, err
 }
 
-func (s *Store) ListItems(owner string) ([]domain.ClothingItem, error) {
-	rows, err := s.db.Query(`
-		SELECT id, category, sub_category, colors, material, image_url, raw_image_url, COALESCE(thumbnail_url, '') as thumbnail_url, image_status, display_scale, last_worn, created_at, updated_at
-		FROM clothing_items WHERE owner = $1 ORDER BY created_at DESC`, owner)
+// ListItems returns up to limit clothing items for owner, ordered by created_at DESC.
+// Pass limit=0 for all items (legacy / internal use). after is an optional created_at
+// cursor: only items created before that time are returned (keyset pagination).
+func (s *Store) ListItems(owner string, limit int, after *time.Time) ([]domain.ClothingItem, error) {
+	var rows *sql.Rows
+	var err error
+	if after != nil {
+		q := `SELECT id, category, sub_category, colors, material, image_url, raw_image_url, COALESCE(thumbnail_url, '') as thumbnail_url, image_status, display_scale, last_worn, created_at, updated_at
+			FROM clothing_items WHERE owner = $1 AND created_at < $2 ORDER BY created_at DESC`
+		if limit > 0 {
+			q += fmt.Sprintf(" LIMIT %d", limit)
+		}
+		rows, err = s.db.Query(q, owner, after)
+	} else {
+		q := `SELECT id, category, sub_category, colors, material, image_url, raw_image_url, COALESCE(thumbnail_url, '') as thumbnail_url, image_status, display_scale, last_worn, created_at, updated_at
+			FROM clothing_items WHERE owner = $1 ORDER BY created_at DESC`
+		if limit > 0 {
+			q += fmt.Sprintf(" LIMIT %d", limit)
+		}
+		rows, err = s.db.Query(q, owner)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +65,8 @@ func (s *Store) ListItems(owner string) ([]domain.ClothingItem, error) {
 	var items []domain.ClothingItem
 	for rows.Next() {
 		var item domain.ClothingItem
-		err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-			&item.ImageURL, &item.RawImageURL, &item.ThumbnailURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt)
-		if err != nil {
+		if err := rows.Scan(&item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
+			&item.ImageURL, &item.RawImageURL, &item.ThumbnailURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -162,12 +178,22 @@ func (s *Store) SetImageProcessing(id uuid.UUID, rawImageURL string) error {
 
 // Wishlist
 
-func (s *Store) ListWishlistItems(owner string) ([]domain.WishlistItem, error) {
-	rows, err := s.db.Query(`
-		SELECT id, name, image_url, product_url, price_pkr, created_at, updated_at
-		FROM wishlist_items
-		WHERE owner = $1
-		ORDER BY created_at DESC`, owner)
+func (s *Store) ListWishlistItems(owner string, limit int, after *time.Time) ([]domain.WishlistItem, error) {
+	var q string
+	var args []any
+	if after != nil {
+		q = `SELECT id, name, image_url, product_url, price_pkr, created_at, updated_at
+			FROM wishlist_items WHERE owner = $1 AND created_at < $2 ORDER BY created_at DESC`
+		args = []any{owner, after}
+	} else {
+		q = `SELECT id, name, image_url, product_url, price_pkr, created_at, updated_at
+			FROM wishlist_items WHERE owner = $1 ORDER BY created_at DESC`
+		args = []any{owner}
+	}
+	if limit > 0 {
+		q += fmt.Sprintf(" LIMIT %d", limit)
+	}
+	rows, err := s.db.Query(q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -231,10 +257,24 @@ func (s *Store) DeleteWishlistItem(id uuid.UUID, owner string) error {
 
 // Outfits
 
-func (s *Store) ListOutfits(owner string) ([]domain.Outfit, error) {
-	rows, err := s.db.Query(`
-		SELECT id, name, usage_count, last_worn, created_at, updated_at
-		FROM outfits WHERE owner = $1 ORDER BY created_at DESC`, owner)
+func (s *Store) ListOutfits(owner string, limit int, after *time.Time) ([]domain.Outfit, error) {
+	var rows *sql.Rows
+	var err error
+	if after != nil {
+		q := `SELECT id, name, usage_count, last_worn, created_at, updated_at
+			FROM outfits WHERE owner = $1 AND created_at < $2 ORDER BY created_at DESC`
+		if limit > 0 {
+			q += fmt.Sprintf(" LIMIT %d", limit)
+		}
+		rows, err = s.db.Query(q, owner, after)
+	} else {
+		q := `SELECT id, name, usage_count, last_worn, created_at, updated_at
+			FROM outfits WHERE owner = $1 ORDER BY created_at DESC`
+		if limit > 0 {
+			q += fmt.Sprintf(" LIMIT %d", limit)
+		}
+		rows, err = s.db.Query(q, owner)
+	}
 	if err != nil {
 		return nil, err
 	}
