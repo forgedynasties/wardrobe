@@ -10,51 +10,63 @@ interface WearHeatmapProps {
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function levelFor(count: number): number {
-  if (count === 0) return 0;
-  if (count === 1) return 1;
-  if (count <= 3) return 2;
-  if (count <= 5) return 3;
-  return 4;
-}
+function computeStreaks(activeDates: Set<string>, year: number) {
+  let current = 0;
+  let longest = 0;
+  let streak = 0;
 
-const LEVEL_CLASSES = [
-  "bg-muted/40",
-  "bg-primary/20",
-  "bg-primary/40",
-  "bg-primary/65",
-  "bg-primary",
-];
-
-export function WearHeatmap({ data, year }: WearHeatmapProps) {
-  // Build lookup: date string → count
-  const countMap = new Map(data.map((e) => [e.date, e.count]));
-
-  // Build all days for the year
+  const today = new Date().toISOString().slice(0, 10);
   const jan1 = new Date(year, 0, 1);
   const dec31 = new Date(year, 11, 31);
-  const startDow = jan1.getDay(); // 0=Sun … 6=Sat
 
-  type Cell = { date: Date; dateStr: string; count: number } | null;
-  const cells: Cell[] = [];
-
-  // Padding before Jan 1
-  for (let i = 0; i < startDow; i++) cells.push(null);
-
+  // Walk every day of the year to compute longest streak
   for (let d = new Date(jan1); d <= dec31; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().slice(0, 10);
-    cells.push({ date: new Date(d), dateStr, count: countMap.get(dateStr) ?? 0 });
+    const s = d.toISOString().slice(0, 10);
+    if (activeDates.has(s)) {
+      streak++;
+      if (streak > longest) longest = streak;
+    } else {
+      streak = 0;
+    }
   }
 
-  // Pad to full weeks
+  // Current streak: walk backwards from today
+  for (let d = new Date(today); ; d.setDate(d.getDate() - 1)) {
+    const s = d.toISOString().slice(0, 10);
+    if (!activeDates.has(s)) break;
+    current++;
+    if (d.getFullYear() < year) break;
+  }
+
+  return { current, longest };
+}
+
+export function WearHeatmap({ data, year }: WearHeatmapProps) {
+  const activeDates = new Set(data.filter((e) => e.count > 0).map((e) => e.date));
+  const activeDays = activeDates.size;
+  const { current, longest } = computeStreaks(activeDates, year);
+
+  // Build all day cells for the year
+  const jan1 = new Date(year, 0, 1);
+  const dec31 = new Date(year, 11, 31);
+  const startDow = jan1.getDay();
+
+  type Cell = { date: Date; dateStr: string; active: boolean } | null;
+  const cells: Cell[] = [];
+
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = new Date(jan1); d <= dec31; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().slice(0, 10);
+    cells.push({ date: new Date(d), dateStr, active: activeDates.has(dateStr) });
+  }
   while (cells.length % 7 !== 0) cells.push(null);
 
   const numWeeks = cells.length / 7;
 
-  // Month label positions: find first week where month starts
+  // Month labels
   const monthLabels: { week: number; label: string }[] = [];
   for (let w = 0; w < numWeeks; w++) {
-    const cell = cells[w * 7]; // first day of this week column (Sunday)
+    const cell = cells[w * 7];
     if (cell) {
       const month = cell.date.getMonth();
       const prev = monthLabels[monthLabels.length - 1];
@@ -66,27 +78,28 @@ export function WearHeatmap({ data, year }: WearHeatmapProps) {
     }
   }
 
-  const totalWears = data.reduce((s, e) => s + e.count, 0);
-  const activeDays = data.filter((e) => e.count > 0).length;
-
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          {totalWears} wear{totalWears !== 1 ? "s" : ""} across {activeDays} day{activeDays !== 1 ? "s" : ""}
-        </p>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span>Less</span>
-          {LEVEL_CLASSES.map((cls, i) => (
-            <div key={i} className={`w-3 h-3 rounded-sm ${cls}`} />
-          ))}
-          <span>More</span>
+    <div className="space-y-4">
+      {/* streak stats */}
+      <div className="flex gap-6">
+        <div>
+          <p className="text-2xl font-bold">{current}</p>
+          <p className="text-xs text-muted-foreground">day streak</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold">{longest}</p>
+          <p className="text-xs text-muted-foreground">longest streak</p>
+        </div>
+        <div>
+          <p className="text-2xl font-bold">{activeDays}</p>
+          <p className="text-xs text-muted-foreground">days logged</p>
         </div>
       </div>
 
+      {/* grid */}
       <div className="overflow-x-auto pb-1">
         <div className="inline-flex flex-col gap-0 min-w-max">
-          {/* Month labels row */}
+          {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: 28 }}>
             {Array.from({ length: numWeeks }).map((_, w) => {
               const label = monthLabels.find((m) => m.week === w);
@@ -98,7 +111,6 @@ export function WearHeatmap({ data, year }: WearHeatmapProps) {
             })}
           </div>
 
-          {/* Grid: 7 rows × numWeeks cols */}
           <div className="flex gap-0">
             {/* Day labels */}
             <div className="flex flex-col gap-0.5 mr-1">
@@ -114,15 +126,12 @@ export function WearHeatmap({ data, year }: WearHeatmapProps) {
               <div key={w} className="flex flex-col gap-0.5 mr-0.5">
                 {Array.from({ length: 7 }).map((_, d) => {
                   const cell = cells[w * 7 + d];
-                  if (!cell) {
-                    return <div key={d} style={{ width: 12, height: 12 }} />;
-                  }
-                  const level = levelFor(cell.count);
+                  if (!cell) return <div key={d} style={{ width: 12, height: 12 }} />;
                   return (
                     <div
                       key={d}
-                      title={`${cell.dateStr}${cell.count ? ` · ${cell.count} wear${cell.count !== 1 ? "s" : ""}` : ""}`}
-                      className={`rounded-sm cursor-default ${LEVEL_CLASSES[level]}`}
+                      title={cell.dateStr}
+                      className={`rounded-sm cursor-default ${cell.active ? "bg-primary" : "bg-muted/40"}`}
                       style={{ width: 12, height: 12 }}
                     />
                   );
