@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Check, ExternalLink, BarChart3, Sparkles, CalendarDays, Trophy } from "lucide-react";
+import { User, Check, ExternalLink, BarChart3, Sparkles, CalendarDays, Trophy, Settings } from "lucide-react";
 import type { ProfileConfig, ProfileSections } from "@/lib/types";
 import Link from "next/link";
 
@@ -58,9 +58,12 @@ export default function ProfilePage() {
 
   return (
     <div className="p-4 max-w-lg mx-auto space-y-6">
-      <div className="flex items-center gap-2">
-        <User className="h-5 w-5 text-primary" />
-        <h1 className="text-2xl font-bold">Profile</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <User className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-bold">Profile</h1>
+        </div>
+        <Settings className="h-5 w-5 text-muted-foreground" />
       </div>
 
       {/* identity */}
