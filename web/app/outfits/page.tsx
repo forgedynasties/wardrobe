@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Sparkles } from "lucide-react";
-import { getOutfits, getOutfitRecommendations, getOutfitSuggestions } from "@/lib/api";
+import { getOutfitsPage, getOutfitRecommendations, getOutfitSuggestions } from "@/lib/api";
 import { OutfitCard } from "@/components/outfit-card";
 import { OutfitStats } from "@/components/outfit-stats";
 import { OutfitRecommendations } from "@/components/outfit-recommendations";
@@ -26,17 +26,32 @@ export default function OutfitsPage() {
   const [recommendations, setRecommendations] = useState<OutfitRecommendation[]>([]);
   const [suggestions, setSuggestions] = useState<OutfitSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [sortBy, setSortBy] = useState<SortOption>("recent");
 
   useEffect(() => {
-    Promise.all([getOutfits(), getOutfitRecommendations(5), getOutfitSuggestions(3)])
-      .then(([os, recs, sugs]) => {
-        setOutfits(os);
+    Promise.all([getOutfitsPage(20), getOutfitRecommendations(5), getOutfitSuggestions(3)])
+      .then(([page, recs, sugs]) => {
+        setOutfits(page.data);
+        setNextCursor(page.next_cursor);
         setRecommendations(recs);
         setSuggestions(sugs);
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await getOutfitsPage(20, nextCursor);
+      setOutfits((prev) => [...prev, ...page.data]);
+      setNextCursor(page.next_cursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextCursor, loadingMore]);
 
   const handleShuffle = () => {
     getOutfitSuggestions(3).then(setSuggestions);
@@ -138,6 +153,14 @@ export default function OutfitsPage() {
               <OutfitCard key={outfit.id} outfit={outfit} />
             ))}
           </div>
+
+          {nextCursor && (
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "Loading..." : "Load more"}
+              </Button>
+            </div>
+          )}
         </>
       )}
 

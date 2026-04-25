@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ExternalLink, Heart, Trash2 } from "lucide-react";
-import { createWishlistItem, deleteWishlistItem, getWishlistItems } from "@/lib/api";
+import { createWishlistItem, deleteWishlistItem, getWishlistPage } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,8 @@ function formatPkr(value: number) {
 export default function WishlistPage() {
   const { user, hydrated } = useUser();
   const [items, setItems] = useState<WishlistItem[] | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
   const [link, setLink] = useState("");
@@ -27,10 +29,22 @@ export default function WishlistPage() {
 
   useEffect(() => {
     if (!hydrated || !user) return;
-    getWishlistItems()
-      .then(setItems)
+    getWishlistPage(20)
+      .then((page) => { setItems(page.data); setNextCursor(page.next_cursor); })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load wishlist"));
   }, [hydrated, user]);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await getWishlistPage(20, nextCursor);
+      setItems((prev) => [...(prev ?? []), ...page.data]);
+      setNextCursor(page.next_cursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextCursor, loadingMore]);
 
   const orderedItems = [...(items ?? [])].sort(
     (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
@@ -179,6 +193,7 @@ export default function WishlistPage() {
           </p>
         </Card>
       ) : (
+        <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {orderedItems.map((item) => (
             <Card key={item.id} className="overflow-hidden flex flex-col">
@@ -221,6 +236,14 @@ export default function WishlistPage() {
               </div>
             </Card>
           ))}
+        </div>
+        {nextCursor && (
+          <div className="flex justify-center">
+            <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? "Loading..." : "Load more"}
+            </Button>
+          </div>
+        )}
         </div>
       )}
     </div>
