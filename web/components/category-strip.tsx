@@ -78,7 +78,7 @@ export function CategoryStrip({ category, items, onSeeAll }: CategoryStripProps)
         </button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory scrollbar-none">
+      <div className="flex gap-2 overflow-x-auto pb-2 pt-1 px-0.5 -mx-0.5 snap-x snap-mandatory scrollbar-none">
         {items.map((item) => (
           <div key={item.id} className="snap-start">
             <StripCard item={item} />
