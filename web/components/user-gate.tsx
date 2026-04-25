@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { useUser } from "@/lib/user-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ type Mode = "login" | "register";
 
 export function UserGate({ children }: { children: React.ReactNode }) {
   const { user, hydrated, login, register } = useUser();
+  const pathname = usePathname();
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -18,7 +20,7 @@ export function UserGate({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
 
   if (!hydrated) return null;
-  if (user) return <>{children}</>;
+  if (user || pathname.startsWith("/p/")) return <>{children}</>;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

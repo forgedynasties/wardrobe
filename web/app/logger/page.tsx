@@ -6,7 +6,6 @@ import { getOutfitLogs, getOutfits, logOutfitWear, getItems, deleteOutfitLog, up
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShimmerImg } from "@/components/shimmer-img";
 import {
@@ -104,6 +103,7 @@ export default function OutfitLoggerPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showLogSheet, setShowLogSheet] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [activeCategory, setActiveCategory] = useState("All");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -202,6 +202,7 @@ export default function OutfitLoggerPage() {
 
   const resetForm = () => {
     setSelectedItems(new Set());
+    setActiveCategory("All");
     setNotes("");
     setSaveError(null);
     setEditingLog(null);
@@ -577,83 +578,112 @@ export default function OutfitLoggerPage() {
           </SheetHeader>
 
           <div className="flex-1 min-h-0 flex flex-col gap-3 px-4 pb-4 overflow-hidden">
-            <div className="flex-1 min-h-0 bg-muted/30 rounded-lg border relative overflow-hidden">
+            <div className="h-32 flex-shrink-0 bg-muted/30 rounded-lg border relative overflow-hidden">
               {selectedItems.size === 0 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                  <div className="text-4xl opacity-40">✨</div>
-                  <p className="text-xs">Pick items below to build your outfit</p>
+                  <div className="text-3xl opacity-40">✨</div>
+                  <p className="text-xs">Tap items below to build your outfit</p>
                 </div>
               ) : (
                 <OutfitCanvas
                   items={items.filter((i) => selectedItems.has(i.id))}
-                  className="p-4"
+                  className="p-3"
                 />
               )}
             </div>
 
-            <div className="flex-shrink-0 space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-muted-foreground">Wardrobe</Label>
+            <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
+              <div className="flex items-center justify-between flex-shrink-0">
+                <div className="flex gap-1 overflow-x-auto pb-0.5">
+                  {(() => {
+                    const cats = ["All", ...Array.from(new Set(items.map(i => i.category))).sort()];
+                    return cats.map((cat) => {
+                      const count = cat === "All" ? selectedItems.size : items.filter(i => i.category === cat && selectedItems.has(i.id)).length;
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setActiveCategory(cat)}
+                          className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            activeCategory === cat
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          }`}
+                        >
+                          {cat}{count > 0 && cat !== "All" ? ` · ${count}` : ""}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
                 {selectedItems.size > 0 && (
                   <button
                     onClick={() => setSelectedItems(new Set())}
-                    className="text-xs text-muted-foreground hover:text-destructive"
+                    className="flex-shrink-0 text-xs text-muted-foreground hover:text-destructive ml-2"
                   >
-                    Clear
+                    Clear {selectedItems.size}
                   </button>
                 )}
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
-                {items.map((item) => {
-                  const src =
-                    item.image_status === "done" && item.image_url
-                      ? imageUrl(item.image_url)
-                      : item.raw_image_url
-                        ? imageUrl(item.raw_image_url)
-                        : null;
-                  const isSelected = selectedItems.has(item.id);
 
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        const newSelected = new Set(selectedItems);
-                        if (newSelected.has(item.id)) {
-                          newSelected.delete(item.id);
-                        } else {
-                          newSelected.add(item.id);
-                        }
-                        setSelectedItems(newSelected);
-                      }}
-                      className={`relative flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg border-2 transition-all snap-start ${
-                        isSelected
-                          ? "bg-primary/15 border-primary scale-95"
-                          : "bg-muted/50 border-border hover:border-primary/50"
-                      }`}
-                      title={item.sub_category || item.category}
-                    >
-                      {src ? (
-                        <ShimmerImg
-                          src={src}
-                          alt={item.category}
-                          className="w-full h-full object-contain p-1"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full gap-0.5">
-                          <div className="text-lg">👕</div>
-                          <div className="text-[9px] font-medium px-1 truncate">
-                            {item.sub_category || item.category}
+              <div className="flex-1 overflow-y-auto">
+                <div className="grid grid-cols-3 gap-2 pb-2">
+                  {items
+                    .filter(item => activeCategory === "All" || item.category === activeCategory)
+                    .map((item) => {
+                      const src =
+                        item.image_status === "done" && item.image_url
+                          ? imageUrl(item.image_url)
+                          : item.raw_image_url
+                            ? imageUrl(item.raw_image_url)
+                            : null;
+                      const isSelected = selectedItems.has(item.id);
+
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            const newSelected = new Set(selectedItems);
+                            if (newSelected.has(item.id)) {
+                              newSelected.delete(item.id);
+                            } else {
+                              newSelected.add(item.id);
+                            }
+                            setSelectedItems(newSelected);
+                          }}
+                          className={`relative aspect-square rounded-xl border-2 transition-all overflow-hidden ${
+                            isSelected
+                              ? "bg-primary/15 border-primary"
+                              : "bg-muted/50 border-border hover:border-primary/50"
+                          }`}
+                        >
+                          {src ? (
+                            <ShimmerImg
+                              src={src}
+                              alt={item.category}
+                              className="w-full h-full object-contain p-2"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full gap-1 p-2">
+                              <div className="text-2xl">{item.category === "Shoes" ? "👟" : "👕"}</div>
+                              <div className="text-[10px] font-medium text-center leading-tight text-muted-foreground">
+                                {item.sub_category || item.category}
+                              </div>
+                            </div>
+                          )}
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold shadow">
+                              ✓
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/40 to-transparent px-1.5 py-1">
+                            <p className="text-[9px] text-white font-medium truncate text-center">
+                              {item.sub_category || item.category}
+                            </p>
                           </div>
-                        </div>
-                      )}
-                      {isSelected && (
-                        <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
-                          ✓
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                        </button>
+                      );
+                    })}
+                </div>
               </div>
             </div>
 
