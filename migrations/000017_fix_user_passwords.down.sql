@@ -1,0 +1,1 @@
+-- no rollback for password update
