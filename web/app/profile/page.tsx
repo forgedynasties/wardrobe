@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@/lib/user-context";
 import {
-  getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap, getWishlistItems, imageUrl, thumbnailUrl,
+  getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap,
+  getWishlistItems, getItems, imageUrl, thumbnailUrl,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,10 @@ import { WearHeatmap } from "@/components/wear-heatmap";
 import { OutfitCard } from "@/components/outfit-card";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { WardrobeAvatar } from "@/components/wardrobe-avatar";
-import { Settings, Share2, Check, Lock, ExternalLink, Star } from "lucide-react";
+import { Settings, Share2, Check, Lock, ExternalLink, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem } from "@/lib/types";
+import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem } from "@/lib/types";
 
 function PrivateBadge() {
   return (
@@ -39,16 +40,17 @@ async function doShare(title: string, url: string, onCopied: () => void) {
 export default function ProfilePage() {
   const { user, hydrated } = useUser();
   const router = useRouter();
+  const currentYear = new Date().getFullYear();
 
   const [config, setConfig] = useState<ProfileConfig | null>(null);
   const [stats, setStats] = useState<WardrobeStats | null>(null);
   const [outfits, setOutfits] = useState<Outfit[]>([]);
+  const [heatmapYear, setHeatmapYear] = useState(currentYear);
   const [heatmap, setHeatmap] = useState<HeatmapEntry[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [neverWorn, setNeverWorn] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-
-  const year = new Date().getFullYear();
 
   useEffect(() => {
     if (!hydrated || !user) return;
@@ -56,16 +58,23 @@ export default function ProfilePage() {
       getProfileSettings(),
       getWardrobeStats(),
       getOutfitsPage(50),
-      getWearHeatmap(year),
+      getWearHeatmap(currentYear),
       getWishlistItems(),
-    ]).then(([cfg, s, page, hm, wl]) => {
+      getItems(),
+    ]).then(([cfg, s, page, hm, wl, items]) => {
       setConfig(cfg);
       setStats(s);
       setOutfits(page.data);
       setHeatmap(hm);
       setWishlist(wl.filter(w => !w.bought_at));
+      setNeverWorn(items.filter(i => !i.last_worn));
     }).finally(() => setLoading(false));
   }, [hydrated, user]);
+
+  useEffect(() => {
+    if (!hydrated || !user) return;
+    getWearHeatmap(heatmapYear).then(setHeatmap);
+  }, [heatmapYear]);
 
   const handleShare = () => {
     if (!user) return;
@@ -82,7 +91,7 @@ export default function ProfilePage() {
   const isPublic = sec ? Object.values(sec).some(Boolean) : false;
 
   return (
-    <div className="p-4 max-w-4xl mx-auto space-y-8 pb-24">
+    <div className="p-4 max-w-2xl mx-auto space-y-8 pb-24">
 
       {/* header */}
       <div className="flex items-start justify-between">
@@ -110,57 +119,83 @@ export default function ProfilePage() {
       </div>
 
       {loading ? (
-        <div className="space-y-6">
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-48 rounded-xl" />
-          <Skeleton className="h-48 rounded-xl" />
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
         </div>
       ) : (
         <>
-          {/* snapshot */}
-          <section className="space-y-4">
+          {/* numbers */}
+          <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">Style Snapshot</h2>
+              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Overview</h2>
               {!sec?.snapshot && <PrivateBadge />}
             </div>
             {stats && (
               <>
-                <div className="grid grid-cols-3 gap-3">
-                  <Card className="p-4 text-center">
-                    <p className="text-3xl font-bold">{stats.total_items}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Items</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <Card className="p-3 text-center">
+                    <p className="text-2xl font-bold">{stats.total_items}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Items</p>
                   </Card>
-                  <Card className="p-4 text-center">
-                    <p className="text-3xl font-bold">{stats.total_outfits}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Outfits</p>
+                  <Card className="p-3 text-center">
+                    <p className="text-2xl font-bold">{stats.total_outfits}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Outfits</p>
                   </Card>
-                  <Card className="p-4 text-center">
-                    <p className="text-3xl font-bold">{stats.total_wears}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Wears</p>
+                  <Card className="p-3 text-center">
+                    <p className="text-2xl font-bold">{stats.total_wears}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Wears</p>
                   </Card>
                 </div>
-                {stats.colors.length > 0 && (
-                  <Card className="p-4">
-                    <p className="text-sm font-medium mb-3">Color Palette</p>
-                    <div className="flex flex-wrap gap-2">
-                      {stats.colors.map((c) => (
-                        <div key={c} className="w-8 h-8 rounded-full border border-border shadow-sm" style={{ backgroundColor: c }} title={c} />
-                      ))}
-                    </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Card className="p-3 text-center">
+                    <p className="text-2xl font-bold">{stats.avg_wears_per_outfit.toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Avg / outfit</p>
+                  </Card>
+                  <Card className="p-3 text-center">
+                    <p className="text-2xl font-bold">{stats.wears_this_month}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">This month</p>
+                  </Card>
+                  <Card className="p-3 text-center">
+                    <p className="text-2xl font-bold">{stats.never_worn_items}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Never worn</p>
+                  </Card>
+                </div>
+
+                {/* category bars */}
+                {stats.items_by_category.length > 0 && (
+                  <Card className="p-4 space-y-2">
+                    {stats.items_by_category.map((cat) => (
+                      <div key={cat.category} className="flex items-center gap-3">
+                        <span className="text-xs capitalize w-20 shrink-0 text-muted-foreground">{cat.category}</span>
+                        <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary/70 rounded-full"
+                            style={{ width: `${(cat.count / (stats.total_items || 1)) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium w-4 text-right text-muted-foreground">{cat.count}</span>
+                      </div>
+                    ))}
                   </Card>
                 )}
-                {stats.items_by_category.length > 0 && (
-                  <Card className="p-4">
-                    <p className="text-sm font-medium mb-3">Categories</p>
-                    <div className="space-y-2">
-                      {stats.items_by_category.map((cat) => (
-                        <div key={cat.category} className="flex items-center gap-3">
-                          <span className="text-sm capitalize w-24 shrink-0">{cat.category}</span>
-                          <div className="flex-1 h-2 bg-muted/50 rounded overflow-hidden">
-                            <div className="h-full bg-primary/70 rounded" style={{ width: `${(cat.count / (stats.total_items || 1)) * 100}%` }} />
-                          </div>
-                          <span className="text-sm font-medium w-6 text-right">{cat.count}</span>
-                        </div>
+
+                {/* color palette — pixel art grid */}
+                {stats.colors.length > 0 && (
+                  <Card className="p-4 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Color Palette</p>
+                    <div
+                      className="grid gap-[2px]"
+                      style={{ gridTemplateColumns: `repeat(${Math.min(stats.colors.length, 10)}, 1fr)` }}
+                    >
+                      {stats.colors.map((c) => (
+                        <div
+                          key={c}
+                          className="aspect-square"
+                          style={{ backgroundColor: c }}
+                          title={c}
+                        />
                       ))}
                     </div>
                   </Card>
@@ -169,40 +204,59 @@ export default function ProfilePage() {
             )}
           </section>
 
+          {/* wear calendar */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Wear Calendar</h2>
+                {!sec?.calendar && <PrivateBadge />}
+              </div>
+              <div className="flex items-center gap-0.5">
+                <Button
+                  variant="ghost" size="icon" className="h-7 w-7"
+                  onClick={() => setHeatmapYear(y => y - 1)}
+                  disabled={heatmapYear <= 2023}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium w-10 text-center">{heatmapYear}</span>
+                <Button
+                  variant="ghost" size="icon" className="h-7 w-7"
+                  onClick={() => setHeatmapYear(y => y + 1)}
+                  disabled={heatmapYear >= currentYear}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <Card className="p-4">
+              <WearHeatmap data={heatmap} year={heatmapYear} />
+            </Card>
+          </section>
+
           {/* outfit gallery */}
-          <section className="space-y-4">
+          <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">Outfit Gallery</h2>
+              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Outfit Gallery</h2>
               {!sec?.outfits && <PrivateBadge />}
             </div>
             {outfits.length === 0 ? (
               <p className="text-sm text-muted-foreground">No outfits yet.</p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {outfits.map((o) => <OutfitCard key={o.id} outfit={o} />)}
               </div>
             )}
           </section>
 
-          {/* wear calendar */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">Wear Calendar</h2>
-              {!sec?.calendar && <PrivateBadge />}
-            </div>
-            <Card className="p-4">
-              <WearHeatmap data={heatmap} year={year} />
-            </Card>
-          </section>
-
           {/* signature pieces */}
           {stats && stats.top_worn_items.length > 0 && (
-            <section className="space-y-4">
+            <section className="space-y-3">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">Signature Pieces</h2>
+                <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Signature Pieces</h2>
                 {!sec?.signature && <PrivateBadge />}
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {stats.top_worn_items.map(({ item, wear_count }) => {
                   const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
                   return (
@@ -211,13 +265,13 @@ export default function ProfilePage() {
                         <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
                           {src
                             ? <ShimmerImg src={src} alt={item.category} className="w-full h-full object-contain" />
-                            : <span className="text-3xl">👕</span>}
-                          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-medium">
+                            : <span className="text-2xl">👕</span>}
+                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1 py-0.5 rounded font-medium">
                             {wear_count}×
                           </div>
                         </div>
-                        <div className="p-2">
-                          <p className="text-sm font-medium capitalize">{item.sub_category || item.category}</p>
+                        <div className="p-1.5">
+                          <p className="text-xs font-medium capitalize truncate">{item.sub_category || item.category}</p>
                         </div>
                       </Card>
                     </Link>
@@ -227,10 +281,43 @@ export default function ProfilePage() {
             </section>
           )}
 
+          {/* never worn */}
+          {neverWorn.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
+                Never Worn <span className="text-xs font-normal">({neverWorn.length})</span>
+              </h2>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {neverWorn.slice(0, 8).map((item) => {
+                  const src = item.image_status === "done" && item.image_url
+                    ? imageUrl(item.image_url)
+                    : item.raw_image_url ? imageUrl(item.raw_image_url) : null;
+                  return (
+                    <Link key={item.id} href={`/items/${item.id}`}>
+                      <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
+                        <div className="aspect-square bg-muted/40 flex items-center justify-center">
+                          {src
+                            ? <img src={src} alt={item.category} className="w-full h-full object-contain p-1" />
+                            : <span className="text-2xl">👕</span>}
+                        </div>
+                        <div className="p-1.5">
+                          <p className="text-xs font-medium capitalize truncate">{item.sub_category || item.category}</p>
+                        </div>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+              {neverWorn.length > 8 && (
+                <p className="text-xs text-muted-foreground">+{neverWorn.length - 8} more</p>
+              )}
+            </section>
+          )}
+
           {/* wishlist */}
-          <section className="space-y-4">
+          <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">Wishlist</h2>
+              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Wishlist</h2>
               {!sec?.wishlist && <PrivateBadge />}
             </div>
             {wishlist.length === 0 ? (

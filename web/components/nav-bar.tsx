@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shirt, Sparkles, CalendarDays, BarChart3, Heart, User } from "lucide-react";
+import { Shirt, Sparkles, CalendarDays, Heart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/lib/user-context";
 
@@ -11,7 +11,6 @@ const navItems = [
   { href: "/outfits", label: "Outfits", icon: Sparkles },
   { href: "/logger", label: "Logger", icon: CalendarDays },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
-  { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
