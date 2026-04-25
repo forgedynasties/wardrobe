@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserRound, LogOut, KeyRound, Bell, BellOff } from "lucide-react";
+import { UserRound, LogOut, KeyRound, Bell, BellOff, Shield } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/user-context";
 import { changePassword } from "@/lib/api";
 import { useOutfitReminder } from "@/components/outfit-reminder";
@@ -21,6 +22,7 @@ type View = "main" | "change-password";
 
 export function UserSwitcher() {
   const { user, logout } = useUser();
+  const router = useRouter();
   const { isEnabled, enable, disable } = useOutfitReminder();
   const [reminderOn, setReminderOn] = useState(false);
   const [open, setOpen] = useState(false);
@@ -102,6 +104,16 @@ export function UserSwitcher() {
 
           {view === "main" && (
             <DialogFooter className="flex-col gap-2 sm:flex-col">
+              {user.is_admin && (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => { setOpen(false); router.push("/admin"); }}
+                >
+                  <Shield className="h-4 w-4" />
+                  Admin panel
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="w-full gap-2"

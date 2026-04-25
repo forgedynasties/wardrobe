@@ -52,6 +52,25 @@ async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
 
 // Items
 
+// Admin
+export function adminListUsers(): Promise<import("./user-context").AuthUser[]> {
+  return fetcher("/api/admin/users");
+}
+
+export function adminResetPassword(username: string, newPassword: string): Promise<void> {
+  return fetcher(`/api/admin/users/${username}/password`, {
+    method: "PUT",
+    body: JSON.stringify({ new_password: newPassword }),
+  });
+}
+
+export function adminSetUserActive(username: string, active: boolean): Promise<void> {
+  return fetcher(`/api/admin/users/${username}/active`, {
+    method: "PUT",
+    body: JSON.stringify({ active }),
+  });
+}
+
 export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   return fetcher("/api/auth/password", {
     method: "PUT",

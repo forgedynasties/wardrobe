@@ -53,6 +53,39 @@ func (s *Store) AuthenticateUser(username, password string) (*domain.User, error
 	return u, nil
 }
 
+func (s *Store) ListUsers() ([]*domain.User, error) {
+	rows, err := s.db.Query(`
+		SELECT id, username, display_name, is_admin, is_active, created_at, updated_at
+		FROM users ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []*domain.User
+	for rows.Next() {
+		u := &domain.User{}
+		if err := rows.Scan(&u.ID, &u.Username, &u.DisplayName, &u.IsAdmin, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+func (s *Store) AdminResetPassword(username, newPassword string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE username = $2`, string(hash), username)
+	return err
+}
+
+func (s *Store) SetUserActive(username string, active bool) error {
+	_, err := s.db.Exec(`UPDATE users SET is_active = $1, updated_at = NOW() WHERE username = $2`, active, username)
+	return err
+}
+
 func (s *Store) ChangePassword(username, currentPassword, newPassword string) error {
 	u, err := s.GetUserByUsername(username)
 	if err != nil || u == nil {

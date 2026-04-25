@@ -151,6 +151,69 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+func (h *Handler) requireAdmin(c *gin.Context) bool {
+	user := c.MustGet("user").(*domain.User)
+	if !user.IsAdmin {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin only"})
+		return false
+	}
+	return true
+}
+
+func (h *Handler) ListUsers(c *gin.Context) {
+	if !h.requireAdmin(c) {
+		return
+	}
+	users, err := h.store.ListUsers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	c.JSON(http.StatusOK, users)
+}
+
+func (h *Handler) AdminResetPassword(c *gin.Context) {
+	if !h.requireAdmin(c) {
+		return
+	}
+	username := c.Param("username")
+	var req struct {
+		NewPassword string `json:"new_password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(req.NewPassword) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 6 characters"})
+		return
+	}
+	if err := h.store.AdminResetPassword(username, req.NewPassword); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *Handler) SetUserActive(c *gin.Context) {
+	if !h.requireAdmin(c) {
+		return
+	}
+	username := c.Param("username")
+	var req struct {
+		Active bool `json:"active"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.store.SetUserActive(username, req.Active); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 // AuthMiddleware validates the session cookie and sets "user" + "owner" in context.
 func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {

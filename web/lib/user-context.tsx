@@ -8,6 +8,8 @@ export interface AuthUser {
   username: string;
   display_name: string;
   is_admin: boolean;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 type AuthContextValue = {
