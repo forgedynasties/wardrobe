@@ -270,29 +270,6 @@ func (h *Handler) DeleteWishlistItem(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handler) GetWishlistShareToken(c *gin.Context) {
-	owner := c.GetString("owner")
-	token, err := h.store.GetOrCreateWishlistShareToken(owner)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"token": token})
-}
-
-func (h *Handler) GetPublicWishlist(c *gin.Context) {
-	token := c.Param("token")
-	items, err := h.store.ListPublicWishlistItems(token)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	if items == nil {
-		items = []domain.WishlistItem{}
-	}
-	c.JSON(http.StatusOK, items)
-}
-
 // Outfits
 
 func (h *Handler) ListOutfits(c *gin.Context) {

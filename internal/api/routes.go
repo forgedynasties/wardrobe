@@ -18,7 +18,6 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 	}
 
 	// Public endpoints (no auth)
-	api.GET("/wishlist/public/:token", h.GetPublicWishlist)
 	api.GET("/profile/public/:username", h.GetPublicProfile)
 
 	// All other routes require a valid session
@@ -43,7 +42,6 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 			wishlist.POST("", h.CreateWishlistItem)
 			wishlist.PATCH("/:id", h.UpdateWishlistItem)
 			wishlist.DELETE("/:id", h.DeleteWishlistItem)
-			wishlist.GET("/share-token", h.GetWishlistShareToken)
 		}
 
 		outfits := protected.Group("/outfits")

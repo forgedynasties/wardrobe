@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
   ExternalLink, Heart, Trash2, Plus, Link2, DollarSign, Image, Tag,
-  Star, ShoppingBag, Share2, Check, ChevronDown, ChevronUp, Wallet,
+  Star, ShoppingBag, ChevronDown, ChevronUp, Wallet,
 } from "lucide-react";
 import {
   createWishlistItem, deleteWishlistItem, updateWishlistItem,
-  getWishlistPage, getWishlistShareToken, getExchangeRates,
+  getWishlistPage, getExchangeRates,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,10 +66,6 @@ export default function WishlistPage() {
   const [budget, setBudget] = useState("");
   const [editingBudget, setEditingBudget] = useState(false);
   const budgetRef = useRef<HTMLInputElement>(null);
-
-  // share
-  const [shareToken, setShareToken] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   // bought section
   const [showBought, setShowBought] = useState(false);
@@ -197,20 +193,6 @@ export default function WishlistPage() {
     setEditingNotes(null);
   };
 
-  const handleShare = async () => {
-    if (!shareToken) {
-      const { token } = await getWishlistShareToken();
-      setShareToken(token);
-      const url = `${window.location.origin}/wishlist/share/${token}`;
-      await navigator.clipboard.writeText(url);
-    } else {
-      const url = `${window.location.origin}/wishlist/share/${shareToken}`;
-      await navigator.clipboard.writeText(url);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   // ── item card ──────────────────────────────────────────────────────────────
 
   function WishlistCard({ item, bought = false }: { item: WishlistItem; bought?: boolean }) {
@@ -314,11 +296,8 @@ export default function WishlistPage() {
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          {/* currency + share row */}
+          {/* currency row */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={handleShare}>
-              {copied ? <><Check className="h-4 w-4 text-green-500" /> Copied!</> : <><Share2 className="h-4 w-4" /> Share</>}
-            </Button>
             <Select value={currency} onValueChange={handleCurrencyChange}>
               <SelectTrigger className="w-28 h-8 text-xs">
                 <SelectValue />

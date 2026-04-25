@@ -1,7 +1,6 @@
 package storage
 
 import (
-	crand "crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -290,43 +289,6 @@ func (s *Store) DeleteWishlistItem(id uuid.UUID, owner string) error {
 		return fmt.Errorf("wishlist item not found")
 	}
 	return nil
-}
-
-func (s *Store) GetOrCreateWishlistShareToken(username string) (string, error) {
-	var token string
-	err := s.db.QueryRow(`SELECT wishlist_share_token FROM users WHERE username = $1`, username).Scan(&token)
-	if err == nil && token != "" {
-		return token, nil
-	}
-	b := make([]byte, 16)
-	if _, err := crand.Read(b); err != nil {
-		return "", err
-	}
-	token = fmt.Sprintf("%x", b)
-	_, err = s.db.Exec(`UPDATE users SET wishlist_share_token = $1 WHERE username = $2`, token, username)
-	return token, err
-}
-
-func (s *Store) ListPublicWishlistItems(token string) ([]domain.WishlistItem, error) {
-	rows, err := s.db.Query(`
-		SELECT w.`+wishlistCols+`
-		FROM wishlist_items w
-		JOIN users u ON u.username = w.owner
-		WHERE u.wishlist_share_token = $1 AND w.bought_at IS NULL
-		ORDER BY w.priority DESC, w.created_at DESC`, token)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []domain.WishlistItem
-	for rows.Next() {
-		item, err := scanWishlistItem(rows)
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
 }
 
 // Profile & heatmap

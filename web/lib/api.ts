@@ -277,14 +277,6 @@ export function deleteWishlistItem(id: string): Promise<void> {
   return fetcher(`/api/wishlist/${id}`, { method: "DELETE" });
 }
 
-export function getWishlistShareToken(): Promise<{ token: string }> {
-  return fetcher("/api/wishlist/share-token");
-}
-
-export function getPublicWishlist(token: string): Promise<WishlistItem[]> {
-  return fetcher(`/api/wishlist/public/${token}`);
-}
-
 // --- Heatmap & profile ---
 
 export function getWearHeatmap(year: number): Promise<HeatmapEntry[]> {
