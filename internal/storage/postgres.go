@@ -24,6 +24,18 @@ func NewStore(db *sql.DB) *Store {
 
 // Items
 
+// LatestUpdatedAt returns the most recent updated_at across clothing_items and outfits for an owner.
+// Used to generate ETags for list endpoints.
+func (s *Store) LatestUpdatedAt(owner string) (time.Time, error) {
+	var t time.Time
+	err := s.db.QueryRow(`
+		SELECT GREATEST(
+			COALESCE((SELECT MAX(updated_at) FROM clothing_items WHERE owner = $1), '1970-01-01'),
+			COALESCE((SELECT MAX(updated_at) FROM outfits WHERE owner = $1), '1970-01-01')
+		)`, owner).Scan(&t)
+	return t, err
+}
+
 func (s *Store) ListItems(owner string) ([]domain.ClothingItem, error) {
 	rows, err := s.db.Query(`
 		SELECT id, category, sub_category, colors, material, image_url, raw_image_url, COALESCE(thumbnail_url, '') as thumbnail_url, image_status, display_scale, last_worn, created_at, updated_at

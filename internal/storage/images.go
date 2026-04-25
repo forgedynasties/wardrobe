@@ -85,6 +85,25 @@ func (s *ImageStore) SaveRaw(ctx context.Context, id uuid.UUID, src io.Reader) (
 	return tmp.Name(), nil
 }
 
+// UploadRaw uploads localPath to R2 under raw/<id>.png.
+func (s *ImageStore) UploadRaw(ctx context.Context, id uuid.UUID, localPath string) error {
+	f, err := os.Open(localPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(s.rawKey(id)),
+		Body:        f,
+		ContentType: aws.String("image/png"),
+	})
+	if err != nil {
+		return fmt.Errorf("upload raw: %w", err)
+	}
+	return nil
+}
+
 // UploadClean uploads localPath to R2 under clean/<id>.png.
 func (s *ImageStore) UploadClean(ctx context.Context, id uuid.UUID, localPath string) error {
 	f, err := os.Open(localPath)

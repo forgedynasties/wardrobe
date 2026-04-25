@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/md5"
 	"database/sql"
 	"fmt"
 	"io"
@@ -37,6 +38,23 @@ func NewHandler(store *storage.Store, imageStore *storage.ImageStore, worker *vi
 	}
 }
 
+// etagCheck computes an ETag from the owner's latest updated_at and handles
+// conditional GET. Returns true if the response was short-circuited (304).
+func (h *Handler) etagCheck(c *gin.Context, owner string) bool {
+	t, err := h.store.LatestUpdatedAt(owner)
+	if err != nil {
+		return false
+	}
+	etag := fmt.Sprintf(`"%x"`, md5.Sum([]byte(t.UTC().String())))
+	c.Header("ETag", etag)
+	c.Header("Cache-Control", "private, no-cache")
+	if c.GetHeader("If-None-Match") == etag {
+		c.Status(http.StatusNotModified)
+		return true
+	}
+	return false
+}
+
 func (h *Handler) invalidateOutfitCaches(owner string) {
 	h.statsCache.Delete(owner)
 	// Invalidate all limit variants for this owner
@@ -68,6 +86,9 @@ func (h *Handler) ServeImage(c *gin.Context) {
 
 func (h *Handler) ListItems(c *gin.Context) {
 	owner := c.GetString("owner")
+	if h.etagCheck(c, owner) {
+		return
+	}
 	items, err := h.store.ListItems(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -197,6 +218,9 @@ func (h *Handler) DeleteWishlistItem(c *gin.Context) {
 
 func (h *Handler) ListOutfits(c *gin.Context) {
 	owner := c.GetString("owner")
+	if h.etagCheck(c, owner) {
+		return
+	}
 	outfits, err := h.store.ListOutfits(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -435,20 +459,41 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	}
 	defer file.Close()
 
-	tmpPath, err := h.imageStore.SaveRaw(c.Request.Context(), id, file)
+	// Write upload to a tmp file so we can resize before uploading to R2.
+	tmp, err := os.CreateTemp("", "raw-"+id.String()+"-*.png")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save image"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create tmp"})
 		return
 	}
+	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
+
+	if _, err := io.Copy(tmp, file); err != nil {
+		tmp.Close()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to buffer image"})
+		return
+	}
+	tmp.Close()
+
+	// Resize raw to max 2000px before uploading (item 14).
+	if err := vision.ResizePNG(tmpPath, 2000); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resize image"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	if err := h.imageStore.UploadRaw(ctx, id, tmpPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to upload image"})
+		return
+	}
 
 	rawURL := h.imageStore.RawURL(id)
 
 	thumbURL := ""
 	thumbTmp := os.TempDir() + "/thumb-" + id.String() + ".png"
+	defer os.Remove(thumbTmp)
 	if err := vision.GenerateThumbnail(tmpPath, thumbTmp, 400); err == nil {
-		defer os.Remove(thumbTmp)
-		if err := h.imageStore.UploadThumb(c.Request.Context(), id, thumbTmp); err == nil {
+		if err := h.imageStore.UploadThumb(ctx, id, thumbTmp); err == nil {
 			thumbURL = h.imageStore.ThumbURL(id)
 		}
 	}
