@@ -12,12 +12,41 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WearHeatmap } from "@/components/wear-heatmap";
 import { OutfitCard } from "@/components/outfit-card";
+import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { WardrobeAvatar } from "@/components/wardrobe-avatar";
 import { Settings, Share2, Check, Lock, ExternalLink, Star, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem, OutfitLog } from "@/lib/types";
+
+const CATEGORY_WEIGHT: Record<string, number> = {
+  outerwear: 5, top: 4, bottom: 3, shoes: 2, accessory: 1,
+};
+const sortByCategory = (items: ClothingItem[]) =>
+  [...items].sort(
+    (a, b) =>
+      (CATEGORY_WEIGHT[b.category?.toLowerCase() ?? ""] ?? 0) -
+      (CATEGORY_WEIGHT[a.category?.toLowerCase() ?? ""] ?? 0)
+  );
+const toKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+const buildMonthCells = (year: number, month: number): (Date | null)[] => {
+  const first = new Date(year, month, 1).getDay();
+  const total = new Date(year, month + 1, 0).getDate();
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < first; i++) cells.push(null);
+  for (let d = 1; d <= total; d++) cells.push(new Date(year, month, d));
+  return cells;
+};
+const isSameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
 
 function hexToHue(hex: string): number {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -53,7 +82,8 @@ async function doShare(title: string, url: string, onCopied: () => void) {
 export default function ProfilePage() {
   const { user, hydrated } = useUser();
   const router = useRouter();
-  const currentYear = new Date().getFullYear();
+  const today = new Date();
+  const currentYear = today.getFullYear();
 
   const [config, setConfig] = useState<ProfileConfig | null>(null);
   const [stats, setStats] = useState<WardrobeStats | null>(null);
@@ -63,6 +93,7 @@ export default function ProfilePage() {
   const [wearLogs, setWearLogs] = useState<OutfitLog[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [neverWorn, setNeverWorn] = useState<ClothingItem[]>([]);
+  const [monthAnchor, setMonthAnchor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [galleryTab, setGalleryTab] = useState<"visible" | "hidden">("visible");
@@ -83,6 +114,12 @@ export default function ProfilePage() {
       setNeverWorn(items.filter(i => !i.last_worn));
     }).finally(() => setLoading(false));
   }, [hydrated, user]);
+
+  useEffect(() => {
+    const y = monthAnchor.getFullYear();
+    if (y !== heatmapYear) setHeatmapYear(y);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthAnchor]);
 
   useEffect(() => {
     if (!hydrated || !user) return;
@@ -249,39 +286,80 @@ export default function ProfilePage() {
               <WearHeatmap data={heatmap} year={heatmapYear} />
             </Card>
 
-            {wearLogs.length > 0 && (
-              <div className="space-y-2">
-                {wearLogs.map((log) => {
-                  const date = new Date(log.wear_date);
-                  const label = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-                  return (
-                    <Card key={log.id} className="p-3 flex items-center gap-3">
-                      <div className="text-xs text-muted-foreground w-24 shrink-0">{label}</div>
-                      <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
-                        {(log.items ?? []).slice(0, 6).map((item) => {
-                          const src = item.image_status === "done" && item.image_url
-                            ? imageUrl(item.image_url)
-                            : item.raw_image_url ? imageUrl(item.raw_image_url) : null;
-                          return (
-                            <div key={item.id} className="w-9 h-9 rounded bg-muted/40 shrink-0 flex items-center justify-center overflow-hidden">
-                              {src
-                                ? <img src={src} alt={item.category} className="w-full h-full object-contain p-0.5" />
-                                : <span className="text-base">👕</span>}
-                            </div>
-                          );
-                        })}
-                        {(log.items ?? []).length > 6 && (
-                          <span className="text-xs text-muted-foreground shrink-0">+{(log.items ?? []).length - 6}</span>
-                        )}
-                      </div>
-                      {log.notes && (
-                        <p className="text-xs text-muted-foreground italic truncate max-w-[120px] shrink-0">&ldquo;{log.notes}&rdquo;</p>
-                      )}
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+            {(() => {
+              const logsMap = new Map(
+                wearLogs.map(log => [log.wear_date.split("T")[0], log])
+              );
+              const cells = buildMonthCells(monthAnchor.getFullYear(), monthAnchor.getMonth());
+              const atCurrent =
+                monthAnchor.getFullYear() === today.getFullYear() &&
+                monthAnchor.getMonth() === today.getMonth();
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-0.5">
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7"
+                      onClick={() => setMonthAnchor(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium">
+                      {monthAnchor.toLocaleString("default", { month: "long", year: "numeric" })}
+                    </span>
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7"
+                      onClick={() => setMonthAnchor(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+                      disabled={atCurrent}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Card className="p-3">
+                    <div className="grid grid-cols-7 gap-1">
+                      {["S","M","T","W","T","F","S"].map((d, i) => (
+                        <div key={i} className="text-center text-[10px] text-muted-foreground py-1">{d}</div>
+                      ))}
+                      {cells.map((date, idx) => {
+                        const dateStr = date ? toKey(date) : null;
+                        const log = dateStr ? logsMap.get(dateStr) ?? null : null;
+                        const hasLog = !!log;
+                        const isToday = !!date && isSameDay(date, today);
+                        const sortedItems = log?.items ? sortByCategory(log.items) : [];
+                        return (
+                          <div
+                            key={idx}
+                            className={`relative aspect-square rounded-md flex items-center justify-center transition-colors ${
+                              !date
+                                ? "bg-transparent"
+                                : hasLog
+                                  ? "bg-primary/10 hover:bg-primary/20 cursor-pointer"
+                                  : "bg-muted/30 hover:bg-muted/40 cursor-pointer"
+                            } ${isToday ? "ring-1 ring-primary" : ""}`}
+                            onClick={() => date && router.push("/logger")}
+                          >
+                            {date && (
+                              <>
+                                <span className={`absolute top-0.5 left-1 text-[9px] font-medium leading-none z-10 ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                                  {date.getDate()}
+                                </span>
+                                {hasLog && sortedItems.length > 0 && (
+                                  <div className="absolute inset-[8px] top-[14px]">
+                                    <OutfitCanvas items={sortedItems.slice(0, 4)} />
+                                  </div>
+                                )}
+                                {hasLog && sortedItems.length === 0 && (
+                                  <div className="w-2 h-2 rounded-full bg-primary mt-3" />
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                </div>
+              );
+            })()}
           </section>
 
           {/* outfit gallery */}
