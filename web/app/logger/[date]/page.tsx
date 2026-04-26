@@ -244,7 +244,7 @@ export default function LogDayPage() {
                     : "border-border hover:border-primary/40 bg-muted/30"
                 }`}
               >
-                <div className="relative aspect-[3/4] w-full bg-muted/30">
+                <div className="relative aspect-[3/4] w-full bg-muted/30 overflow-hidden">
                   <OutfitCanvas items={outfit.items ?? []} />
                 </div>
                 <div className="p-2 text-left">

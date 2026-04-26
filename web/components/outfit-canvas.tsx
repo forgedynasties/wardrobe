@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { thumbnailUrl } from "@/lib/api";
-import { outfitConfig } from "@/lib/outfit-config";
+import { outfitConfig, defaultZIndex } from "@/lib/outfit-config";
 import { ShimmerImg } from "@/components/shimmer-img";
 import type { ClothingItem, OutfitItem } from "@/lib/types";
 
@@ -42,14 +42,11 @@ export function OutfitCanvas({ items, className }: Props) {
   const useCustom = hasCustomLayout(items);
 
   if (useCustom) {
-    // When z_index is 0 (DB default, pre-editor), fall back to the slot's zIndex so
-    // mannequin category ordering is preserved even in custom layout mode.
-    const slotZ = (item: ClothingItem | OutfitItem) => {
-      const sub = item.sub_category ? cfg.subcategorySlots[item.sub_category]?.zIndex : undefined;
-      return sub ?? cfg.mannequinSlots[item.category]?.zIndex ?? 1;
-    };
+    // When z_index is 0 (DB default, pre-editor), fall back to hardcoded default zIndex.
     const effectiveZ = (item: ClothingItem | OutfitItem) =>
-      isOutfitItem(item) && item.z_index !== 0 ? item.z_index : slotZ(item);
+      isOutfitItem(item) && item.z_index !== 0
+        ? item.z_index
+        : defaultZIndex(item.category, item.sub_category);
 
     const sorted = [...items].sort((a, b) => effectiveZ(a) - effectiveZ(b));
     return (
@@ -84,12 +81,10 @@ export function OutfitCanvas({ items, className }: Props) {
     );
   }
 
-  // Mannequin composition: sort by slot zIndex ascending so lower z renders first (behind).
-  const sorted = [...items].sort((a, b) => {
-    const az = (a.sub_category ? cfg.subcategorySlots[a.sub_category]?.zIndex : undefined) ?? cfg.mannequinSlots[a.category]?.zIndex ?? 0;
-    const bz = (b.sub_category ? cfg.subcategorySlots[b.sub_category]?.zIndex : undefined) ?? cfg.mannequinSlots[b.category]?.zIndex ?? 0;
-    return az - bz;
-  });
+  // Mannequin composition: sort by hardcoded default zIndex ascending so lower z renders first.
+  const sorted = [...items].sort(
+    (a, b) => defaultZIndex(a.category, a.sub_category) - defaultZIndex(b.category, b.sub_category),
+  );
 
   return (
     <div
@@ -115,7 +110,7 @@ export function OutfitCanvas({ items, className }: Props) {
                 left: hasCustomX ? `${slot.left}%` : "50%",
                 height: `${slot.height}%`,
                 width: `${slotWidth}%`,
-                zIndex: slot.zIndex,
+                zIndex: defaultZIndex(item.category, item.sub_category),
                 transform: `${hasCustomX ? "" : "translateX(-50%) "}scale(${item.display_scale || 1})`,
               }}
             >

@@ -1,5 +1,5 @@
 import { imageUrl, proxiedImageUrl } from "@/lib/api";
-import { outfitConfig } from "@/lib/outfit-config";
+import { outfitConfig, defaultZIndex } from "@/lib/outfit-config";
 import type { ClothingItem, OutfitItem } from "@/lib/types";
 
 const CANVAS_W = 1080;
@@ -94,18 +94,12 @@ export async function exportOutfitImage(
   const cfg = outfitConfig.get();
   const useCustom = hasCustomLayout(items);
 
-  const slotZIndex = (item: Item) => {
-    const sub = item.sub_category ? cfg.subcategorySlots[item.sub_category]?.zIndex : undefined;
-    return sub ?? cfg.mannequinSlots[item.category]?.zIndex ?? 1;
-  };
   const effectiveZ = (item: Item) =>
-    isOutfitItem(item) && item.z_index !== 0 ? item.z_index : slotZIndex(item);
+    isOutfitItem(item) && item.z_index !== 0
+      ? item.z_index
+      : defaultZIndex(item.category, item.sub_category);
 
-  const sorted = [...items].sort((a, b) =>
-    useCustom
-      ? effectiveZ(a) - effectiveZ(b)
-      : slotZIndex(a) - slotZIndex(b),
-  );
+  const sorted = [...items].sort((a, b) => effectiveZ(a) - effectiveZ(b));
 
   const imgs = await Promise.all(
     sorted.map(async (it) => {

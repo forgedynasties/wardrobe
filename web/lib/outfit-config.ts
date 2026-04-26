@@ -40,6 +40,15 @@ const defaults: OutfitConfig = {
   overlapThreshold: 2,
 };
 
+// defaultZIndex always reads from hardcoded defaults — immune to stale localStorage/server config.
+// Use this for z-ordering instead of reading cfg.mannequinSlots[cat]?.zIndex.
+export function defaultZIndex(category: string, subCategory?: string | null): number {
+  if (subCategory && defaults.subcategorySlots[subCategory]?.zIndex !== undefined) {
+    return defaults.subcategorySlots[subCategory].zIndex;
+  }
+  return defaults.mannequinSlots[category]?.zIndex ?? 1;
+}
+
 const STORAGE_KEY = "wardrobe.outfitConfig.v2";
 
 function load(): OutfitConfig {
