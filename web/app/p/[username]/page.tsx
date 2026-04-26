@@ -133,7 +133,7 @@ export default function PublicProfilePage() {
           <h2 className="text-lg font-semibold border-b pb-2">Outfit Gallery</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {profile.outfits.map((outfit) => (
-              <OutfitCard key={outfit.id} outfit={outfit} />
+              <OutfitCard key={outfit.id} outfit={outfit} href={`/p/${username}/outfits/${outfit.id}`} />
             ))}
           </div>
         </div>

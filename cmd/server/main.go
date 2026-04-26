@@ -84,7 +84,7 @@ func main() {
 			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Content-Type"},
+		AllowHeaders:     []string{"Content-Type", "Authorization", "X-User"},
 		AllowCredentials: true,
 	}))
 	api.RegisterRoutes(r, handler)

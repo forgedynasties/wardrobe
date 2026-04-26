@@ -10,14 +10,16 @@ import type { Outfit } from "@/lib/types";
 
 interface OutfitCardProps {
   outfit: Outfit;
+  href?: string;
   onToggleHidden?: () => void;
   onTogglePinned?: () => void;
 }
 
-export const OutfitCard = memo(function OutfitCard({ outfit, onToggleHidden, onTogglePinned }: OutfitCardProps) {
+export const OutfitCard = memo(function OutfitCard({ outfit, href, onToggleHidden, onTogglePinned }: OutfitCardProps) {
+  const outfitHref = href ?? `/outfits/${outfit.id}`;
   return (
     <Card className="overflow-hidden group hover:ring-2 hover:ring-primary/40 transition-all duration-200 hover:shadow-md">
-      <Link href={`/outfits/${outfit.id}`}>
+      <Link href={outfitHref}>
         <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden cursor-pointer">
           <OutfitCanvas items={outfit.items ?? []} />
           <OutfitExportButton
@@ -34,7 +36,7 @@ export const OutfitCard = memo(function OutfitCard({ outfit, onToggleHidden, onT
       </Link>
       <div className="px-3 py-2.5 space-y-1.5">
         <div className="flex items-center justify-between gap-1">
-          <Link href={`/outfits/${outfit.id}`} className="flex-1 min-w-0">
+          <Link href={outfitHref} className="flex-1 min-w-0">
             <h3 className="font-semibold text-sm truncate">{outfit.name}</h3>
           </Link>
           {(onToggleHidden || onTogglePinned) && (
