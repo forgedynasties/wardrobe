@@ -214,6 +214,7 @@ export default function OutfitDetailPage() {
                 const updated = await updateOutfitLayout(outfit.id, layouts);
                 setOutfit(updated);
                 setEditingLayout(false);
+                router.refresh();
               }}
               onCancel={() => setEditingLayout(false)}
             />
