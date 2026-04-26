@@ -26,6 +26,14 @@ export interface PublicProfile {
   wishlist?: WishlistItem[];
 }
 
+export interface OutfitItemLayoutUpdate {
+  item_id: string;
+  position_x: number;
+  position_y: number;
+  scale: number;
+  z_index: number;
+}
+
 export interface Page<T> {
   data: T[];
   next_cursor?: string;

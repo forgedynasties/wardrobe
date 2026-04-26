@@ -59,7 +59,7 @@ export function OutfitCanvas({ items, className }: Props) {
               key={item.id ?? idx}
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{
-                transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${item.display_scale || 1})`,
+                transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${(isOutfitItem(item) ? (item.scale ?? 1) : 1) * (item.display_scale || 1)})`,
                 zIndex: layout.z_index,
               }}
             >

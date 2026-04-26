@@ -447,6 +447,28 @@ func (s *Store) loadOutfitItemsBatch(outfitIDs []uuid.UUID) (map[uuid.UUID][]dom
 	return result, rows.Err()
 }
 
+func (s *Store) UpdateOutfitLayout(outfitID uuid.UUID, owner string, updates []domain.OutfitItemLayout) error {
+	// Verify ownership
+	var exists bool
+	err := s.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM outfits WHERE id = $1 AND owner = $2)`, outfitID, owner).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return sql.ErrNoRows
+	}
+	for _, u := range updates {
+		_, err := s.db.Exec(`
+			UPDATE outfit_items SET position_x = $1, position_y = $2, scale = $3, z_index = $4
+			WHERE outfit_id = $5 AND clothing_item_id = $6`,
+			u.PositionX, u.PositionY, u.Scale, u.ZIndex, outfitID, u.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Store) GetOutfit(id uuid.UUID, owner string) (*domain.Outfit, error) {
 	var o domain.Outfit
 	err := s.db.QueryRow(`

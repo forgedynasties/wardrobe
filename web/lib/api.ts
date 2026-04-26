@@ -9,6 +9,7 @@ import type {
   UpdateItemRequest,
   CreateOutfitRequest,
   UpdateOutfitRequest,
+  OutfitItemLayoutUpdate,
   ItemStats,
   WardrobeStats,
   WishlistItem,
@@ -297,6 +298,13 @@ export function getPublicProfile(username: string): Promise<PublicProfile> {
 
 export function getPublicItem(username: string, id: string): Promise<ClothingItem> {
   return fetcher(`/api/profile/public/${username}/items/${id}`);
+}
+
+export function updateOutfitLayout(outfitId: string, items: OutfitItemLayoutUpdate[]): Promise<Outfit> {
+  return fetcher(`/api/outfits/${outfitId}/layout`, {
+    method: "PUT",
+    body: JSON.stringify(items),
+  });
 }
 
 export function getPublicOutfit(username: string, id: string): Promise<Outfit> {

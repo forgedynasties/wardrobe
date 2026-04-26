@@ -351,6 +351,33 @@ func (h *Handler) UpdateOutfit(c *gin.Context) {
 	c.JSON(http.StatusOK, outfit)
 }
 
+func (h *Handler) UpdateOutfitLayout(c *gin.Context) {
+	owner := c.GetString("owner")
+	outfitID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	var updates []domain.OutfitItemLayout
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.store.UpdateOutfitLayout(outfitID, owner, updates); err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "outfit not found"})
+		return
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	outfit, err := h.store.GetOutfit(outfitID, owner)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, outfit)
+}
+
 func (h *Handler) DeleteOutfit(c *gin.Context) {
 	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))

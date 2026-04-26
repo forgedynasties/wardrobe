@@ -35,6 +35,14 @@ type OutfitItem struct {
 	ZIndex    int     `json:"z_index"`
 }
 
+type OutfitItemLayout struct {
+	ItemID    uuid.UUID `json:"item_id"`
+	PositionX float64   `json:"position_x"`
+	PositionY float64   `json:"position_y"`
+	Scale     float64   `json:"scale"`
+	ZIndex    int       `json:"z_index"`
+}
+
 type Outfit struct {
 	ID         uuid.UUID    `json:"id"`
 	Name       string       `json:"name"`
