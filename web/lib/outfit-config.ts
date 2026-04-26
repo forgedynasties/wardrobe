@@ -51,13 +51,15 @@ function load(): OutfitConfig {
     const mergedSlots: Record<string, MannequinSlot> = { ...defaults.mannequinSlots };
     if (parsed.mannequinSlots) {
       for (const [cat, slot] of Object.entries(parsed.mannequinSlots)) {
-        mergedSlots[cat] = { ...defaults.mannequinSlots[cat], ...slot };
+        const def = defaults.mannequinSlots[cat];
+        mergedSlots[cat] = { ...def, ...slot, zIndex: def?.zIndex ?? slot.zIndex };
       }
     }
     const mergedSubSlots: Record<string, MannequinSlot> = { ...defaults.subcategorySlots };
     if (parsed.subcategorySlots) {
       for (const [sub, slot] of Object.entries(parsed.subcategorySlots)) {
-        mergedSubSlots[sub] = { ...defaults.subcategorySlots[sub], ...slot };
+        const def = defaults.subcategorySlots[sub];
+        mergedSubSlots[sub] = { ...def, ...slot, zIndex: def?.zIndex ?? slot.zIndex };
       }
     }
     return {
@@ -108,13 +110,15 @@ function merge(parsed: Partial<OutfitConfig>): OutfitConfig {
   const mergedSlots: Record<string, MannequinSlot> = { ...defaults.mannequinSlots };
   if (parsed.mannequinSlots) {
     for (const [cat, slot] of Object.entries(parsed.mannequinSlots)) {
-      mergedSlots[cat] = { ...defaults.mannequinSlots[cat], ...slot };
+      const def = defaults.mannequinSlots[cat];
+      mergedSlots[cat] = { ...def, ...slot, zIndex: def?.zIndex ?? slot.zIndex };
     }
   }
   const mergedSubSlots: Record<string, MannequinSlot> = { ...defaults.subcategorySlots };
   if (parsed.subcategorySlots) {
     for (const [sub, slot] of Object.entries(parsed.subcategorySlots)) {
-      mergedSubSlots[sub] = { ...defaults.subcategorySlots[sub], ...slot };
+      const def = defaults.subcategorySlots[sub];
+      mergedSubSlots[sub] = { ...def, ...slot, zIndex: def?.zIndex ?? slot.zIndex };
     }
   }
   return {

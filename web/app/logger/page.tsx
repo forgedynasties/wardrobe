@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getOutfitLogs, deleteOutfitLog, imageUrl } from "@/lib/api";
+import { getOutfitLogs, getOutfits, deleteOutfitLog, imageUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { OutfitCanvas } from "@/components/outfit-canvas";
-import type { ClothingItem, OutfitLog } from "@/lib/types";
+import type { ClothingItem, Outfit, OutfitItem, OutfitLog } from "@/lib/types";
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   outerwear: 5,
@@ -83,6 +83,7 @@ export default function OutfitLoggerPage() {
   const [view, setView] = useState<View>("week");
   const [anchor, setAnchor] = useState(new Date());
   const [logs, setLogs] = useState<Map<string, OutfitLog>>(new Map());
+  const [outfitMap, setOutfitMap] = useState<Map<string, Outfit>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const [deleteTarget, setDeleteTarget] = useState<{ dateStr: string; log: OutfitLog } | null>(null);
@@ -113,11 +114,15 @@ export default function OutfitLoggerPage() {
     try {
       setLoading(true);
       const { start, end } = viewRange(view, anchor);
-      const logsData = await getOutfitLogs(toKey(start), toKey(end));
+      const [logsData, allOutfits] = await Promise.all([
+        getOutfitLogs(toKey(start), toKey(end)),
+        getOutfits(),
+      ]);
       const logsMap = new Map(
         logsData.map((log) => [log.wear_date.split("T")[0], log]),
       );
       setLogs(logsMap);
+      setOutfitMap(new Map(allOutfits.map((o) => [o.id, o])));
     } catch (err) {
       console.error(err);
     } finally {
@@ -199,6 +204,12 @@ export default function OutfitLoggerPage() {
     const log = dateStr ? logs.get(dateStr) ?? null : null;
     const hasLog = !!log;
     const isToday = !!date && isSameDay(date, today);
+    // When log is linked to a saved outfit, use that outfit's items (with position data)
+    // so OutfitCanvas can render the custom layout. Fall back to snapshot items otherwise.
+    const linkedOutfit = log?.outfit_id ? outfitMap.get(log.outfit_id) : undefined;
+    const canvasItems: (ClothingItem | OutfitItem)[] = linkedOutfit?.items
+      ? linkedOutfit.items
+      : sortByCategory(log?.items ?? []);
     const sortedItems = log?.items ? sortByCategory(log.items) : [];
     const itemCount = sortedItems.length;
     const hasPrevStreak = hasLog && prevHasLog;
@@ -269,8 +280,8 @@ export default function OutfitLoggerPage() {
                   <div className="w-2 h-2 rounded-full bg-primary" />
                 )}
                 {itemCount >= 1 && (
-                  <div className="absolute inset-[10px]">
-                    <OutfitCanvas items={sortedItems.slice(0, 4)} />
+                  <div className="absolute inset-[10px] overflow-hidden">
+                    <OutfitCanvas items={canvasItems.slice(0, 4)} />
                   </div>
                 )}
                 {sortedItems.length > 4 && (
