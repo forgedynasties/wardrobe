@@ -79,6 +79,7 @@ export default function OutfitDetailPage() {
     setDeleting(true);
     try {
       await deleteOutfit(id);
+      router.refresh();
       router.push("/outfits");
     } catch {
       setDeleting(false);
