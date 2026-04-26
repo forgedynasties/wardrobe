@@ -471,7 +471,9 @@ func (s *Store) UpdateOutfitLayout(outfitID uuid.UUID, owner string, updates []d
 			return err
 		}
 	}
-	return nil
+	// Bump outfit updated_at so the ETag on ListOutfits changes, busting the client cache.
+	_, err = s.db.Exec(`UPDATE outfits SET updated_at = NOW() WHERE id = $1`, outfitID)
+	return err
 }
 
 func (s *Store) GetOutfit(id uuid.UUID, owner string) (*domain.Outfit, error) {
