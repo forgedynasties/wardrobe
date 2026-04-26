@@ -19,6 +19,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem } from "@/lib/types";
 
+function hexToHue(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const d = max - min;
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0)
+          : max === g ? (b - r) / d + 2
+          : (r - g) / d + 4;
+  return h * 60;
+}
+
 function PrivateBadge() {
   return (
     <Badge variant="secondary" className="gap-1 text-xs font-normal">
@@ -181,22 +194,44 @@ export default function ProfilePage() {
                   </Card>
                 )}
 
-                {/* color palette — pixel art grid */}
+                {/* color palette */}
                 {stats.colors.length > 0 && (
-                  <Card className="p-4 space-y-2">
+                  <Card className="p-4 space-y-4">
                     <p className="text-xs font-medium text-muted-foreground">Color Palette</p>
+
+                    {/* pixel art grid */}
                     <div
                       className="grid gap-[2px]"
                       style={{ gridTemplateColumns: `repeat(${Math.min(stats.colors.length, 10)}, 1fr)` }}
                     >
                       {stats.colors.map((c) => (
-                        <div
-                          key={c}
-                          className="aspect-square"
-                          style={{ backgroundColor: c }}
-                          title={c}
-                        />
+                        <div key={c} className="aspect-square" style={{ backgroundColor: c }} title={c} />
                       ))}
+                    </div>
+
+                    {/* spectrum bar */}
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide">Spectrum</p>
+                      <div className="flex h-6 rounded overflow-hidden">
+                        {[...stats.colors].sort((a, b) => hexToHue(a) - hexToHue(b)).map((c) => (
+                          <div key={c} className="flex-1 h-full" style={{ backgroundColor: c }} title={c} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* swatch circles */}
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide">Swatches</p>
+                      <div className="flex">
+                        {stats.colors.map((c, i) => (
+                          <div
+                            key={c}
+                            className="w-8 h-8 rounded-full border-2 border-background shrink-0"
+                            style={{ backgroundColor: c, marginLeft: i === 0 ? 0 : -10 }}
+                            title={c}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </Card>
                 )}
