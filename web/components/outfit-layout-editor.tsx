@@ -166,9 +166,10 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    // Select on click (no movement)
+    // Select on click (no movement) — toggle if clicking same item
     if (dragRef.current && !dragRef.current.hasMoved) {
-      setSelectedId(dragRef.current.itemId);
+      const clickedId = dragRef.current.itemId;
+      setSelectedId(prev => (prev === clickedId ? null : clickedId));
     }
     activePointers.current.delete(e.pointerId);
     if (activePointers.current.size < 2) pinchRef.current = null;
@@ -239,7 +240,6 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
-            onClick={() => setSelectedId(null)}
           >
             {canvasSorted.map((item) => {
               const src = thumbnailUrl(item) || null;
@@ -255,17 +255,17 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                     transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${effectiveScale})`,
                     zIndex: layout.z_index + 1,
                     cursor: "grab",
+                    outline: isSelected ? "2px solid hsl(var(--primary))" : "none",
+                    outlineOffset: "-2px",
                   }}
                   onPointerDown={(e) => handlePointerDown(e, item.id)}
                 >
-                  {isSelected && (
-                    <div className="absolute inset-[15%] rounded-lg ring-2 ring-primary ring-offset-0 pointer-events-none" />
-                  )}
                   {src ? (
                     <ShimmerImg
                       src={src}
                       alt={item.category}
                       className="w-full h-full object-contain pointer-events-none"
+                      style={isSelected ? { filter: "drop-shadow(0 0 6px hsl(var(--primary) / 0.7))" } : undefined}
                     />
                   ) : (
                     <span className="text-4xl pointer-events-none">👕</span>
