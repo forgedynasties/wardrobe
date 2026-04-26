@@ -893,70 +893,75 @@ func suggestionReason(items []domain.ClothingItem) string {
 // Outfit Logs
 
 func (s *Store) LogOutfitWear(req domain.LogOutfitWearRequest, owner string) (*domain.OutfitLog, error) {
-	// Find or create outfit from items
-	var outfitID uuid.UUID
-	if req.OutfitID != nil {
-		outfitID = *req.OutfitID
-	} else if len(req.ItemIDs) > 0 {
-		outfit, err := s.FindOrCreateOutfitByItems(req.ItemIDs, owner)
-		if err != nil {
-			return nil, err
-		}
-		outfitID = outfit.ID
-	} else {
+	if req.OutfitID == nil && len(req.ItemIDs) == 0 {
 		return nil, fmt.Errorf("must provide either outfit_id or item_ids")
 	}
 
-	// Create log with outfit_id
+	// Insert the log. For ad-hoc wears (item_ids only) outfit_id stays NULL.
 	var log domain.OutfitLog
 	err := s.db.QueryRow(`
 		INSERT INTO outfit_logs (outfit_id, wear_date, notes, owner)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, outfit_id, wear_date, notes, created_at, updated_at`,
-		outfitID, req.WearDate, req.Notes, owner).
+		req.OutfitID, req.WearDate, req.Notes, owner).
 		Scan(&log.ID, &log.OutfitID, &log.WearDate, &log.Notes, &log.CreatedAt, &log.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	// Copy outfit items to outfit_log_items for historical tracking
-	_, err = s.db.Exec(`
-		INSERT INTO outfit_log_items (outfit_log_id, clothing_item_id)
-		SELECT $1, clothing_item_id FROM outfit_items WHERE outfit_id = $2`,
-		log.ID, outfitID)
-	if err != nil {
-		return nil, err
+	if req.OutfitID != nil {
+		// Wearing a saved outfit: snapshot current outfit items into outfit_log_items.
+		_, err = s.db.Exec(`
+			INSERT INTO outfit_log_items (outfit_log_id, clothing_item_id)
+			SELECT $1, clothing_item_id FROM outfit_items WHERE outfit_id = $2`,
+			log.ID, *req.OutfitID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Update outfit wear tracking.
+		_, err = s.db.Exec(`
+			UPDATE outfits SET usage_count = usage_count + 1, last_worn = $1 WHERE id = $2`,
+			req.WearDate, *req.OutfitID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Update last_worn on items via the snapshot.
+		_, err = s.db.Exec(`
+			UPDATE clothing_items SET last_worn = $1
+			WHERE id IN (SELECT clothing_item_id FROM outfit_log_items WHERE outfit_log_id = $2)`,
+			req.WearDate, log.ID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Ad-hoc wear: insert items directly into outfit_log_items, no outfit created.
+		for _, itemID := range req.ItemIDs {
+			_, err := s.db.Exec(`
+				INSERT INTO outfit_log_items (outfit_log_id, clothing_item_id) VALUES ($1, $2)`,
+				log.ID, itemID)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Update last_worn on items.
+		_, err = s.db.Exec(`
+			UPDATE clothing_items SET last_worn = $1
+			WHERE id IN (SELECT clothing_item_id FROM outfit_log_items WHERE outfit_log_id = $2)`,
+			req.WearDate, log.ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Update last_worn timestamp on all items in this log
-	_, err = s.db.Exec(`
-		UPDATE clothing_items
-		SET last_worn = $1
-		WHERE id IN (
-			SELECT clothing_item_id FROM outfit_items WHERE outfit_id = $2
-		)`,
-		req.WearDate, outfitID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Update outfit wear tracking
-	_, err = s.db.Exec(`
-		UPDATE outfits
-		SET usage_count = usage_count + 1, last_worn = $1
-		WHERE id = $2`,
-		req.WearDate, outfitID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load items from outfit
+	// Load items from outfit_log_items (authoritative for all log types).
 	itemRows, err := s.db.Query(`
 		SELECT ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, COALESCE(ci.thumbnail_url, '') as thumbnail_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
 		FROM clothing_items ci
-		JOIN outfit_items oi ON oi.clothing_item_id = ci.id
-		WHERE oi.outfit_id = $1`,
-		outfitID)
+		JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
+		WHERE oli.outfit_log_id = $1`, log.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -988,59 +993,28 @@ func (s *Store) GetOutfitLogs(startDate, endDate time.Time, owner string) ([]dom
 	defer rows.Close()
 
 	var logs []domain.OutfitLog
-	var outfitIDs []uuid.UUID
-	var manualLogIDs []uuid.UUID
+	var logIDs []uuid.UUID
 
 	for rows.Next() {
 		var log domain.OutfitLog
 		if err := rows.Scan(&log.ID, &log.OutfitID, &log.WearDate, &log.Notes, &log.CreatedAt, &log.UpdatedAt); err != nil {
 			return nil, err
 		}
-		if log.OutfitID != nil {
-			outfitIDs = append(outfitIDs, *log.OutfitID)
-		} else {
-			manualLogIDs = append(manualLogIDs, log.ID)
-		}
+		logIDs = append(logIDs, log.ID)
 		logs = append(logs, log)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	// Batch-load items from outfits
-	outfitItemsMap := map[uuid.UUID][]domain.ClothingItem{}
-	if len(outfitIDs) > 0 {
-		irows, err := s.db.Query(`
-			SELECT oi.outfit_id, ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, COALESCE(ci.thumbnail_url, '') as thumbnail_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
-			FROM clothing_items ci
-			JOIN outfit_items oi ON oi.clothing_item_id = ci.id
-			WHERE oi.outfit_id = ANY($1)`, pq.Array(outfitIDs))
-		if err != nil {
-			return nil, err
-		}
-		defer irows.Close()
-		for irows.Next() {
-			var oid uuid.UUID
-			var item domain.ClothingItem
-			if err := irows.Scan(&oid, &item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
-				&item.ImageURL, &item.RawImageURL, &item.ThumbnailURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
-				return nil, err
-			}
-			outfitItemsMap[oid] = append(outfitItemsMap[oid], item)
-		}
-		if err := irows.Err(); err != nil {
-			return nil, err
-		}
-	}
-
-	// Batch-load items from manual logs
-	manualItemsMap := map[uuid.UUID][]domain.ClothingItem{}
-	if len(manualLogIDs) > 0 {
+	// Always read items from outfit_log_items (snapshot at wear time), never from live outfit.
+	logItemsMap := map[uuid.UUID][]domain.ClothingItem{}
+	if len(logIDs) > 0 {
 		irows, err := s.db.Query(`
 			SELECT oli.outfit_log_id, ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, COALESCE(ci.thumbnail_url, '') as thumbnail_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at
 			FROM clothing_items ci
 			JOIN outfit_log_items oli ON oli.clothing_item_id = ci.id
-			WHERE oli.outfit_log_id = ANY($1)`, pq.Array(manualLogIDs))
+			WHERE oli.outfit_log_id = ANY($1)`, pq.Array(logIDs))
 		if err != nil {
 			return nil, err
 		}
@@ -1052,7 +1026,7 @@ func (s *Store) GetOutfitLogs(startDate, endDate time.Time, owner string) ([]dom
 				&item.ImageURL, &item.RawImageURL, &item.ThumbnailURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
 				return nil, err
 			}
-			manualItemsMap[lid] = append(manualItemsMap[lid], item)
+			logItemsMap[lid] = append(logItemsMap[lid], item)
 		}
 		if err := irows.Err(); err != nil {
 			return nil, err
@@ -1060,11 +1034,7 @@ func (s *Store) GetOutfitLogs(startDate, endDate time.Time, owner string) ([]dom
 	}
 
 	for i := range logs {
-		if logs[i].OutfitID != nil {
-			logs[i].Items = outfitItemsMap[*logs[i].OutfitID]
-		} else {
-			logs[i].Items = manualItemsMap[logs[i].ID]
-		}
+		logs[i].Items = logItemsMap[logs[i].ID]
 	}
 	return logs, nil
 }
@@ -1212,31 +1182,7 @@ func (s *Store) DeleteOutfitLog(logID uuid.UUID, owner string) error {
 		itemIDs = append(itemIDs, itemID)
 	}
 
-	if log.OutfitID == nil {
-		// No outfit associated, just delete the log and update items
-		result, err := s.db.Exec(`DELETE FROM outfit_logs WHERE id = $1`, logID)
-		if err != nil {
-			return err
-		}
-		rows, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if rows == 0 {
-			return fmt.Errorf("outfit log not found")
-		}
-
-		// Update items' last_worn to most recent remaining log
-		for _, itemID := range itemIDs {
-			if err := s.recalculateItemLastWorn(itemID, owner); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	// Delete the log
+	// Delete the log (cascade removes outfit_log_items via FK or we rely on explicit delete order).
 	result, err := s.db.Exec(`DELETE FROM outfit_logs WHERE id = $1`, logID)
 	if err != nil {
 		return err
@@ -1249,36 +1195,30 @@ func (s *Store) DeleteOutfitLog(logID uuid.UUID, owner string) error {
 		return fmt.Errorf("outfit log not found")
 	}
 
-	// Decrement outfit usage_count
-	_, err = s.db.Exec(`
-		UPDATE outfits
-		SET usage_count = GREATEST(0, usage_count - 1)
-		WHERE id = $1`,
-		*log.OutfitID)
-	if err != nil {
-		return err
+	if log.OutfitID != nil {
+		// Decrement outfit usage_count and recalculate last_worn.
+		_, err = s.db.Exec(`
+			UPDATE outfits SET usage_count = GREATEST(0, usage_count - 1) WHERE id = $1`,
+			*log.OutfitID)
+		if err != nil {
+			return err
+		}
+
+		var lastWorn *time.Time
+		err = s.db.QueryRow(`
+			SELECT MAX(wear_date) FROM outfit_logs WHERE outfit_id = $1`,
+			*log.OutfitID).Scan(&lastWorn)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+
+		_, err = s.db.Exec(`UPDATE outfits SET last_worn = $1 WHERE id = $2`, lastWorn, *log.OutfitID)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Update outfit last_worn to the most recent remaining log (or NULL if none)
-	var lastWorn *time.Time
-	err = s.db.QueryRow(`
-		SELECT MAX(wear_date) FROM outfit_logs WHERE outfit_id = $1`,
-		*log.OutfitID).
-		Scan(&lastWorn)
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-
-	_, err = s.db.Exec(`
-		UPDATE outfits
-		SET last_worn = $1
-		WHERE id = $2`,
-		lastWorn, *log.OutfitID)
-	if err != nil {
-		return err
-	}
-
-	// Update items' last_worn to most recent remaining log
+	// Recalculate last_worn for all items that were in this log.
 	for _, itemID := range itemIDs {
 		if err := s.recalculateItemLastWorn(itemID, owner); err != nil {
 			return err
