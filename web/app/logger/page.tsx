@@ -1,20 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getOutfitLogs, getOutfits, logOutfitWear, getItems, deleteOutfitLog, updateOutfitLog, imageUrl } from "@/lib/api";
+import { getOutfitLogs, deleteOutfitLog, imageUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShimmerImg } from "@/components/shimmer-img";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -23,15 +16,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { OutfitCanvas } from "@/components/outfit-canvas";
-import type { Outfit, ClothingItem, OutfitLog } from "@/lib/types";
+import type { ClothingItem, OutfitLog } from "@/lib/types";
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   outerwear: 5,
@@ -93,22 +79,13 @@ function viewRange(view: View, anchor: Date): { start: Date; end: Date } {
 }
 
 export default function OutfitLoggerPage() {
+  const router = useRouter();
   const [view, setView] = useState<View>("week");
   const [anchor, setAnchor] = useState(new Date());
   const [logs, setLogs] = useState<Map<string, OutfitLog>>(new Map());
-  const [outfits, setOutfits] = useState<Outfit[]>([]);
-  const [items, setItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showLogSheet, setShowLogSheet] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ dateStr: string; log: OutfitLog } | null>(null);
-  const [editingLog, setEditingLog] = useState<OutfitLog | null>(null);
   const [peek, setPeek] = useState<{ log: OutfitLog; x: number; y: number } | null>(null);
   const peekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -128,23 +105,19 @@ export default function OutfitLoggerPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
     loadLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, anchor]);
 
-  const loadData = async () => {
+  const loadLogs = async () => {
     try {
       setLoading(true);
-      const [outfitsData, itemsData] = await Promise.all([
-        getOutfits(),
-        getItems(),
-      ]);
-      setOutfits(outfitsData);
-      setItems(itemsData);
+      const { start, end } = viewRange(view, anchor);
+      const logsData = await getOutfitLogs(toKey(start), toKey(end));
+      const logsMap = new Map(
+        logsData.map((log) => [log.wear_date.split("T")[0], log]),
+      );
+      setLogs(logsMap);
     } catch (err) {
       console.error(err);
     } finally {
@@ -152,43 +125,8 @@ export default function OutfitLoggerPage() {
     }
   };
 
-  const loadLogs = async () => {
-    try {
-      const { start, end } = viewRange(view, anchor);
-      const logsData = await getOutfitLogs(toKey(start), toKey(end));
-      console.log("[DEBUG] raw wear_dates from server:", logsData.map(l => l.wear_date));
-      const logsMap = new Map(
-        logsData.map((log) => {
-          const dateKey = log.wear_date.split("T")[0];
-          console.log("[DEBUG] mapping wear_date", log.wear_date, "→ key", dateKey);
-          return [dateKey, log];
-        })
-      );
-      setLogs(logsMap);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleDateClick = (date: Date) => {
-    const dateStr = toKey(date);
-    console.log("[DEBUG] clicked date:", date.toString(), "→ key:", dateStr);
-    const existingLog = logs.get(dateStr);
-
-    setSelectedDate(date);
-    setSaveError(null);
-
-    if (existingLog) {
-      setEditingLog(existingLog);
-      setSelectedItems(new Set((existingLog.items || []).map((item) => item.id)));
-      setNotes(existingLog.notes);
-    } else {
-      setEditingLog(null);
-      setSelectedItems(new Set());
-      setNotes("");
-    }
-
-    setShowLogSheet(true);
+    router.push(`/logger/${toKey(date)}`);
   };
 
   const shiftAnchor = (dir: -1 | 1) => {
@@ -198,60 +136,6 @@ export default function OutfitLoggerPage() {
         return new Date(prev.getFullYear(), prev.getMonth() + dir, 1);
       return new Date(prev.getFullYear() + dir, 0, 1);
     });
-  };
-
-  const resetForm = () => {
-    setSelectedItems(new Set());
-    setActiveCategory("All");
-    setNotes("");
-    setSaveError(null);
-    setEditingLog(null);
-  };
-
-  const handleSaveLog = async () => {
-    if (!selectedDate) return;
-
-    setSaving(true);
-    setSaveError(null);
-    try {
-      if (editingLog) {
-        // Update existing log
-        await updateOutfitLog(editingLog.id, {
-          notes,
-          item_ids: Array.from(selectedItems),
-        });
-      } else {
-        // Create new log
-        if (selectedItems.size === 0) {
-          setSaveError("Please select at least one item");
-          setSaving(false);
-          return;
-        }
-
-        const dateString = `${toKey(selectedDate)}T00:00:00Z`;
-        console.log("[DEBUG] saving log for selectedDate:", selectedDate.toString(), "→ dateString:", dateString);
-
-        const requestData: Record<string, unknown> = {
-          wear_date: dateString,
-          item_ids: Array.from(selectedItems),
-        };
-
-        if (notes) {
-          requestData.notes = notes;
-        }
-
-        await logOutfitWear(requestData as any);
-      }
-
-      resetForm();
-      setShowLogSheet(false);
-      await loadLogs();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to save log";
-      setSaveError(errorMessage);
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleDeleteLog = async () => {
@@ -565,170 +449,6 @@ export default function OutfitLoggerPage() {
           </div>
         )}
       </Card>
-
-      <Sheet open={showLogSheet} onOpenChange={(open) => { setShowLogSheet(open); if (!open) resetForm(); }}>
-        <SheetContent side="bottom" className="h-[65vh] flex flex-col">
-          <SheetHeader className="flex-shrink-0 pb-1">
-            <SheetTitle className="text-base">
-              {editingLog ? "Edit log for" : "Log outfit for"} {selectedDate?.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-            </SheetTitle>
-            <SheetDescription className="text-xs">
-              {selectedItems.size} {selectedItems.size === 1 ? "item" : "items"} selected
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex-1 min-h-0 flex flex-col gap-2 px-4 pb-3 overflow-hidden">
-            <div className="h-20 flex-shrink-0 bg-muted/30 rounded-lg border relative overflow-hidden">
-              {selectedItems.size === 0 ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                  <div className="text-3xl opacity-40">✨</div>
-                  <p className="text-xs">Tap items below to build your outfit</p>
-                </div>
-              ) : (
-                <OutfitCanvas
-                  items={items.filter((i) => selectedItems.has(i.id))}
-                  className="p-3"
-                />
-              )}
-            </div>
-
-            <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-hidden">
-              <div className="flex items-center justify-between flex-shrink-0">
-                <div className="flex gap-1 overflow-x-auto pb-0.5">
-                  {(() => {
-                    const cats = ["All", ...Array.from(new Set(items.map(i => i.category))).sort()];
-                    return cats.map((cat) => {
-                      const count = cat === "All" ? selectedItems.size : items.filter(i => i.category === cat && selectedItems.has(i.id)).length;
-                      return (
-                        <button
-                          key={cat}
-                          onClick={() => setActiveCategory(cat)}
-                          className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                            activeCategory === cat
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground hover:bg-muted/80"
-                          }`}
-                        >
-                          {cat}{count > 0 && cat !== "All" ? ` · ${count}` : ""}
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-                {selectedItems.size > 0 && (
-                  <button
-                    onClick={() => setSelectedItems(new Set())}
-                    className="flex-shrink-0 text-xs text-muted-foreground hover:text-destructive ml-2"
-                  >
-                    Clear {selectedItems.size}
-                  </button>
-                )}
-              </div>
-
-              <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-4 gap-1.5 pb-2">
-                  {items
-                    .filter(item => activeCategory === "All" || item.category === activeCategory)
-                    .map((item) => {
-                      const src =
-                        item.image_status === "done" && item.image_url
-                          ? imageUrl(item.image_url)
-                          : item.raw_image_url
-                            ? imageUrl(item.raw_image_url)
-                            : null;
-                      const isSelected = selectedItems.has(item.id);
-
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            const newSelected = new Set(selectedItems);
-                            if (newSelected.has(item.id)) {
-                              newSelected.delete(item.id);
-                            } else {
-                              newSelected.add(item.id);
-                            }
-                            setSelectedItems(newSelected);
-                          }}
-                          className={`relative aspect-square rounded-xl border-2 transition-all overflow-hidden ${
-                            isSelected
-                              ? "bg-primary/15 border-primary"
-                              : "bg-muted/50 border-border hover:border-primary/50"
-                          }`}
-                        >
-                          {src ? (
-                            <ShimmerImg
-                              src={src}
-                              alt={item.category}
-                              className="w-full h-full object-contain p-1"
-                            />
-                          ) : (
-                            <div className="flex flex-col items-center justify-center h-full gap-0.5 p-1">
-                              <div className="text-xl">{item.category === "Shoes" ? "👟" : "👕"}</div>
-                            </div>
-                          )}
-                          {isSelected && (
-                            <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold shadow">
-                              ✓
-                            </div>
-                          )}
-                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent px-1 py-0.5">
-                            <p className="text-[8px] text-white font-medium truncate text-center leading-tight">
-                              {item.sub_category || item.category}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
-            </div>
-
-            <Input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes (optional)"
-              className="flex-shrink-0"
-            />
-
-            {saveError && (
-              <div className="bg-destructive/10 border border-destructive/50 text-destructive px-3 py-2 rounded-md text-sm flex-shrink-0">
-                {saveError}
-              </div>
-            )}
-
-            <div className="flex gap-2 flex-shrink-0">
-              <Button
-                className="flex-1"
-                onClick={handleSaveLog}
-                disabled={saving || (selectedItems.size === 0 && !editingLog)}
-              >
-                {saving ? "Saving..." : editingLog ? "Update" : "Save"}
-              </Button>
-              {editingLog && (
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    if (selectedDate && editingLog) {
-                      const dateStr = selectedDate.toISOString().split("T")[0];
-                      setDeleteTarget({ dateStr, log: editingLog });
-                      setShowLogSheet(false);
-                    }
-                  }}
-                >
-                  Delete
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                onClick={() => { setShowLogSheet(false); resetForm(); }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <DialogContent>

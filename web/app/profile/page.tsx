@@ -335,7 +335,7 @@ export default function ProfilePage() {
                                   ? "bg-primary/10 hover:bg-primary/20 cursor-pointer"
                                   : "bg-muted/30 hover:bg-muted/40 cursor-pointer"
                             } ${isToday ? "ring-1 ring-primary" : ""}`}
-                            onClick={() => date && router.push("/logger")}
+                            onClick={() => date && router.push(`/logger/${toKey(date)}`)}
                           >
                             {date && (
                               <>
