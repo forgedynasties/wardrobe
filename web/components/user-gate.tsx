@@ -46,7 +46,7 @@ export function UserGate({ children }: { children: React.ReactNode }) {
         <div className="text-center">
           <h1 className="font-heading text-3xl font-semibold">Wardrobe</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "login" ? "Sign in to your wardrobe" : "Create an account"}
+            {mode === "login" ? "Sign in to your wardrobe" : "Sign-ups are coming soon"}
           </p>
         </div>
 
@@ -91,8 +91,8 @@ export function UserGate({ children }: { children: React.ReactNode }) {
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "..." : mode === "login" ? "Sign in" : "Create account"}
+          <Button type="submit" className="w-full" disabled={loading || mode === "register"}>
+            {loading ? "..." : mode === "login" ? "Sign in" : "Coming soon"}
           </Button>
         </form>
 
@@ -104,11 +104,7 @@ export function UserGate({ children }: { children: React.ReactNode }) {
               </button>
             </>
           ) : (
-            <>Already have one?{" "}
-              <button className="underline" onClick={() => { setMode("login"); setError(""); }}>
-                Sign in
-              </button>
-            </>
+            <span className="text-muted-foreground italic">Sign-ups are coming soon.</span>
           )}
         </p>
       </div>
