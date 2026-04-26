@@ -147,48 +147,51 @@ export default function ProfilePage() {
             </div>
             {stats && (
               <>
-                <div className="grid grid-cols-3 gap-2">
-                  <Card className="p-3 text-center">
-                    <p className="text-2xl font-bold">{stats.total_items}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Items</p>
-                  </Card>
-                  <Card className="p-3 text-center">
-                    <p className="text-2xl font-bold">{stats.total_outfits}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Outfits</p>
-                  </Card>
-                  <Card className="p-3 text-center">
-                    <p className="text-2xl font-bold">{stats.total_wears}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Wears</p>
-                  </Card>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <Card className="p-3 text-center">
-                    <p className="text-2xl font-bold">{stats.avg_wears_per_outfit.toFixed(1)}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Avg / outfit</p>
-                  </Card>
-                  <Card className="p-3 text-center">
-                    <p className="text-2xl font-bold">{stats.wears_this_month}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">This month</p>
-                  </Card>
-                  <Card className="p-3 text-center">
-                    <p className="text-2xl font-bold">{stats.never_worn_items}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Never worn</p>
-                  </Card>
-                </div>
+                {/* main stats */}
+                <Card className="p-4">
+                  <div className="grid grid-cols-3 divide-x divide-border">
+                    <div className="text-center pr-4">
+                      <p className="text-3xl font-bold tracking-tight">{stats.total_items}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Items</p>
+                    </div>
+                    <div className="text-center px-4">
+                      <p className="text-3xl font-bold tracking-tight">{stats.total_outfits}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Outfits</p>
+                    </div>
+                    <div className="text-center pl-4">
+                      <p className="text-3xl font-bold tracking-tight">{stats.total_wears}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Wears</p>
+                      {stats.wears_this_month > 0 && (
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">{stats.wears_this_month} this month</p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+
+                {/* never worn callout */}
+                {stats.never_worn_items > 0 && stats.total_items > 0 && (
+                  <p className="text-sm text-muted-foreground px-1">
+                    You haven&apos;t worn{" "}
+                    <span className="font-semibold text-foreground">
+                      {Math.round((stats.never_worn_items / stats.total_items) * 100)}%
+                    </span>{" "}
+                    of your wardrobe.
+                  </p>
+                )}
 
                 {/* category bars */}
                 {stats.items_by_category.length > 0 && (
-                  <Card className="p-4 space-y-2">
+                  <Card className="p-4 space-y-2.5">
                     {stats.items_by_category.map((cat) => (
                       <div key={cat.category} className="flex items-center gap-3">
                         <span className="text-xs capitalize w-20 shrink-0 text-muted-foreground">{cat.category}</span>
                         <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-primary/70 rounded-full"
+                            className="h-full bg-foreground/30 rounded-full"
                             style={{ width: `${(cat.count / (stats.total_items || 1)) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs font-medium w-4 text-right text-muted-foreground">{cat.count}</span>
+                        <span className="text-xs font-medium w-4 text-right tabular-nums text-muted-foreground">{cat.count}</span>
                       </div>
                     ))}
                   </Card>
@@ -196,43 +199,15 @@ export default function ProfilePage() {
 
                 {/* color palette */}
                 {stats.colors.length > 0 && (
-                  <Card className="p-4 space-y-4">
+                  <Card className="p-4 space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">Color Palette</p>
-
-                    {/* pixel art grid */}
-                    <div
-                      className="grid gap-[2px]"
-                      style={{ gridTemplateColumns: `repeat(${Math.min(stats.colors.length, 10)}, 1fr)` }}
-                    >
-                      {stats.colors.map((c) => (
-                        <div key={c} className="aspect-square" style={{ backgroundColor: c }} title={c} />
+                    <div className="flex h-5 rounded overflow-hidden">
+                      {[...stats.colors].sort((a, b) => hexToHue(a) - hexToHue(b)).map((c) => (
+                        <div key={c} className="flex-1 h-full" style={{ backgroundColor: c }} title={c} />
                       ))}
                     </div>
-
-                    {/* spectrum bar */}
-                    <div className="space-y-1">
-                      <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide">Spectrum</p>
-                      <div className="flex h-6 rounded overflow-hidden">
-                        {[...stats.colors].sort((a, b) => hexToHue(a) - hexToHue(b)).map((c) => (
-                          <div key={c} className="flex-1 h-full" style={{ backgroundColor: c }} title={c} />
-                        ))}
-                      </div>
                     </div>
 
-                    {/* swatch circles */}
-                    <div className="space-y-1">
-                      <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide">Swatches</p>
-                      <div className="flex">
-                        {stats.colors.map((c, i) => (
-                          <div
-                            key={c}
-                            className="w-8 h-8 rounded-full border-2 border-background shrink-0"
-                            style={{ backgroundColor: c, marginLeft: i === 0 ? 0 : -10 }}
-                            title={c}
-                          />
-                        ))}
-                      </div>
-                    </div>
                   </Card>
                 )}
               </>
