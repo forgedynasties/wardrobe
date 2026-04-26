@@ -559,6 +559,12 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	}
 	tmp.Close()
 
+	// Crop transparent padding so the item fills its bounding box.
+	if err := vision.CropTransparent(tmpPath, 10); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to crop image"})
+		return
+	}
+
 	// Resize raw to max 2000px before uploading (item 14).
 	if err := vision.ResizePNG(tmpPath, 2000); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resize image"})
