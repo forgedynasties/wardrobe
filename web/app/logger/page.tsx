@@ -567,18 +567,18 @@ export default function OutfitLoggerPage() {
       </Card>
 
       <Sheet open={showLogSheet} onOpenChange={(open) => { setShowLogSheet(open); if (!open) resetForm(); }}>
-        <SheetContent side="bottom" className="h-[80vh] flex flex-col">
-          <SheetHeader className="flex-shrink-0">
-            <SheetTitle>
-              {editingLog ? "Edit log for" : "Log outfit for"} {selectedDate?.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+        <SheetContent side="bottom" className="h-[65vh] flex flex-col">
+          <SheetHeader className="flex-shrink-0 pb-1">
+            <SheetTitle className="text-base">
+              {editingLog ? "Edit log for" : "Log outfit for"} {selectedDate?.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
             </SheetTitle>
-            <SheetDescription>
-              {selectedItems.size} {selectedItems.size === 1 ? "item" : "items"} selected — tap to add or remove
+            <SheetDescription className="text-xs">
+              {selectedItems.size} {selectedItems.size === 1 ? "item" : "items"} selected
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 min-h-0 flex flex-col gap-3 px-4 pb-4 overflow-hidden">
-            <div className="h-32 flex-shrink-0 bg-muted/30 rounded-lg border relative overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col gap-2 px-4 pb-3 overflow-hidden">
+            <div className="h-20 flex-shrink-0 bg-muted/30 rounded-lg border relative overflow-hidden">
               {selectedItems.size === 0 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
                   <div className="text-3xl opacity-40">✨</div>
@@ -626,7 +626,7 @@ export default function OutfitLoggerPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-3 gap-2 pb-2">
+                <div className="grid grid-cols-4 gap-1.5 pb-2">
                   {items
                     .filter(item => activeCategory === "All" || item.category === activeCategory)
                     .map((item) => {
@@ -660,23 +660,20 @@ export default function OutfitLoggerPage() {
                             <ShimmerImg
                               src={src}
                               alt={item.category}
-                              className="w-full h-full object-contain p-2"
+                              className="w-full h-full object-contain p-1"
                             />
                           ) : (
-                            <div className="flex flex-col items-center justify-center h-full gap-1 p-2">
-                              <div className="text-2xl">{item.category === "Shoes" ? "👟" : "👕"}</div>
-                              <div className="text-[10px] font-medium text-center leading-tight text-muted-foreground">
-                                {item.sub_category || item.category}
-                              </div>
+                            <div className="flex flex-col items-center justify-center h-full gap-0.5 p-1">
+                              <div className="text-xl">{item.category === "Shoes" ? "👟" : "👕"}</div>
                             </div>
                           )}
                           {isSelected && (
-                            <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold shadow">
+                            <div className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold shadow">
                               ✓
                             </div>
                           )}
-                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/40 to-transparent px-1.5 py-1">
-                            <p className="text-[9px] text-white font-medium truncate text-center">
+                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent px-1 py-0.5">
+                            <p className="text-[8px] text-white font-medium truncate text-center leading-tight">
                               {item.sub_category || item.category}
                             </p>
                           </div>
