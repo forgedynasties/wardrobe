@@ -651,7 +651,7 @@ func (s *Store) RecommendOutfits(limit int, owner string) ([]domain.OutfitRecomm
 	rows, err := s.db.Query(`
 		WITH outfit_metrics AS (
 			SELECT
-				o.id, o.name, o.usage_count, o.last_worn, o.created_at, o.updated_at,
+				o.id, o.name, o.usage_count, o.last_worn, o.hidden, o.pinned, o.created_at, o.updated_at,
 				COALESCE(EXTRACT(EPOCH FROM (NOW() - o.last_worn)) / 86400.0, 365.0) AS days_since_worn,
 				EXTRACT(EPOCH FROM (NOW() - o.created_at)) / 86400.0 AS days_since_created,
 				COALESCE((
