@@ -193,11 +193,19 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
   };
 
   const handleReset = () => {
-    setLayouts(prev => {
-      const next = new Map(prev);
-      for (const [id, l] of next) {
-        next.set(id, { ...l, position_x: 0, position_y: 0 });
-      }
+    const cfg = outfitConfig.get();
+    setLayouts(() => {
+      const next = new Map<string, ItemLayout>();
+      items.forEach((item, idx) => {
+        const subSlot = item.sub_category ? cfg.subcategorySlots[item.sub_category] : undefined;
+        const slot = subSlot ?? cfg.mannequinSlots[item.category] ?? DEFAULT_SLOT;
+        next.set(item.id, {
+          position_x: slot.left !== undefined ? slot.left - 50 : 0,
+          position_y: slot.top + slot.height / 2 - 50,
+          scale: (slot.height / 100) / (item.display_scale || 1),
+          z_index: slot.zIndex ?? idx,
+        });
+      });
       return next;
     });
   };
