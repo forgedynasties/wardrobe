@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useUser } from "@/lib/user-context";
 import {
   getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap,
   getWishlistItems, getItems, imageUrl, thumbnailUrl, updateOutfit, getOutfitLogs,
 } from "@/lib/api";
+import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +85,11 @@ export default function ProfilePage() {
   const router = useRouter();
   const today = new Date();
   const currentYear = today.getFullYear();
+  const outfitVersion = useSyncExternalStore(
+    outfitRefreshStore.subscribe,
+    outfitRefreshStore.getSnapshot,
+    () => 0,
+  );
 
   const [config, setConfig] = useState<ProfileConfig | null>(null);
   const [stats, setStats] = useState<WardrobeStats | null>(null);
@@ -114,6 +120,11 @@ export default function ProfilePage() {
       setNeverWorn(items.filter(i => !i.last_worn));
     }).finally(() => setLoading(false));
   }, [hydrated, user]);
+
+  useEffect(() => {
+    if (!hydrated || !user || outfitVersion === 0) return;
+    getOutfitsPage(50).then((page) => setOutfits(page.data));
+  }, [outfitVersion, hydrated, user]);
 
   useEffect(() => {
     const y = monthAnchor.getFullYear();

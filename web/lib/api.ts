@@ -138,13 +138,13 @@ export async function uploadImage(
 // Outfits
 
 export function getOutfits(): Promise<Outfit[]> {
-  return fetcher("/api/outfits");
+  return fetcher("/api/outfits", { cache: "no-store" });
 }
 
 export function getOutfitsPage(limit: number, after?: string): Promise<Page<Outfit>> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (after) params.set("after", after);
-  return fetcher(`/api/outfits?${params}`);
+  return fetcher(`/api/outfits?${params}`, { cache: "no-store" });
 }
 
 export function getOutfit(id: string): Promise<Outfit> {
