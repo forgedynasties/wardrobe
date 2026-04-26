@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Pencil, Trash2, Check, Plus, X, Share2, LayoutTemplate } from "lucide-react";
 import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, updateOutfitLayout, imageUrl, thumbnailUrl } from "@/lib/api";
+import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import { FitBuilder } from "@/components/fit-builder";
 import { OutfitCanvas } from "@/components/outfit-canvas";
 import { OutfitLayoutEditor } from "@/components/outfit-layout-editor";
@@ -79,7 +80,7 @@ export default function OutfitDetailPage() {
     setDeleting(true);
     try {
       await deleteOutfit(id);
-      router.refresh();
+      outfitRefreshStore.trigger();
       router.push("/outfits");
     } catch {
       setDeleting(false);
@@ -214,7 +215,7 @@ export default function OutfitDetailPage() {
                 const updated = await updateOutfitLayout(outfit.id, layouts);
                 setOutfit(updated);
                 setEditingLayout(false);
-                router.refresh();
+                outfitRefreshStore.trigger();
               }}
               onCancel={() => setEditingLayout(false)}
             />

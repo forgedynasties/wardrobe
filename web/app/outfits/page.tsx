@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
+import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import Link from "next/link";
 import { Plus, Sparkles, ArrowUpDown } from "lucide-react";
 import { getOutfitsPage, getOutfitRecommendations, getOutfitSuggestions } from "@/lib/api";
@@ -22,6 +23,12 @@ import type { Outfit, OutfitRecommendation, OutfitSuggestion } from "@/lib/types
 type SortOption = "recent" | "most-worn" | "least-worn" | "last-worn" | "never-worn";
 
 export default function OutfitsPage() {
+  const refreshVersion = useSyncExternalStore(
+    outfitRefreshStore.subscribe,
+    outfitRefreshStore.getSnapshot,
+    () => 0,
+  );
+
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [recommendations, setRecommendations] = useState<OutfitRecommendation[]>([]);
   const [suggestions, setSuggestions] = useState<OutfitSuggestion[]>([]);
@@ -31,6 +38,7 @@ export default function OutfitsPage() {
   const [sortBy, setSortBy] = useState<SortOption>("recent");
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([getOutfitsPage(20), getOutfitRecommendations(5), getOutfitSuggestions(3)])
       .then(([page, recs, sugs]) => {
         setOutfits(page.data);
@@ -39,7 +47,7 @@ export default function OutfitsPage() {
         setSuggestions(sugs);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshVersion]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return;
