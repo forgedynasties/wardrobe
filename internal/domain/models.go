@@ -40,6 +40,8 @@ type Outfit struct {
 	Name       string       `json:"name"`
 	UsageCount int          `json:"usage_count"`
 	LastWorn   *time.Time   `json:"last_worn"`
+	Hidden     bool         `json:"hidden"`
+	Pinned     bool         `json:"pinned"`
 	Items      []OutfitItem `json:"items,omitempty"`
 	CreatedAt  time.Time    `json:"created_at"`
 	UpdatedAt  time.Time    `json:"updated_at"`
@@ -70,7 +72,9 @@ type CreateOutfitRequest struct {
 }
 
 type UpdateOutfitRequest struct {
-	Name *string `json:"name"`
+	Name   *string `json:"name"`
+	Hidden *bool   `json:"hidden"`
+	Pinned *bool   `json:"pinned"`
 }
 
 type AddOutfitItemRequest struct {

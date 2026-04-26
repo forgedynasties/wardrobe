@@ -59,6 +59,8 @@ export interface Outfit {
   name: string;
   usage_count: number;
   last_worn: string | null;
+  hidden: boolean;
+  pinned: boolean;
   items?: OutfitItem[];
   created_at: string;
   updated_at: string;
@@ -86,6 +88,8 @@ export interface CreateOutfitRequest {
 
 export interface UpdateOutfitRequest {
   name?: string;
+  hidden?: boolean;
+  pinned?: boolean;
 }
 
 export interface OutfitRecommendation extends Outfit {

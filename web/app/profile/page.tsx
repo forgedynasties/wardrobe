@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "@/lib/user-context";
 import {
   getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap,
-  getWishlistItems, getItems, imageUrl, thumbnailUrl,
+  getWishlistItems, getItems, imageUrl, thumbnailUrl, updateOutfit,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { WearHeatmap } from "@/components/wear-heatmap";
 import { OutfitCard } from "@/components/outfit-card";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { WardrobeAvatar } from "@/components/wardrobe-avatar";
-import { Settings, Share2, Check, Lock, ExternalLink, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Settings, Share2, Check, Lock, ExternalLink, Star, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem } from "@/lib/types";
@@ -64,6 +64,7 @@ export default function ProfilePage() {
   const [neverWorn, setNeverWorn] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [galleryTab, setGalleryTab] = useState<"visible" | "hidden">("visible");
 
   useEffect(() => {
     if (!hydrated || !user) return;
@@ -206,8 +207,6 @@ export default function ProfilePage() {
                         <div key={c} className="flex-1 h-full" style={{ backgroundColor: c }} title={c} />
                       ))}
                     </div>
-                    </div>
-
                   </Card>
                 )}
               </>
@@ -246,17 +245,52 @@ export default function ProfilePage() {
 
           {/* outfit gallery */}
           <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Outfit Gallery</h2>
-              {!sec?.outfits && <PrivateBadge />}
-            </div>
-            {outfits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No outfits yet.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {outfits.map((o) => <OutfitCard key={o.id} outfit={o} />)}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Outfit Gallery</h2>
+                {!sec?.outfits && <PrivateBadge />}
               </div>
-            )}
+              <div className="flex items-center gap-1 text-sm">
+                <button
+                  onClick={() => setGalleryTab("visible")}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${galleryTab === "visible" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  Gallery
+                </button>
+                <button
+                  onClick={() => setGalleryTab("hidden")}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${galleryTab === "hidden" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  Hidden {outfits.filter(o => o.hidden).length > 0 && `(${outfits.filter(o => o.hidden).length})`}
+                </button>
+              </div>
+            </div>
+            {(() => {
+              const shown = outfits.filter(o => galleryTab === "hidden" ? o.hidden : !o.hidden);
+              if (shown.length === 0) return (
+                <p className="text-sm text-muted-foreground">{galleryTab === "hidden" ? "No hidden outfits." : "No outfits yet."}</p>
+              );
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {shown.map((o) => (
+                    <OutfitCard
+                      key={o.id}
+                      outfit={o}
+                      onToggleHidden={() => {
+                        updateOutfit(o.id, { hidden: !o.hidden }).then(updated =>
+                          setOutfits(prev => prev.map(x => x.id === updated.id ? updated : x))
+                        );
+                      }}
+                      onTogglePinned={() => {
+                        updateOutfit(o.id, { pinned: !o.pinned }).then(updated =>
+                          setOutfits(prev => prev.map(x => x.id === updated.id ? updated : x))
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </section>
 
           {/* signature pieces */}

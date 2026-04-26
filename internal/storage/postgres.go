@@ -363,15 +363,15 @@ func (s *Store) ListOutfits(owner string, limit int, after *time.Time) ([]domain
 	var rows *sql.Rows
 	var err error
 	if after != nil {
-		q := `SELECT id, name, usage_count, last_worn, created_at, updated_at
-			FROM outfits WHERE owner = $1 AND created_at < $2 ORDER BY created_at DESC`
+		q := `SELECT id, name, usage_count, last_worn, hidden, pinned, created_at, updated_at
+			FROM outfits WHERE owner = $1 AND created_at < $2 ORDER BY pinned DESC, created_at DESC`
 		if limit > 0 {
 			q += fmt.Sprintf(" LIMIT %d", limit)
 		}
 		rows, err = s.db.Query(q, owner, after)
 	} else {
-		q := `SELECT id, name, usage_count, last_worn, created_at, updated_at
-			FROM outfits WHERE owner = $1 ORDER BY created_at DESC`
+		q := `SELECT id, name, usage_count, last_worn, hidden, pinned, created_at, updated_at
+			FROM outfits WHERE owner = $1 ORDER BY pinned DESC, created_at DESC`
 		if limit > 0 {
 			q += fmt.Sprintf(" LIMIT %d", limit)
 		}
@@ -386,7 +386,7 @@ func (s *Store) ListOutfits(owner string, limit int, after *time.Time) ([]domain
 	var ids []uuid.UUID
 	for rows.Next() {
 		var o domain.Outfit
-		if err := rows.Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.Hidden, &o.Pinned, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
 		}
 		outfits = append(outfits, o)
@@ -450,9 +450,9 @@ func (s *Store) loadOutfitItemsBatch(outfitIDs []uuid.UUID) (map[uuid.UUID][]dom
 func (s *Store) GetOutfit(id uuid.UUID, owner string) (*domain.Outfit, error) {
 	var o domain.Outfit
 	err := s.db.QueryRow(`
-		SELECT id, name, usage_count, last_worn, created_at, updated_at
+		SELECT id, name, usage_count, last_worn, hidden, pinned, created_at, updated_at
 		FROM outfits WHERE id = $1 AND owner = $2`, id, owner).
-		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.Hidden, &o.Pinned, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -470,9 +470,9 @@ func (s *Store) CreateOutfit(req domain.CreateOutfitRequest, owner string) (*dom
 	err := s.db.QueryRow(`
 		INSERT INTO outfits (name, owner)
 		VALUES ($1, $2)
-		RETURNING id, name, usage_count, last_worn, created_at, updated_at`,
+		RETURNING id, name, usage_count, last_worn, hidden, pinned, created_at, updated_at`,
 		req.Name, owner).
-		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.Hidden, &o.Pinned, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -483,12 +483,14 @@ func (s *Store) UpdateOutfit(id uuid.UUID, req domain.UpdateOutfitRequest, owner
 	var o domain.Outfit
 	err := s.db.QueryRow(`
 		UPDATE outfits SET
-			name = COALESCE($2, name),
+			name   = COALESCE($2, name),
+			hidden = COALESCE($4, hidden),
+			pinned = COALESCE($5, pinned),
 			updated_at = NOW()
 		WHERE id = $1 AND owner = $3
-		RETURNING id, name, usage_count, last_worn, created_at, updated_at`,
-		id, req.Name, owner).
-		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		RETURNING id, name, usage_count, last_worn, hidden, pinned, created_at, updated_at`,
+		id, req.Name, owner, req.Hidden, req.Pinned).
+		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.Hidden, &o.Pinned, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -538,9 +540,9 @@ func (s *Store) WearOutfit(id uuid.UUID, owner string) (*domain.Outfit, error) {
 			last_worn = NOW(),
 			updated_at = NOW()
 		WHERE id = $1 AND owner = $2
-		RETURNING id, name, usage_count, last_worn, created_at, updated_at`,
+		RETURNING id, name, usage_count, last_worn, hidden, pinned, created_at, updated_at`,
 		id, owner).
-		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt)
+		Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.Hidden, &o.Pinned, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -563,7 +565,7 @@ func (s *Store) FindOrCreateOutfitByItems(itemIDs []uuid.UUID, owner string) (*d
 	// Query for outfits with the exact item set
 	// First get all outfits with same number of items
 	rows, err := s.db.Query(`
-		SELECT o.id, o.name, o.usage_count, o.last_worn, o.created_at, o.updated_at,
+		SELECT o.id, o.name, o.usage_count, o.last_worn, o.hidden, o.pinned, o.created_at, o.updated_at,
 			COUNT(oi.clothing_item_id) as item_count
 		FROM outfits o
 		LEFT JOIN outfit_items oi ON oi.outfit_id = o.id
@@ -578,7 +580,7 @@ func (s *Store) FindOrCreateOutfitByItems(itemIDs []uuid.UUID, owner string) (*d
 	for rows.Next() {
 		var o domain.Outfit
 		var itemCount int
-		err := rows.Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.CreatedAt, &o.UpdatedAt, &itemCount)
+		err := rows.Scan(&o.ID, &o.Name, &o.UsageCount, &o.LastWorn, &o.Hidden, &o.Pinned, &o.CreatedAt, &o.UpdatedAt, &itemCount)
 		if err != nil {
 			continue
 		}
@@ -662,7 +664,7 @@ func (s *Store) RecommendOutfits(limit int, owner string) ([]domain.OutfitRecomm
 			FROM outfits o
 			WHERE o.owner = $2
 		)
-		SELECT id, name, usage_count, last_worn, created_at, updated_at,
+		SELECT id, name, usage_count, last_worn, hidden, pinned, created_at, updated_at,
 			days_since_worn, days_since_created, avg_item_days,
 			(
 				0.4 * (1.0 - EXP(-days_since_worn / 14.0)) +
@@ -683,7 +685,7 @@ func (s *Store) RecommendOutfits(limit int, owner string) ([]domain.OutfitRecomm
 	for rows.Next() {
 		var r domain.OutfitRecommendation
 		var daysSinceWorn, daysSinceCreated, avgItemDays float64
-		if err := rows.Scan(&r.ID, &r.Name, &r.UsageCount, &r.LastWorn, &r.CreatedAt, &r.UpdatedAt,
+		if err := rows.Scan(&r.ID, &r.Name, &r.UsageCount, &r.LastWorn, &r.Hidden, &r.Pinned, &r.CreatedAt, &r.UpdatedAt,
 			&daysSinceWorn, &daysSinceCreated, &avgItemDays, &r.Score); err != nil {
 			return nil, err
 		}
