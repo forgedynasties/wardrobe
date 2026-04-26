@@ -6,6 +6,38 @@ import { ShimmerImg } from "@/components/shimmer-img";
 import { thumbnailUrl } from "@/lib/api";
 import type { ClothingItem } from "@/lib/types";
 
+function hexToHue(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const d = max - min;
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0)
+          : max === g ? (b - r) / d + 2
+          : (r - g) / d + 4;
+  return h * 60;
+}
+
+function CategorySpectrum({ items }: { items: ClothingItem[] }) {
+  const colors: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    for (const c of item.colors ?? []) {
+      if (!seen.has(c)) { seen.add(c); colors.push(c); }
+    }
+  }
+  if (colors.length === 0) return null;
+  const sorted = [...colors].sort((a, b) => hexToHue(a) - hexToHue(b));
+  return (
+    <div className="flex h-2 rounded-full overflow-hidden mb-2">
+      {sorted.map((c) => (
+        <div key={c} className="flex-1 h-full" style={{ backgroundColor: c }} />
+      ))}
+    </div>
+  );
+}
+
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   Top: Shirt,
   Bottom: ArrowDown,
@@ -77,6 +109,8 @@ export function CategoryStrip({ category, items, onSeeAll }: CategoryStripProps)
           <ChevronRight className="h-3 w-3" />
         </button>
       </div>
+
+      <CategorySpectrum items={items} />
 
       <div className="flex gap-2 overflow-x-auto pb-2 pt-1 px-0.5 -mx-0.5 snap-x snap-mandatory scrollbar-none">
         {items.map((item) => (

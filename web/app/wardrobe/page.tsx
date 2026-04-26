@@ -11,6 +11,32 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/lib/user-context";
 import type { ClothingItem } from "@/lib/types";
 
+type SortBy = "default" | "color";
+
+function hexToHue(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const d = max - min;
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0)
+          : max === g ? (b - r) / d + 2
+          : (r - g) / d + 4;
+  return h * 60;
+}
+
+function sortItems(items: ClothingItem[], sort: SortBy): ClothingItem[] {
+  if (sort === "color") {
+    return [...items].sort((a, b) => {
+      const ha = a.colors?.[0] ? hexToHue(a.colors[0]) : 361;
+      const hb = b.colors?.[0] ? hexToHue(b.colors[0]) : 361;
+      return ha - hb;
+    });
+  }
+  return items;
+}
+
 const CATEGORIES = ["Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
 const PAGE_SIZE = 100;
 
@@ -21,6 +47,7 @@ export default function WardrobePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [focusCategory, setFocusCategory] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortBy>("default");
 
   useEffect(() => {
     if (!hydrated || !user) return;
@@ -46,7 +73,7 @@ export default function WardrobePage() {
   }, [nextCursor]);
 
   const focusItems = focusCategory
-    ? items.filter((i) => i.category === focusCategory)
+    ? sortItems(items.filter((i) => i.category === focusCategory), sortBy)
     : [];
 
   return (
@@ -67,7 +94,24 @@ export default function WardrobePage() {
       </div>
 
       {focusCategory && (
-        <h2 className="text-xl font-semibold mb-4">{focusCategory}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">{focusCategory}</h2>
+          <div className="flex items-center gap-1 rounded-md border p-0.5 bg-muted/40 text-xs">
+            {(["default", "color"] as SortBy[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSortBy(s)}
+                className={`px-2.5 py-1 rounded capitalize transition-colors font-medium ${
+                  sortBy === s
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {s === "color" ? "Color" : "Default"}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {loading ? (
@@ -92,7 +136,7 @@ export default function WardrobePage() {
               key={cat}
               category={cat}
               items={items.filter((i) => i.category === cat)}
-              onSeeAll={() => setFocusCategory(cat)}
+              onSeeAll={() => { setFocusCategory(cat); setSortBy("default"); }}
             />
           ))}
           {items.length === 0 && (
