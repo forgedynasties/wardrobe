@@ -486,30 +486,36 @@ export default function ProfilePage() {
             {wishlist.length === 0 ? (
               <p className="text-sm text-muted-foreground">No wishlist items yet.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
                 {[...wishlist].sort((a, b) => b.priority - a.priority).map((item) => (
-                  <Card key={item.id} className="p-3 flex items-center gap-3">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.name} className="w-10 h-10 rounded object-cover shrink-0 bg-muted/40" />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-muted/40 shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        {item.priority === 1 && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />}
-                        <p className="text-sm font-medium truncate">{item.name}</p>
+                  <a
+                    key={item.id}
+                    href={item.product_url || undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 w-32"
+                  >
+                    <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
+                      <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl">🛍️</span>
+                        )}
+                        {item.priority === 1 && (
+                          <div className="absolute top-1 right-1">
+                            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 drop-shadow" />
+                          </div>
+                        )}
                       </div>
-                      {item.notes && <p className="text-xs text-muted-foreground truncate">{item.notes}</p>}
-                    </div>
-                    {item.price_pkr > 0 && (
-                      <span className="text-sm font-medium shrink-0">PKR {item.price_pkr.toLocaleString()}</span>
-                    )}
-                    {item.product_url && (
-                      <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                  </Card>
+                      <div className="p-1.5 space-y-0.5">
+                        <p className="text-xs font-medium truncate">{item.name}</p>
+                        {item.price_pkr > 0 && (
+                          <p className="text-[10px] text-muted-foreground">PKR {item.price_pkr.toLocaleString()}</p>
+                        )}
+                      </div>
+                    </Card>
+                  </a>
                 ))}
               </div>
             )}
