@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createItem, uploadImage } from "@/lib/api";
+import { extractColorsFromImage } from "@/lib/colors";
 import { ImageUpload } from "@/components/image-upload";
 import { ColorPicker } from "@/components/color-picker";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,11 @@ export default function NewItemPage() {
 
   const handleFileSelect = (f: File) => {
     setFile(f);
-    setPreview(URL.createObjectURL(f));
+    const objectUrl = URL.createObjectURL(f);
+    setPreview(objectUrl);
+    extractColorsFromImage(objectUrl, 5).then((extracted) => {
+      if (extracted.length > 0) setColors(extracted);
+    });
   };
 
   const handleSubmit = async () => {

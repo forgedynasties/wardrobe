@@ -79,10 +79,12 @@ export function OutfitCanvas({ items, className }: Props) {
     );
   }
 
-  // Mannequin composition: position each item in its body-region slot
-  const sorted = [...items].sort(
-    (a, b) => cfg.categoryOrder.indexOf(a.category) - cfg.categoryOrder.indexOf(b.category),
-  );
+  // Mannequin composition: sort by slot zIndex ascending so lower z renders first (behind).
+  const sorted = [...items].sort((a, b) => {
+    const az = (a.sub_category ? cfg.subcategorySlots[a.sub_category]?.zIndex : undefined) ?? cfg.mannequinSlots[a.category]?.zIndex ?? 0;
+    const bz = (b.sub_category ? cfg.subcategorySlots[b.sub_category]?.zIndex : undefined) ?? cfg.mannequinSlots[b.category]?.zIndex ?? 0;
+    return az - bz;
+  });
 
   return (
     <div

@@ -1,4 +1,4 @@
-import { imageUrl, proxiedImageUrl } from "@/lib/api";
+import { imageUrl } from "@/lib/api";
 import { outfitConfig } from "@/lib/outfit-config";
 import type { ClothingItem, OutfitItem } from "@/lib/types";
 
@@ -16,18 +16,23 @@ function hasCustomLayout(items: Item[]): boolean {
 }
 
 function itemSrc(item: Item): string | null {
-  if (item.image_status === "done" && item.image_url) return proxiedImageUrl(imageUrl(item.image_url));
-  if (item.raw_image_url) return proxiedImageUrl(imageUrl(item.raw_image_url));
+  if (item.image_status === "done" && item.image_url) return imageUrl(item.image_url);
+  if (item.raw_image_url) return imageUrl(item.raw_image_url);
   return null;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+async function loadImage(src: string): Promise<HTMLImageElement> {
+  // Fetch with credentials so auth cookies are sent, then blob → ObjectURL to avoid
+  // cross-origin canvas taint that would result from img.crossOrigin = "anonymous".
+  const res = await fetch(src, { credentials: "include" });
+  if (!res.ok) throw new Error(`failed to load ${src}: ${res.status}`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`failed to load ${src}`));
-    img.src = src;
+    img.onload = () => { URL.revokeObjectURL(objectUrl); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(`failed to decode ${src}`)); };
+    img.src = objectUrl;
   });
 }
 
