@@ -1,4 +1,4 @@
-import { imageUrl } from "@/lib/api";
+import { imageUrl, proxiedImageUrl } from "@/lib/api";
 import { outfitConfig } from "@/lib/outfit-config";
 import type { ClothingItem, OutfitItem } from "@/lib/types";
 
@@ -16,8 +16,9 @@ function hasCustomLayout(items: Item[]): boolean {
 }
 
 function itemSrc(item: Item): string | null {
-  if (item.image_status === "done" && item.image_url) return imageUrl(item.image_url);
-  if (item.raw_image_url) return imageUrl(item.raw_image_url);
+  // Always proxy through backend to avoid R2 CORS restriction on canvas fetch.
+  if (item.image_status === "done" && item.image_url) return proxiedImageUrl(imageUrl(item.image_url));
+  if (item.raw_image_url) return proxiedImageUrl(imageUrl(item.raw_image_url));
   return null;
 }
 

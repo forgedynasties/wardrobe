@@ -42,11 +42,16 @@ export function OutfitCanvas({ items, className }: Props) {
   const useCustom = hasCustomLayout(items);
 
   if (useCustom) {
-    const sorted = [...items].sort((a, b) => {
-      const az = isOutfitItem(a) ? a.z_index : 0;
-      const bz = isOutfitItem(b) ? b.z_index : 0;
-      return az - bz;
-    });
+    // When z_index is 0 (DB default, pre-editor), fall back to the slot's zIndex so
+    // mannequin category ordering is preserved even in custom layout mode.
+    const slotZ = (item: ClothingItem | OutfitItem) => {
+      const sub = item.sub_category ? cfg.subcategorySlots[item.sub_category]?.zIndex : undefined;
+      return sub ?? cfg.mannequinSlots[item.category]?.zIndex ?? 1;
+    };
+    const effectiveZ = (item: ClothingItem | OutfitItem) =>
+      isOutfitItem(item) && item.z_index !== 0 ? item.z_index : slotZ(item);
+
+    const sorted = [...items].sort((a, b) => effectiveZ(a) - effectiveZ(b));
     return (
       <div className={`absolute inset-0 isolate ${className ?? ""}`}>
         {sorted.map((item, idx) => {
@@ -60,7 +65,7 @@ export function OutfitCanvas({ items, className }: Props) {
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               style={{
                 transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${(isOutfitItem(item) ? (item.scale ?? 1) : 1) * (item.display_scale || 1)})`,
-                zIndex: layout.z_index,
+                zIndex: effectiveZ(item),
               }}
             >
               {src ? (
