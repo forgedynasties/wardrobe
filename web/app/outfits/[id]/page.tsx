@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, Check, Plus, X, Share2 } from "lucide-react";
-import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, imageUrl, thumbnailUrl } from "@/lib/api";
+import { ArrowLeft, Pencil, Trash2, Check, Plus, X, Share2, LayoutTemplate } from "lucide-react";
+import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, updateOutfitLayout, imageUrl, thumbnailUrl } from "@/lib/api";
 import { FitBuilder } from "@/components/fit-builder";
 import { OutfitCanvas } from "@/components/outfit-canvas";
+import { OutfitLayoutEditor } from "@/components/outfit-layout-editor";
 import { OutfitExportButton } from "@/components/outfit-export-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ export default function OutfitDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [showItemPicker, setShowItemPicker] = useState(false);
   const [removingItem, setRemovingItem] = useState<string | null>(null);
+  const [editingLayout, setEditingLayout] = useState(false);
 
   useEffect(() => {
     getOutfit(id).then((o) => {
@@ -144,6 +146,10 @@ export default function OutfitDetailPage() {
                 {shareCopied ? <Check className="h-4 w-4 text-green-500" /> : <Share2 className="h-4 w-4" />}
               </Button>
               <OutfitExportButton items={outfit.items ?? []} name={outfit.name} />
+              <Button variant="outline" size="sm" onClick={() => setEditingLayout(true)} className="gap-1.5" disabled={!outfit?.items?.length}>
+                <LayoutTemplate className="h-3.5 w-3.5" />
+                Layout
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5">
                 <Pencil className="h-3.5 w-3.5" />
                 Edit
@@ -200,11 +206,21 @@ export default function OutfitDetailPage() {
             </div>
           </div>
 
-          {outfit.items && outfit.items.length > 0 && (
+          {editingLayout && outfit.items && outfit.items.length > 0 ? (
+            <OutfitLayoutEditor
+              items={outfit.items as import("@/lib/types").OutfitItem[]}
+              onSave={async (layouts) => {
+                const updated = await updateOutfitLayout(outfit.id, layouts);
+                setOutfit(updated);
+                setEditingLayout(false);
+              }}
+              onCancel={() => setEditingLayout(false)}
+            />
+          ) : outfit.items && outfit.items.length > 0 ? (
             <div className="aspect-[3/4] w-full max-w-sm mx-auto bg-muted/30 rounded-lg overflow-hidden relative">
               <OutfitCanvas items={outfit.items} />
             </div>
-          )}
+          ) : null}
 
           <Button
             size="lg"
