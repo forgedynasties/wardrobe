@@ -94,16 +94,18 @@ export async function exportOutfitImage(
   const cfg = outfitConfig.get();
   const useCustom = hasCustomLayout(items);
 
-  const sorted = [...items].sort((a, b) => {
-    if (useCustom) {
-      const az = isOutfitItem(a) ? a.z_index : 0;
-      const bz = isOutfitItem(b) ? b.z_index : 0;
-      return az - bz;
-    }
-    return (
-      cfg.categoryOrder.indexOf(a.category) - cfg.categoryOrder.indexOf(b.category)
-    );
-  });
+  const slotZIndex = (item: Item) => {
+    const sub = item.sub_category ? cfg.subcategorySlots[item.sub_category]?.zIndex : undefined;
+    return sub ?? cfg.mannequinSlots[item.category]?.zIndex ?? 1;
+  };
+  const effectiveZ = (item: Item) =>
+    isOutfitItem(item) && item.z_index !== 0 ? item.z_index : slotZIndex(item);
+
+  const sorted = [...items].sort((a, b) =>
+    useCustom
+      ? effectiveZ(a) - effectiveZ(b)
+      : slotZIndex(a) - slotZIndex(b),
+  );
 
   const imgs = await Promise.all(
     sorted.map(async (it) => {
@@ -121,18 +123,22 @@ export async function exportOutfitImage(
     const item = sorted[i];
     const img = imgs[i];
     if (!img) continue;
-    const scale = item.display_scale || 1;
+    const displayScale = item.display_scale || 1;
 
     if (useCustom) {
+      // Mirror OutfitCanvas custom mode: scale(item.scale * display_scale)
+      const itemScale = isOutfitItem(item) ? (item.scale ?? 1) : 1;
+      const effectiveScale = itemScale * displayScale;
       const layout = isOutfitItem(item)
         ? { position_x: item.position_x, position_y: item.position_y }
         : { position_x: 0, position_y: 0 };
-      const dw = CANVAS_W * scale;
-      const dh = CANVAS_H * scale;
+      const dw = CANVAS_W * effectiveScale;
+      const dh = CANVAS_H * effectiveScale;
       const x = (layout.position_x / 100) * CANVAS_W + (CANVAS_W - dw) / 2;
       const y = (layout.position_y / 100) * CANVAS_H + (CANVAS_H - dh) / 2;
       drawContain(ctx, img, x, y, dw, dh);
     } else {
+      // Mirror OutfitCanvas mannequin mode: scale(display_scale) applied to slot
       const subSlot = item.sub_category
         ? cfg.subcategorySlots[item.sub_category]
         : undefined;
@@ -144,8 +150,8 @@ export async function exportOutfitImage(
       const baseH = (slot.height / 100) * CANVAS_H;
       const x0 = (left / 100) * CANVAS_W;
       const y0 = (slot.top / 100) * CANVAS_H;
-      const dw = baseW * scale;
-      const dh = baseH * scale;
+      const dw = baseW * displayScale;
+      const dh = baseH * displayScale;
       drawContain(ctx, img, x0 + (baseW - dw) / 2, y0 + (baseH - dh) / 2, dw, dh);
     }
   }
