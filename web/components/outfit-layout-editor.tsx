@@ -48,10 +48,16 @@ function initLayouts(items: OutfitItem[]): Map<string, ItemLayout> {
       // Convert mannequin slot → editor coordinates
       const subSlot = item.sub_category ? cfg.subcategorySlots[item.sub_category] : undefined;
       const slot = subSlot ?? cfg.mannequinSlots[item.category] ?? DEFAULT_SLOT;
+      // Portrait items (most clothing) are width-constrained in their slot → use slot.width.
+      // Shoes are landscape-ish and height-constrained in their slot → use slot.height.
+      // Accessories have a narrow custom slot.width.
+      // Divide by display_scale so effectiveScale = scale * display_scale = constraintDim / 100.
+      const cat = item.category?.toLowerCase();
+      const constraintDim = cat === "shoes" ? slot.height : (slot.width ?? 80);
       m.set(item.id, {
         position_x: slot.left !== undefined ? slot.left - 50 : 0,
         position_y: slot.top + slot.height / 2 - 50,
-        scale: slot.height / 100,
+        scale: constraintDim / 100 / (item.display_scale || 1),
         z_index: slot.zIndex ?? idx,
       });
     }
