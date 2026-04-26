@@ -587,9 +587,15 @@ func (h *Handler) UploadImage(c *gin.Context) {
 		return
 	}
 
+	colors, _ := vision.ExtractColors(tmpPath, 5)
+	if len(colors) > 0 {
+		_ = h.store.UpdateItemColors(id, colors)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":        "done",
 		"raw_image_url": rawURL,
+		"colors":        colors,
 	})
 }
 

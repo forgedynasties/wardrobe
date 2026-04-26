@@ -170,6 +170,11 @@ func (s *Store) UpdateImageStatus(id uuid.UUID, status, imageURL, rawImageURL, t
 	return err
 }
 
+func (s *Store) UpdateItemColors(id uuid.UUID, colors []string) error {
+	_, err := s.db.Exec(`UPDATE clothing_items SET colors = $2, updated_at = NOW() WHERE id = $1`, id, pq.Array(colors))
+	return err
+}
+
 func (s *Store) SetImageProcessing(id uuid.UUID, rawImageURL string) error {
 	_, err := s.db.Exec(`
 		UPDATE clothing_items SET image_status = 'processing', raw_image_url = $2, updated_at = NOW()

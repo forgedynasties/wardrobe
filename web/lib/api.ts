@@ -120,7 +120,7 @@ export function deleteItem(id: string): Promise<void> {
 export async function uploadImage(
   id: string,
   file: File,
-): Promise<{ status: string; raw_image_url: string }> {
+): Promise<{ status: string; raw_image_url: string; colors?: string[] }> {
   const form = new FormData();
   form.append("image", file);
   const res = await fetch(`${API_BASE}/api/items/${id}/image`, {
