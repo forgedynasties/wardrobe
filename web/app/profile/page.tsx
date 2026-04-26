@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "@/lib/user-context";
 import {
   getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap,
-  getWishlistItems, getItems, imageUrl, thumbnailUrl, updateOutfit,
+  getWishlistItems, getItems, imageUrl, thumbnailUrl, updateOutfit, getOutfitLogs,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { WardrobeAvatar } from "@/components/wardrobe-avatar";
 import { Settings, Share2, Check, Lock, ExternalLink, Star, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem } from "@/lib/types";
+import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem, OutfitLog } from "@/lib/types";
 
 function hexToHue(hex: string): number {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -60,6 +60,7 @@ export default function ProfilePage() {
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [heatmapYear, setHeatmapYear] = useState(currentYear);
   const [heatmap, setHeatmap] = useState<HeatmapEntry[]>([]);
+  const [wearLogs, setWearLogs] = useState<OutfitLog[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [neverWorn, setNeverWorn] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,14 +73,12 @@ export default function ProfilePage() {
       getProfileSettings(),
       getWardrobeStats(),
       getOutfitsPage(50),
-      getWearHeatmap(currentYear),
       getWishlistItems(),
       getItems(),
-    ]).then(([cfg, s, page, hm, wl, items]) => {
+    ]).then(([cfg, s, page, wl, items]) => {
       setConfig(cfg);
       setStats(s);
       setOutfits(page.data);
-      setHeatmap(hm);
       setWishlist(wl.filter(w => !w.bought_at));
       setNeverWorn(items.filter(i => !i.last_worn));
     }).finally(() => setLoading(false));
@@ -87,8 +86,16 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!hydrated || !user) return;
-    getWearHeatmap(heatmapYear).then(setHeatmap);
-  }, [heatmapYear]);
+    const start = `${heatmapYear}-01-01`;
+    const end = `${heatmapYear}-12-31`;
+    Promise.all([
+      getWearHeatmap(heatmapYear),
+      getOutfitLogs(start, end),
+    ]).then(([hm, logs]) => {
+      setHeatmap(hm);
+      setWearLogs([...logs].sort((a, b) => b.wear_date.localeCompare(a.wear_date)));
+    });
+  }, [heatmapYear, hydrated, user]);
 
   const handleShare = () => {
     if (!user) return;
@@ -241,6 +248,40 @@ export default function ProfilePage() {
             <Card className="p-4">
               <WearHeatmap data={heatmap} year={heatmapYear} />
             </Card>
+
+            {wearLogs.length > 0 && (
+              <div className="space-y-2">
+                {wearLogs.map((log) => {
+                  const date = new Date(log.wear_date);
+                  const label = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                  return (
+                    <Card key={log.id} className="p-3 flex items-center gap-3">
+                      <div className="text-xs text-muted-foreground w-24 shrink-0">{label}</div>
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
+                        {(log.items ?? []).slice(0, 6).map((item) => {
+                          const src = item.image_status === "done" && item.image_url
+                            ? imageUrl(item.image_url)
+                            : item.raw_image_url ? imageUrl(item.raw_image_url) : null;
+                          return (
+                            <div key={item.id} className="w-9 h-9 rounded bg-muted/40 shrink-0 flex items-center justify-center overflow-hidden">
+                              {src
+                                ? <img src={src} alt={item.category} className="w-full h-full object-contain p-0.5" />
+                                : <span className="text-base">👕</span>}
+                            </div>
+                          );
+                        })}
+                        {(log.items ?? []).length > 6 && (
+                          <span className="text-xs text-muted-foreground shrink-0">+{(log.items ?? []).length - 6}</span>
+                        )}
+                      </div>
+                      {log.notes && (
+                        <p className="text-xs text-muted-foreground italic truncate max-w-[120px] shrink-0">&ldquo;{log.notes}&rdquo;</p>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {/* outfit gallery */}
@@ -370,9 +411,16 @@ export default function ProfilePage() {
               <div className="space-y-2">
                 {[...wishlist].sort((a, b) => b.priority - a.priority).map((item) => (
                   <Card key={item.id} className="p-3 flex items-center gap-3">
-                    {item.priority === 1 && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />}
+                    {item.image_url ? (
+                      <img src={item.image_url} alt={item.name} className="w-10 h-10 rounded object-cover shrink-0 bg-muted/40" />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-muted/40 shrink-0" />
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <div className="flex items-center gap-1.5">
+                        {item.priority === 1 && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />}
+                        <p className="text-sm font-medium truncate">{item.name}</p>
+                      </div>
                       {item.notes && <p className="text-xs text-muted-foreground truncate">{item.notes}</p>}
                     </div>
                     {item.price_pkr > 0 && (
