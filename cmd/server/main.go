@@ -72,6 +72,7 @@ func main() {
 	allowedOrigins := []string{
 		"https://wardrobe.cd4li.space",
 		"https://srv-d7hsitho3t8c73akfq5g.onrender.com",
+		"https://wardrobe-front-production.up.railway.app",
 		"http://localhost:3000",
 		"http://localhost:3001",
 	}
