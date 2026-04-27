@@ -58,5 +58,4 @@ logs/
 *.log
 *.md
 .claudeignore
-server
 scripts/import-user-items.sh
