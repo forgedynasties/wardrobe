@@ -71,6 +71,7 @@ func main() {
 	// CORS configuration with proper origin handling
 	allowedOrigins := []string{
 		"https://wardrobe.cd4li.space",
+		"https://srv-d7hsitho3t8c73akfq5g.onrender.com",
 		"http://localhost:3000",
 		"http://localhost:3001",
 	}
