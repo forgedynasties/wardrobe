@@ -259,10 +259,10 @@ func (s *Store) UpdateWishlistItem(id uuid.UUID, owner string, req domain.Update
 		if *req.Bought {
 			setClauses = append(setClauses, fmt.Sprintf("bought_at = $%d", argN))
 			args = append(args, time.Now())
+			argN++
 		} else {
 			setClauses = append(setClauses, "bought_at = NULL")
 		}
-		argN++
 	}
 	if len(setClauses) == 0 {
 		return nil, fmt.Errorf("no fields to update")
