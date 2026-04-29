@@ -88,7 +88,7 @@ export async function exportOutfitImage(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no canvas context");
 
-  ctx.fillStyle = getUiCanvasBackground(ctx);
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
   const cfg = outfitConfig.get();
@@ -148,17 +148,6 @@ export async function exportOutfitImage(
       const dh = baseH * displayScale;
       drawContain(ctx, img, x0 + (baseW - dw) / 2, y0 + (baseH - dh) / 2, dw, dh);
     }
-  }
-
-  if (opts?.name) {
-    ctx.save();
-    ctx.globalAlpha = 0.7;
-    ctx.fillStyle = "#111";
-    ctx.font = "600 32px system-ui, -apple-system, sans-serif";
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText(opts.name, 32, 32);
-    ctx.restore();
   }
 
   ctx.save();
