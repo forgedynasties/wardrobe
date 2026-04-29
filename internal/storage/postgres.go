@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 
-	"wardrobe/internal/domain"
+	"hangur/internal/domain"
 )
 
 type Store struct {
@@ -1339,8 +1339,8 @@ func (s *Store) GetItemStats(id uuid.UUID, owner string) (*domain.ItemStats, err
 	return &stats, nil
 }
 
-func (s *Store) GetWardrobeStats(owner string) (*domain.WardrobeStats, error) {
-	stats := &domain.WardrobeStats{}
+func (s *Store) GetHangurStats(owner string) (*domain.HangurStats, error) {
+	stats := &domain.HangurStats{}
 
 	// Total items
 	err := s.db.QueryRow(`SELECT COUNT(*) FROM clothing_items WHERE owner = $1`, owner).Scan(&stats.TotalItems)

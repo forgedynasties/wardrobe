@@ -49,7 +49,7 @@ export function defaultZIndex(category: string, subCategory?: string | null): nu
   return defaults.mannequinSlots[category]?.zIndex ?? 1;
 }
 
-const STORAGE_KEY = "wardrobe.outfitConfig.v2";
+const STORAGE_KEY = "hangur.outfitConfig.v2";
 
 function load(): OutfitConfig {
   if (typeof window === "undefined") return structuredClone(defaults);

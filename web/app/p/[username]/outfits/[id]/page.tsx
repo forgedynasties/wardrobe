@@ -70,7 +70,7 @@ export default function PublicOutfitPage() {
         <Link href={`/p/${username}`} className="underline underline-offset-2">
           @{username}
         </Link>
-        's wardrobe
+        's hangur
       </p>
     </div>
   );

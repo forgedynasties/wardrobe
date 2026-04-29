@@ -39,7 +39,7 @@ echo -e "${YELLOW}📡 LAN IP: ${LAN_IP}${NC}"
 echo -e "${YELLOW}⚛️  Starting frontend...${NC}"
 cd web
 npm install > /dev/null 2>&1
-NEXT_PUBLIC_API_URL=http://${LAN_IP}:8081 npm run dev -- -H 0.0.0.0 &
+NEXT_PUBLIC_API_URL=http://localhost:8081 npm run dev -- -H 0.0.0.0 &
 FRONTEND_PID=$!
 
 cd ..

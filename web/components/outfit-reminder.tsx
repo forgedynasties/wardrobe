@@ -52,7 +52,7 @@ export function OutfitReminder() {
     getOutfitLogByDate(today)
       .then(() => { /* log exists, no reminder needed */ })
       .catch(() => {
-        new Notification("Wardrobe", {
+        new Notification("Hangur", {
           body: "Don't forget to log what you wore today!",
           icon: "/icon-192.png",
           tag: "outfit-reminder",

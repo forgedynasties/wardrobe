@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/lib/user-context";
 
 const navItems = [
-  { href: "/wardrobe", label: "Wardrobe", icon: Shirt },
+  { href: "/hangur", label: "Hangur", icon: Shirt },
   { href: "/outfits", label: "Outfits", icon: Sparkles },
   { href: "/logger", label: "Logger", icon: CalendarDays },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
@@ -19,18 +19,18 @@ function GuestBar() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/90 backdrop-blur-lg">
       <div className="flex items-center justify-between h-16 max-w-sm mx-auto px-6 gap-4">
         <div>
-          <p className="text-sm font-semibold">Wardrobe</p>
+          <p className="text-sm font-semibold">Hangur</p>
           <p className="text-xs text-muted-foreground">Track what you wear</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <Link
-            href="/wardrobe"
+            href="/hangur"
             className="px-3 py-1.5 rounded-lg border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Sign in
           </Link>
           <Link
-            href="/wardrobe"
+            href="/hangur"
             className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
           >
             Sign up free

@@ -23,7 +23,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!user?.is_admin) { router.replace("/wardrobe"); return; }
+    if (!user?.is_admin) { router.replace("/hangur"); return; }
     adminListUsers().then(setUsers);
   }, [hydrated, user, router]);
 

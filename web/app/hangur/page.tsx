@@ -40,7 +40,7 @@ function sortItems(items: ClothingItem[], sort: SortBy): ClothingItem[] {
 const CATEGORIES = ["Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
 const PAGE_SIZE = 100;
 
-export default function WardrobePage() {
+export default function HangurPage() {
   const { user, hydrated } = useUser();
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,10 +85,10 @@ export default function WardrobePage() {
             className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Wardrobe
+            Hangur
           </button>
         ) : (
-          <h1 className="text-2xl font-bold">Wardrobe</h1>
+          <h1 className="text-2xl font-bold">Hangur</h1>
         )}
         <AddItemButton />
       </div>
@@ -141,7 +141,7 @@ export default function WardrobePage() {
           ))}
           {items.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-              <p className="text-lg font-medium text-foreground mb-1">Your wardrobe is empty</p>
+              <p className="text-lg font-medium text-foreground mb-1">Your hangur is empty</p>
               <p className="text-sm mb-6">Add your first clothing item to get started</p>
               <AddItemButton />
             </div>

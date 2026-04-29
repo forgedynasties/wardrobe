@@ -9,7 +9,7 @@ import { WearHeatmap } from "@/components/wear-heatmap";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { OutfitCard } from "@/components/outfit-card";
 import { Lock, ExternalLink, Star } from "lucide-react";
-import { WardrobeAvatar } from "@/components/wardrobe-avatar";
+import { HangurAvatar } from "@/components/hangur-avatar";
 import type { PublicProfile } from "@/lib/types";
 import Link from "next/link";
 
@@ -62,7 +62,7 @@ export default function PublicProfilePage() {
       {/* header */}
       <div className="flex items-center gap-3">
         <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
-          <WardrobeAvatar colors={profile.avatar_colors ?? []} username={profile.username} size={56} />
+          <HangurAvatar colors={profile.avatar_colors ?? []} username={profile.username} size={56} />
         </div>
         <div>
           <h1 className="text-2xl font-bold">{profile.display_name}</h1>
@@ -207,7 +207,7 @@ export default function PublicProfilePage() {
       )}
 
       <p className="text-xs text-muted-foreground text-center pt-4">
-        Made with <Link href="/" className="underline underline-offset-2">Wardrobe</Link>
+        Made with <Link href="/" className="underline underline-offset-2">Hangur</Link>
       </p>
     </div>
   );

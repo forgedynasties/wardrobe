@@ -44,9 +44,9 @@ export function UserGate({ children }: { children: React.ReactNode }) {
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background px-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="font-heading text-3xl font-semibold">Wardrobe</h1>
+          <h1 className="font-heading text-3xl font-semibold">Hangur</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "login" ? "Sign in to your wardrobe" : "Sign-ups are coming soon"}
+            {mode === "login" ? "Sign in to your hangur" : "Sign-ups are coming soon"}
           </p>
         </div>
 

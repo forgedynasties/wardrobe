@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: wardrobe-db
+    container_name: hangur-db
     environment:
       POSTGRES_USER: wardrobe
       POSTGRES_PASSWORD: wardrobe
@@ -18,7 +18,7 @@ services:
 
   backend:
     build: .
-    container_name: wardrobe-backend
+    container_name: hangur-backend
     env_file: .env
     environment:
       DATABASE_URL: postgres://wardrobe:wardrobe@db:5432/wardrobe?sslmode=disable

@@ -1,4 +1,4 @@
-module wardrobe
+module hangur
 
 go 1.26.1
 

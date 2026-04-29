@@ -14,9 +14,9 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 
-	"wardrobe/internal/api"
-	"wardrobe/internal/storage"
-	"wardrobe/internal/vision"
+	"hangur/internal/api"
+	"hangur/internal/storage"
+	"hangur/internal/vision"
 )
 
 func main() {

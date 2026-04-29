@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { SunMoon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const STORAGE_KEY = "wardrobe-theme";
+const STORAGE_KEY = "hangur-theme";
 
 type Theme = "light" | "dark";
 

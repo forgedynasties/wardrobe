@@ -14,17 +14,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"wardrobe/internal/cache"
-	"wardrobe/internal/domain"
-	"wardrobe/internal/storage"
-	"wardrobe/internal/vision"
+	"hangur/internal/cache"
+	"hangur/internal/domain"
+	"hangur/internal/storage"
+	"hangur/internal/vision"
 )
 
 type Handler struct {
 	store      *storage.Store
 	imageStore *storage.ImageStore
 	worker     *vision.Worker
-	statsCache *cache.TTLCache[string, *domain.WardrobeStats]
+	statsCache *cache.TTLCache[string, *domain.HangurStats]
 	recsCache  *cache.TTLCache[string, []domain.OutfitRecommendation]
 }
 
@@ -33,7 +33,7 @@ func NewHandler(store *storage.Store, imageStore *storage.ImageStore, worker *vi
 		store:      store,
 		imageStore: imageStore,
 		worker:     worker,
-		statsCache: cache.New[string, *domain.WardrobeStats](60 * time.Second),
+		statsCache: cache.New[string, *domain.HangurStats](60 * time.Second),
 		recsCache:  cache.New[string, []domain.OutfitRecommendation](5 * time.Minute),
 	}
 }
@@ -731,13 +731,13 @@ func (h *Handler) GetItemStats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
-func (h *Handler) GetWardrobeStats(c *gin.Context) {
+func (h *Handler) GetHangurStats(c *gin.Context) {
 	owner := c.GetString("owner")
 	if cached, ok := h.statsCache.Get(owner); ok {
 		c.JSON(http.StatusOK, cached)
 		return
 	}
-	stats, err := h.store.GetWardrobeStats(owner)
+	stats, err := h.store.GetHangurStats(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -918,7 +918,7 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 
 	s := cfg.Sections
 	if s.Snapshot || s.Signature {
-		if stats, err := h.store.GetWardrobeStats(username); err == nil {
+		if stats, err := h.store.GetHangurStats(username); err == nil {
 			if s.Snapshot {
 				profile.Snapshot = stats
 			}

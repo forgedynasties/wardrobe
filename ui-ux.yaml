@@ -1,6 +1,6 @@
 app:
-  name: Wardrobe
-  description: Digital wardrobe manager — catalog clothes, build outfits, track wear history
+  name: Hangur
+  description: Digital hangur manager — catalog clothes, build outfits, track wear history
   stack:
     frontend: Next.js (React 18, App Router)
     backend: Go (Gin framework)
@@ -25,9 +25,9 @@ layout:
   navigation:
     type: Bottom tab bar (fixed)
     tabs:
-      - label: Wardrobe
+      - label: Hangur
         icon: Shirt
-        route: /wardrobe
+        route: /hangur
       - label: Outfits
         icon: Sparkles
         route: /outfits
@@ -45,13 +45,13 @@ pages:
 
   home:
     route: /
-    behavior: Redirects to /wardrobe
+    behavior: Redirects to /hangur
 
-  wardrobe:
-    route: /wardrobe
+  hangur:
+    route: /hangur
     purpose: Browse and manage all clothing items
     layout:
-      - header: "Wardrobe" title + "+ Add" button (top-right)
+      - header: "Hangur" title + "+ Add" button (top-right)
       - category_filters: Horizontal badge row (All, Top, Bottom, Outerwear, Shoes, Accessory)
       - item_grid: Responsive grid (2col mobile, 3col tablet, 4col desktop)
       - fab: Floating "+ Add" on mobile (bottom-right, above navbar)
@@ -64,15 +64,15 @@ pages:
     route: /items/new
     purpose: Create new clothing item with image
     layout:
-      - back_button: Arrow back to /wardrobe
+      - back_button: Arrow back to /hangur
       - image_upload: Drag-drop or click-to-browse area
       - form:
           - category: Dropdown (required) — Top, Bottom, Outerwear, Shoes, Accessory
           - sub_category: Text input (type/style)
           - colors: ColorPicker (multi-select presets + custom hex)
           - material: Text input
-      - submit: "Add to wardrobe" button
-    flow: Upload image → fill metadata → POST createItem + uploadImage → redirect to wardrobe
+      - submit: "Add to hangur" button
+    flow: Upload image → fill metadata → POST createItem + uploadImage → redirect to hangur
     components: [ImageUpload, ColorPicker, Select, Input, Label, Button]
 
   item_detail:
@@ -101,7 +101,7 @@ pages:
       - color picker
       - material input
       - save/cancel buttons
-    delete: Confirmation dialog → redirects to /wardrobe
+    delete: Confirmation dialog → redirects to /hangur
     components: [ImageUpload, ColorPicker, Badge, Dialog, Select, Skeleton]
 
   outfits:
@@ -126,7 +126,7 @@ pages:
 
   create_outfit:
     route: /outfits/new
-    purpose: Build a new outfit from wardrobe items
+    purpose: Build a new outfit from hangur items
     layout:
       - header: Back button + title
       - name_input: Optional outfit name (auto-generated if empty)
@@ -177,10 +177,10 @@ pages:
 
   stats:
     route: /stats
-    purpose: Analytics dashboard for wardrobe insights
+    purpose: Analytics dashboard for hangur insights
     layout:
-      - header: "Wardrobe Stats" + subtitle
-      - wardrobe_overview:
+      - header: "Hangur Stats" + subtitle
+      - hangur_overview:
           cards: [Total Items, Never Worn (with %), Total Outfits, Never Worn Outfits]
           grid: 4 columns on desktop
       - items_by_category:
@@ -329,7 +329,7 @@ components:
 config:
 
   outfit_config:
-    storage: localStorage (key: wardrobe.outfitConfig.v2)
+    storage: localStorage (key: hangur.outfitConfig.v2)
     fields:
       categoryOrder: [Outerwear, Top, Bottom, Shoes, Accessory]
       categoryZIndex: { Bottom: 1, Top: 2, Outerwear: 3, Shoes: 4, Accessory: 5 }
@@ -382,7 +382,7 @@ api:
     delete:       DELETE /api/outfit-logs/{id}
 
   stats:
-    wardrobe:   GET  /api/stats
+    hangur:   GET  /api/stats
     stale_data: GET  /api/stats/utility/stale-data
     fix_stale:  POST /api/stats/utility/fix-stale-data
 
@@ -444,14 +444,14 @@ ux_patterns:
 
   empty_states:
     strategy: Friendly message + CTA to create first item/outfit
-    used_in: Wardrobe, Outfits, FitBuilder
+    used_in: Hangur, Outfits, FitBuilder
 
   error_handling:
     strategy: Console errors, graceful fallbacks
     connection_errors: "Can't reach server" message in FitBuilder
 
   mobile_first:
-    fab: Floating action buttons on wardrobe + outfits pages
+    fab: Floating action buttons on hangur + outfits pages
     sheets: Bottom sheets for item selection and log editing
     touch: Pointer events for drag-drop (works on mobile)
     navbar: Fixed bottom tab bar

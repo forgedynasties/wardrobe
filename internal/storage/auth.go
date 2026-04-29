@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"wardrobe/internal/domain"
+	"hangur/internal/domain"
 )
 
 func (s *Store) GetUserByUsername(username string) (*domain.User, error) {

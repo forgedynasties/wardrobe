@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"wardrobe/internal/domain"
+	"hangur/internal/domain"
 )
 
 const outfitConfigKey = "outfit_config"

@@ -67,9 +67,9 @@ export default function NewItemPage() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/wardrobe")} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/hangur")} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" />
-          Wardrobe
+          Hangur
         </Button>
         <h1 className="text-2xl font-bold">Add Item</h1>
         <div className="w-20" />
@@ -148,7 +148,7 @@ export default function NewItemPage() {
           onClick={handleSubmit}
           disabled={!category || saving}
         >
-          {saving ? "Saving..." : "Add to Wardrobe"}
+          {saving ? "Saving..." : "Add to Hangur"}
         </Button>
       </div>
     </div>

@@ -19,7 +19,7 @@ export interface PublicProfile {
   display_name: string;
   username: string;
   avatar_colors: string[];
-  snapshot?: WardrobeStats;
+  snapshot?: HangurStats;
   outfits?: Outfit[];
   calendar?: HeatmapEntry[];
   signature?: TopItem[];
@@ -168,7 +168,7 @@ export interface TopItem {
   wear_count: number;
 }
 
-export interface WardrobeStats {
+export interface HangurStats {
   total_items: number;
   total_outfits: number;
   total_wears: number;

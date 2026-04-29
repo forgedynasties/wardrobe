@@ -1,4 +1,4 @@
-const CACHE = "wardrobe-v1";
+const CACHE = "hangur-v1";
 const SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

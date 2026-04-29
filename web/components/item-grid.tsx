@@ -33,7 +33,7 @@ export const ItemGrid = memo(function ItemGrid({ items, loading }: ItemGridProps
         <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
           <Shirt className="h-8 w-8" />
         </div>
-        <p className="text-lg font-medium text-foreground mb-1">Your wardrobe is empty</p>
+        <p className="text-lg font-medium text-foreground mb-1">Your hangur is empty</p>
         <p className="text-sm mb-6">Add your first clothing item to get started</p>
         <AddItemButton />
       </div>

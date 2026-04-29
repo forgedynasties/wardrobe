@@ -220,14 +220,14 @@ type PublicProfile struct {
 	DisplayName  string         `json:"display_name"`
 	Username     string         `json:"username"`
 	AvatarColors []string       `json:"avatar_colors"`
-	Snapshot     *WardrobeStats `json:"snapshot,omitempty"`
+	Snapshot     *HangurStats `json:"snapshot,omitempty"`
 	Outfits      []Outfit       `json:"outfits,omitempty"`
 	Calendar     []HeatmapEntry `json:"calendar,omitempty"`
 	Signature    []TopItem      `json:"signature,omitempty"`
 	Wishlist     []WishlistItem `json:"wishlist,omitempty"`
 }
 
-type WardrobeStats struct {
+type HangurStats struct {
 	TotalItems      int              `json:"total_items"`
 	TotalOutfits    int              `json:"total_outfits"`
 	TotalWears      int              `json:"total_wears"`

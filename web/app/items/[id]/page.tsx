@@ -84,7 +84,7 @@ export default function ItemDetailPage() {
     setDeleting(true);
     try {
       await deleteItem(id);
-      router.push("/wardrobe");
+      router.push("/hangur");
     } catch {
       setDeleting(false);
     }
@@ -126,9 +126,9 @@ export default function ItemDetailPage() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/wardrobe")} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/hangur")} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" />
-          Wardrobe
+          Hangur
         </Button>
         <div className="flex gap-2">
           {!editing && (
@@ -319,7 +319,7 @@ export default function ItemDetailPage() {
           <DialogHeader>
             <DialogTitle>Delete item</DialogTitle>
             <DialogDescription>
-              This will permanently remove this {item.category.toLowerCase()} from your wardrobe. This action cannot be undone.
+              This will permanently remove this {item.category.toLowerCase()} from your hangur. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

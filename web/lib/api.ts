@@ -11,7 +11,7 @@ import type {
   UpdateOutfitRequest,
   OutfitItemLayoutUpdate,
   ItemStats,
-  WardrobeStats,
+  HangurStats,
   WishlistItem,
   CreateWishlistItemRequest,
   Page,
@@ -246,7 +246,7 @@ export function getItemStats(id: string): Promise<ItemStats> {
   return fetcher(`/api/items/${id}/stats`);
 }
 
-export function getWardrobeStats(): Promise<WardrobeStats> {
+export function getHangurStats(): Promise<HangurStats> {
   return fetcher(`/api/stats`);
 }
 

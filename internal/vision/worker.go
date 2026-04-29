@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"wardrobe/internal/domain"
-	"wardrobe/internal/storage"
+	"hangur/internal/domain"
+	"hangur/internal/storage"
 
 	"github.com/google/uuid"
 )

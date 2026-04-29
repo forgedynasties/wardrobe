@@ -72,7 +72,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 
 		stats := protected.Group("/stats")
 		{
-			stats.GET("", h.GetWardrobeStats)
+			stats.GET("", h.GetHangurStats)
 			stats.GET("/wear-heatmap", h.GetWearHeatmap)
 			stats.GET("/utility/stale-data", h.DetectStaleData)
 			stats.POST("/utility/fix-stale-data", h.FixStaleData)

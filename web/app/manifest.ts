@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Wardrobe",
-    short_name: "Wardrobe",
-    description: "Digital wardrobe manager",
+    name: "Hangur",
+    short_name: "Hangur",
+    description: "Digital hangur manager",
     start_url: "/",
     scope: "/",
     display: "standalone",

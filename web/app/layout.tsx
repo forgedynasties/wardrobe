@@ -20,12 +20,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Wardrobe",
-  description: "Digital wardrobe manager",
-  applicationName: "Wardrobe",
+  title: "Hangur",
+  description: "Digital hangur manager",
+  applicationName: "Hangur",
   appleWebApp: {
     capable: true,
-    title: "Wardrobe",
+    title: "Hangur",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },

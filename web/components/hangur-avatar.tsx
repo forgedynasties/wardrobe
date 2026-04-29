@@ -39,7 +39,7 @@ interface Props {
   className?: string;
 }
 
-export function WardrobeAvatar({ colors, username = "", size = 48, className }: Props) {
+export function HangurAvatar({ colors, username = "", size = 48, className }: Props) {
   const palette = colors.length > 0 ? [...new Set(colors)].slice(0, 10) : hashToColors(username);
 
   const cells = useMemo(() => {

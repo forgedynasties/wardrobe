@@ -13,7 +13,7 @@ import type { ProfileConfig, ProfileSections } from "@/lib/types";
 import Link from "next/link";
 
 const SECTION_META: { key: keyof ProfileSections; label: string; desc: string; icon: React.ElementType }[] = [
-  { key: "snapshot", label: "Style Snapshot", desc: "Wardrobe size, categories, and color palette", icon: BarChart3 },
+  { key: "snapshot", label: "Style Snapshot", desc: "Hangur size, categories, and color palette", icon: BarChart3 },
   { key: "outfits", label: "Outfit Gallery", desc: "Grid of outfits you've created", icon: Sparkles },
   { key: "calendar", label: "Wear Calendar", desc: "Heatmap of days you wore outfits", icon: CalendarDays },
   { key: "signature", label: "Signature Pieces", desc: "Your most-worn clothing items", icon: Trophy },

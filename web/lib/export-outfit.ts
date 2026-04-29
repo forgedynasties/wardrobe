@@ -167,7 +167,7 @@ export async function exportOutfitImage(
   ctx.font = "600 30px system-ui, -apple-system, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "bottom";
-  ctx.fillText("wardrobe", CANVAS_W - 32, CANVAS_H - 28);
+  ctx.fillText("hangur", CANVAS_W - 32, CANVAS_H - 28);
   ctx.restore();
 
   const blob: Blob = await new Promise((resolve, reject) =>
@@ -179,7 +179,7 @@ export async function exportOutfitImage(
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = opts?.filename ?? `${slugify(opts?.name ?? "outfit")}-wardrobe.png`;
+  a.download = opts?.filename ?? `${slugify(opts?.name ?? "outfit")}-hangur.png`;
   document.body.appendChild(a);
   a.click();
   a.remove();

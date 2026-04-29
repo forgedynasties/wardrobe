@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"wardrobe/internal/domain"
+	"hangur/internal/domain"
 )
 
 const (

@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useUser } from "@/lib/user-context";
 import {
-  getProfileSettings, getWardrobeStats, getOutfitsPage, getWearHeatmap,
+  getProfileSettings, getHangurStats, getOutfitsPage, getWearHeatmap,
   getWishlistItems, getItems, imageUrl, thumbnailUrl, updateOutfit, getOutfitLogs,
 } from "@/lib/api";
 import { outfitRefreshStore } from "@/lib/outfit-refresh";
@@ -15,11 +15,11 @@ import { WearHeatmap } from "@/components/wear-heatmap";
 import { OutfitCard } from "@/components/outfit-card";
 import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
-import { WardrobeAvatar } from "@/components/wardrobe-avatar";
+import { HangurAvatar } from "@/components/hangur-avatar";
 import { Settings, Share2, Check, Lock, ExternalLink, Star, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { WardrobeStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem, OutfitLog } from "@/lib/types";
+import type { HangurStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem, OutfitLog } from "@/lib/types";
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   outerwear: 5, top: 4, bottom: 3, shoes: 2, accessory: 1,
@@ -92,7 +92,7 @@ export default function ProfilePage() {
   );
 
   const [config, setConfig] = useState<ProfileConfig | null>(null);
-  const [stats, setStats] = useState<WardrobeStats | null>(null);
+  const [stats, setStats] = useState<HangurStats | null>(null);
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [heatmapYear, setHeatmapYear] = useState(currentYear);
   const [heatmap, setHeatmap] = useState<HeatmapEntry[]>([]);
@@ -108,7 +108,7 @@ export default function ProfilePage() {
     if (!hydrated || !user) return;
     Promise.all([
       getProfileSettings(),
-      getWardrobeStats(),
+      getHangurStats(),
       getOutfitsPage(50),
       getWishlistItems(),
       getItems(),
@@ -148,7 +148,7 @@ export default function ProfilePage() {
   const handleShare = () => {
     if (!user) return;
     const url = `${window.location.origin}/p/${user.username}`;
-    doShare(`${user.display_name}'s Wardrobe`, url, () => {
+    doShare(`${user.display_name}'s Hangur`, url, () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -166,7 +166,7 @@ export default function ProfilePage() {
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
-            <WardrobeAvatar colors={stats?.colors ?? []} username={user.username} size={56} />
+            <HangurAvatar colors={stats?.colors ?? []} username={user.username} size={56} />
           </div>
           <div>
             <h1 className="text-2xl font-bold">{user.display_name}</h1>
@@ -231,7 +231,7 @@ export default function ProfilePage() {
                     <span className="font-semibold text-foreground">
                       {Math.round((stats.never_worn_items / stats.total_items) * 100)}%
                     </span>{" "}
-                    of your wardrobe.
+                    of your hangur.
                   </p>
                 )}
 
