@@ -17,7 +17,7 @@ import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
 import { CategoryPixelBox } from "@/components/category-pixel-box";
-import { Settings, Share2, Check, Lock, ExternalLink, Star, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
+import { Settings, Share2, Check, Lock, ExternalLink, Star, Heart, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { HangurStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem, OutfitLog } from "@/lib/types";
@@ -489,7 +489,7 @@ export default function ProfilePage() {
             {wishlist.length === 0 ? (
               <p className="text-sm text-muted-foreground">No wishlist items yet.</p>
             ) : (
-              <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
+              <div className="flex gap-3 overflow-x-auto py-1 -mx-4 px-4">
                 {[...wishlist].sort((a, b) => b.priority - a.priority).map((item) => (
                   <a
                     key={item.id}
@@ -499,20 +499,20 @@ export default function ProfilePage() {
                     className="shrink-0 w-32"
                   >
                     <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
-                      <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
+                      <div className="aspect-square bg-muted/40 flex items-center justify-center">
                         {item.image_url ? (
                           <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-3xl">🛍️</span>
                         )}
-                        {item.priority === 1 && (
-                          <div className="absolute top-1 right-1">
-                            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 drop-shadow" />
-                          </div>
-                        )}
                       </div>
                       <div className="p-1.5 space-y-0.5">
-                        <p className="text-xs font-medium truncate">{item.name}</p>
+                        <div className="flex items-center gap-1">
+                          {item.priority === 1 && (
+                            <Heart className="h-3 w-3 shrink-0 text-red-500 fill-red-500" />
+                          )}
+                          <p className="text-xs font-medium truncate">{item.name}</p>
+                        </div>
                         {item.price_pkr > 0 && (
                           <p className="text-[10px] text-muted-foreground">PKR {item.price_pkr.toLocaleString()}</p>
                         )}

@@ -183,8 +183,15 @@ export default function WishlistPage() {
   };
 
   const handleToggleBought = async (item: WishlistItem) => {
-    const updated = await updateWishlistItem(item.id, { bought: !item.bought_at });
-    setItems((prev) => prev?.map((i) => i.id === item.id ? updated : i) ?? null);
+    const nowBought = !item.bought_at;
+    const optimistic: WishlistItem = { ...item, bought_at: nowBought ? new Date().toISOString() : null };
+    setItems((prev) => prev?.map((i) => i.id === item.id ? optimistic : i) ?? null);
+    try {
+      const updated = await updateWishlistItem(item.id, { bought: nowBought });
+      setItems((prev) => prev?.map((i) => i.id === item.id ? updated : i) ?? null);
+    } catch {
+      setItems((prev) => prev?.map((i) => i.id === item.id ? item : i) ?? null);
+    }
   };
 
   const handleSaveNotes = async (id: string) => {
