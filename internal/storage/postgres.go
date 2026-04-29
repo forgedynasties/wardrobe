@@ -1360,13 +1360,15 @@ func (s *Store) GetHangurStats(owner string) (*domain.HangurStats, error) {
 		return nil, err
 	}
 
-	// Items by category
+	// Items by category with per-category colors
 	rows, err := s.db.Query(`
-		SELECT category, COUNT(*)
-		FROM clothing_items
-		WHERE owner = $1
-		GROUP BY category
-		ORDER BY category`, owner)
+		SELECT ci.category, COUNT(DISTINCT ci.id) as count,
+			COALESCE(ARRAY_AGG(DISTINCT c.color) FILTER (WHERE c.color IS NOT NULL), '{}') as colors
+		FROM clothing_items ci
+		LEFT JOIN LATERAL unnest(ci.colors) AS c(color) ON true
+		WHERE ci.owner = $1
+		GROUP BY ci.category
+		ORDER BY ci.category`, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -1375,7 +1377,7 @@ func (s *Store) GetHangurStats(owner string) (*domain.HangurStats, error) {
 	stats.ItemsByCategory = []domain.CategoryCount{}
 	for rows.Next() {
 		var cat domain.CategoryCount
-		if err := rows.Scan(&cat.Category, &cat.Count); err != nil {
+		if err := rows.Scan(&cat.Category, &cat.Count, pq.Array(&cat.Colors)); err != nil {
 			return nil, err
 		}
 		stats.ItemsByCategory = append(stats.ItemsByCategory, cat)

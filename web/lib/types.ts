@@ -156,6 +156,7 @@ export interface ItemStats {
 export interface CategoryCount {
   category: string;
   count: number;
+  colors: string[];
 }
 
 export interface DayOfWeekCount {

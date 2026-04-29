@@ -49,17 +49,35 @@ const isSameDay = (a: Date, b: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
-function hexToHue(hex: string): number {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  if (max === min) return 0;
-  const d = max - min;
-  const h = max === r ? (g - b) / d + (g < b ? 6 : 0)
-          : max === g ? (b - r) / d + 2
-          : (r - g) / d + 4;
-  return h * 60;
+
+const PIXEL_GRID = 8;
+
+function CategoryPixelBox({ category, colors }: { category: string; colors: string[] }) {
+  const pixels = Array.from({ length: PIXEL_GRID * PIXEL_GRID }, (_, i) => {
+    const row = Math.floor(i / PIXEL_GRID);
+    const col = i % PIXEL_GRID;
+    return colors[(row + col) % colors.length];
+  });
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${PIXEL_GRID}, 1fr)`,
+          width: 48,
+          height: 48,
+          imageRendering: "pixelated",
+          borderRadius: 4,
+          overflow: "hidden",
+        }}
+      >
+        {pixels.map((color, i) => (
+          <div key={i} style={{ backgroundColor: color }} />
+        ))}
+      </div>
+      <span className="text-xs capitalize text-muted-foreground">{category}</span>
+    </div>
+  );
 }
 
 function PrivateBadge() {
@@ -253,13 +271,12 @@ export default function ProfilePage() {
                   </Card>
                 )}
 
-                {/* color palette */}
-                {stats.colors.length > 0 && (
-                  <Card className="p-4 space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Color Palette</p>
-                    <div className="flex h-5 rounded overflow-hidden">
-                      {[...stats.colors].sort((a, b) => hexToHue(a) - hexToHue(b)).map((c) => (
-                        <div key={c} className="flex-1 h-full" style={{ backgroundColor: c }} title={c} />
+                {/* category pixel boxes */}
+                {stats.items_by_category.some(cat => cat.colors?.length > 0) && (
+                  <Card className="p-4">
+                    <div className="flex flex-wrap gap-4">
+                      {stats.items_by_category.filter(cat => cat.colors?.length > 0).map(cat => (
+                        <CategoryPixelBox key={cat.category} category={cat.category} colors={cat.colors} />
                       ))}
                     </div>
                   </Card>

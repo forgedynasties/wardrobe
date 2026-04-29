@@ -154,8 +154,9 @@ type ItemStats struct {
 }
 
 type CategoryCount struct {
-	Category string `json:"category"`
-	Count    int    `json:"count"`
+	Category string   `json:"category"`
+	Count    int      `json:"count"`
+	Colors   []string `json:"colors"`
 }
 
 type DayOfWeekCount struct {
