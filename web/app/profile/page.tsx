@@ -16,6 +16,7 @@ import { OutfitCard } from "@/components/outfit-card";
 import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
+import { CategoryPixelBox } from "@/components/category-pixel-box";
 import { Settings, Share2, Check, Lock, ExternalLink, Star, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -50,35 +51,6 @@ const isSameDay = (a: Date, b: Date) =>
   a.getDate() === b.getDate();
 
 
-const PIXEL_GRID = 8;
-
-function CategoryPixelBox({ category, colors }: { category: string; colors: string[] }) {
-  const pixels = Array.from({ length: PIXEL_GRID * PIXEL_GRID }, (_, i) => {
-    const row = Math.floor(i / PIXEL_GRID);
-    const col = i % PIXEL_GRID;
-    return colors[(row + col) % colors.length];
-  });
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${PIXEL_GRID}, 1fr)`,
-          width: 48,
-          height: 48,
-          imageRendering: "pixelated",
-          borderRadius: 4,
-          overflow: "hidden",
-        }}
-      >
-        {pixels.map((color, i) => (
-          <div key={i} style={{ backgroundColor: color }} />
-        ))}
-      </div>
-      <span className="text-xs capitalize text-muted-foreground">{category}</span>
-    </div>
-  );
-}
 
 function PrivateBadge() {
   return (
@@ -276,7 +248,10 @@ export default function ProfilePage() {
                   <Card className="p-4">
                     <div className="flex flex-wrap gap-4">
                       {stats.items_by_category.filter(cat => cat.colors?.length > 0).map(cat => (
-                        <CategoryPixelBox key={cat.category} category={cat.category} colors={cat.colors} />
+                        <div key={cat.category} className="flex flex-col items-center gap-1.5">
+                          <CategoryPixelBox colors={cat.colors} size={48} />
+                          <span className="text-xs capitalize text-muted-foreground">{cat.category}</span>
+                        </div>
                       ))}
                     </div>
                   </Card>

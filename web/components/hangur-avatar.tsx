@@ -2,6 +2,31 @@
 
 import { useMemo } from "react";
 
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(255 * c).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function vibrate(hex: string): string {
+  if (!hex.startsWith("#") || hex.length < 7) return hex;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const d = max - min;
+  if (d < 0.04) return hex;
+  const h = (max === r ? (g - b) / d + (g < b ? 6 : 0)
+           : max === g ? (b - r) / d + 2
+           : (r - g) / d + 4) / 6 * 360;
+  return hslToHex(h, 80, 52);
+}
+
 function hash(s: string): number {
   let h = 5381;
   for (let i = 0; i < s.length; i++) {
@@ -40,7 +65,7 @@ interface Props {
 }
 
 export function HangurAvatar({ colors, username = "", size = 48, className }: Props) {
-  const palette = colors.length > 0 ? [...new Set(colors)].slice(0, 10) : hashToColors(username);
+  const palette = colors.length > 0 ? [...new Set(colors)].slice(0, 10).map(vibrate) : hashToColors(username);
 
   const cells = useMemo(() => {
     const rand = seededRng(hash(username || "x"));
