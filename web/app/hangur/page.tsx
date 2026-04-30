@@ -88,7 +88,7 @@ export default function HangurPage() {
             Hangur
           </button>
         ) : (
-          <h1 className="text-2xl font-bold">Hangur</h1>
+          <h1 className="text-2xl font-bold">My Hangur</h1>
         )}
         <AddItemButton />
       </div>
