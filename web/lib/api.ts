@@ -76,6 +76,21 @@ export function adminSetUserActive(username: string, active: boolean): Promise<v
   });
 }
 
+export function adminSetUserAdmin(username: string, admin: boolean): Promise<void> {
+  return fetcher(`/api/admin/users/${username}/admin`, {
+    method: "PUT",
+    body: JSON.stringify({ admin }),
+  });
+}
+
+export function adminDeleteUser(username: string): Promise<void> {
+  return fetcher(`/api/admin/users/${username}`, { method: "DELETE" });
+}
+
+export function adminRecropImages(): Promise<{ cropped: number; failed: number }> {
+  return fetcher("/api/admin/recrop-images", { method: "POST" });
+}
+
 export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   return fetcher("/api/auth/password", {
     method: "PUT",

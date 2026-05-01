@@ -155,3 +155,20 @@ func (s *Store) PurgeExpiredSessions() error {
 	_, err := s.db.Exec(`DELETE FROM sessions WHERE expires_at < NOW()`)
 	return err
 }
+
+func (s *Store) SetUserAdmin(username string, admin bool) error {
+	_, err := s.db.Exec(`UPDATE users SET is_admin = $1, updated_at = NOW() WHERE username = $2`, admin, username)
+	return err
+}
+
+func (s *Store) DeleteUser(username string) error {
+	res, err := s.db.Exec(`DELETE FROM users WHERE username = $1`, username)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}

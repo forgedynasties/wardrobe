@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Trophy } from "lucide-react";
+import { Trophy, Shield } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserSwitcher } from "@/components/user-switcher";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/lib/user-context";
 
 export function TopBar() {
+  const { user } = useUser();
+
   return (
     <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-lg">
       <Link href="/" className="flex items-center gap-1.5 hover:opacity-75 transition-opacity">
@@ -16,6 +19,13 @@ export function TopBar() {
         <span className="font-heading text-sm font-semibold tracking-tight">Hangur</span>
       </Link>
       <div className="flex items-center gap-1">
+        {user?.is_admin && (
+          <Link href="/admin">
+            <Button variant="ghost" size="icon" className="h-8 w-8" title="Admin dashboard">
+              <Shield className="h-4 w-4" />
+            </Button>
+          </Link>
+        )}
         <Link href="/leaderboard">
           <Button variant="ghost" size="icon" className="h-8 w-8" title="Leaderboard">
             <Trophy className="h-4 w-4" />

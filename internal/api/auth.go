@@ -226,6 +226,46 @@ func (h *Handler) SetUserActive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+func (h *Handler) SetUserAdmin(c *gin.Context) {
+	if !h.requireAdmin(c) {
+		return
+	}
+	username := c.Param("username")
+	self := c.MustGet("user").(*domain.User)
+	if username == self.Username {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot change your own admin status"})
+		return
+	}
+	var req struct {
+		Admin bool `json:"admin"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.store.SetUserAdmin(username, req.Admin); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *Handler) DeleteUser(c *gin.Context) {
+	if !h.requireAdmin(c) {
+		return
+	}
+	username := c.Param("username")
+	if err := h.store.DeleteUser(username); err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 // AuthMiddleware validates the session cookie and sets "user" + "owner" in context.
 func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {

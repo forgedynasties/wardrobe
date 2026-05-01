@@ -96,6 +96,8 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 			admin.GET("/users", h.ListUsers)
 			admin.PUT("/users/:username/password", h.AdminResetPassword)
 			admin.PUT("/users/:username/active", h.SetUserActive)
+			admin.PUT("/users/:username/admin", h.SetUserAdmin)
+			admin.DELETE("/users/:username", h.DeleteUser)
 		}
 	}
 }
