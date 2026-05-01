@@ -20,11 +20,23 @@ import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
 import { CategoryPixelBox } from "@/components/category-pixel-box";
-import { Settings, Share2, Check, ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { Settings, Share2, Check, ChevronLeft, ChevronRight, Heart, Lock } from "lucide-react";
 import type {
   HangurStats, Outfit, HeatmapEntry, ProfileConfig,
   WishlistItem, ClothingItem, OutfitLog, PublicProfile,
 } from "@/lib/types";
+
+function PrivateSection({ label }: { label: string }) {
+  return (
+    <section>
+      <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide mb-3">{label}</h2>
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed text-muted-foreground text-sm">
+        <Lock className="h-3.5 w-3.5 shrink-0" />
+        <span>This section is private</span>
+      </div>
+    </section>
+  );
+}
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   outerwear: 5, top: 4, bottom: 3, shoes: 2, accessory: 1,
@@ -192,12 +204,16 @@ export default function ProfilePage() {
 
   const pub = !isSelf ? (publicProfile as PublicProfile) : null;
 
-  // Sections visible to other viewer
-  const showSnapshot = isSelf || !!pub?.snapshot;
-  const showOutfits = isSelf || !!(pub?.outfits?.length);
-  const showCalendar = isSelf || !!pub?.calendar;
-  const showSignature = isSelf || !!(pub?.signature?.length);
-  const showWishlist = isSelf || !!(pub?.wishlist?.length);
+  // Section visibility for other viewers: enabled = section is on, has data or is known private
+  const pubSections = pub?.sections;
+  const allPrivate = !isSelf && pubSections != null &&
+    !pubSections.snapshot && !pubSections.outfits && !pubSections.calendar && !pubSections.signature && !pubSections.wishlist;
+
+  const showSnapshot = isSelf || !!pubSections?.snapshot;
+  const showOutfits = isSelf || !!pubSections?.outfits;
+  const showCalendar = isSelf || !!pubSections?.calendar;
+  const showSignature = isSelf || !!pubSections?.signature;
+  const showWishlist = isSelf || !!pubSections?.wishlist;
 
   const shownOutfits = isSelf
     ? outfits.filter((o) => galleryTab === "hidden" ? o.hidden : !o.hidden)
@@ -244,6 +260,12 @@ export default function ProfilePage() {
       {isSelf && loading ? (
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+        </div>
+      ) : allPrivate ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+          <Lock className="h-8 w-8 text-muted-foreground" />
+          <p className="font-semibold">Private profile</p>
+          <p className="text-sm text-muted-foreground">This person hasn&apos;t made their hangur public yet.</p>
         </div>
       ) : (
         <>
@@ -321,6 +343,11 @@ export default function ProfilePage() {
             </section>
           )}
 
+          {/* snapshot hidden placeholder */}
+          {!isSelf && !showSnapshot && (
+            <PrivateSection label="Overview" />
+          )}
+
           {/* outfit gallery */}
           {showOutfits && (
             <section className="space-y-3">
@@ -367,6 +394,11 @@ export default function ProfilePage() {
                 </div>
               )}
             </section>
+          )}
+
+          {/* outfits hidden placeholder */}
+          {!isSelf && !showOutfits && (
+            <PrivateSection label="Outfit Gallery" />
           )}
 
           {/* wear calendar */}
@@ -463,6 +495,11 @@ export default function ProfilePage() {
             </section>
           )}
 
+          {/* calendar hidden placeholder */}
+          {!isSelf && !showCalendar && (
+            <PrivateSection label="Wear Calendar" />
+          )}
+
           {/* favourites (signature pieces) */}
           {showSignature && topWornItems.length > 0 && (
             <section className="space-y-3">
@@ -491,6 +528,11 @@ export default function ProfilePage() {
                 })}
               </div>
             </section>
+          )}
+
+          {/* favourites hidden placeholder */}
+          {!isSelf && !showSignature && (
+            <PrivateSection label="Favourites" />
           )}
 
           {/* never worn (self only) */}
@@ -524,6 +566,11 @@ export default function ProfilePage() {
                 <p className="text-xs text-muted-foreground">+{neverWorn.length - 8} more</p>
               )}
             </section>
+          )}
+
+          {/* wishlist hidden placeholder */}
+          {!isSelf && !showWishlist && (
+            <PrivateSection label="Wishlist" />
           )}
 
           {/* wishlist */}

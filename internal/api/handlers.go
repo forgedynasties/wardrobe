@@ -910,6 +910,7 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 		DisplayName:  user.DisplayName,
 		Username:     user.Username,
 		AvatarColors: []string{},
+		Sections:     cfg.Sections,
 	}
 
 	if colors, err := h.store.GetAvatarColors(username); err == nil {

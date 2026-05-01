@@ -218,14 +218,15 @@ type ProfileConfig struct {
 }
 
 type PublicProfile struct {
-	DisplayName  string         `json:"display_name"`
-	Username     string         `json:"username"`
-	AvatarColors []string       `json:"avatar_colors"`
-	Snapshot     *HangurStats `json:"snapshot,omitempty"`
-	Outfits      []Outfit       `json:"outfits,omitempty"`
-	Calendar     []HeatmapEntry `json:"calendar,omitempty"`
-	Signature    []TopItem      `json:"signature,omitempty"`
-	Wishlist     []WishlistItem `json:"wishlist,omitempty"`
+	DisplayName  string           `json:"display_name"`
+	Username     string           `json:"username"`
+	AvatarColors []string         `json:"avatar_colors"`
+	Sections     ProfileSections  `json:"sections"`
+	Snapshot     *HangurStats     `json:"snapshot,omitempty"`
+	Outfits      []Outfit         `json:"outfits,omitempty"`
+	Calendar     []HeatmapEntry   `json:"calendar,omitempty"`
+	Signature    []TopItem        `json:"signature,omitempty"`
+	Wishlist     []WishlistItem   `json:"wishlist,omitempty"`
 }
 
 type LeaderboardEntry struct {

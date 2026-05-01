@@ -19,6 +19,7 @@ export interface PublicProfile {
   display_name: string;
   username: string;
   avatar_colors: string[];
+  sections: ProfileSections;
   snapshot?: HangurStats;
   outfits?: Outfit[];
   calendar?: HeatmapEntry[];
