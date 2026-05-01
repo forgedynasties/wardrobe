@@ -1,214 +1,624 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { getPublicProfile, imageUrl, thumbnailUrl } from "@/lib/api";
+import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  getPublicProfile, getProfileSettings, setProfileSettings,
+  getHangurStats, getOutfitsPage, getWearHeatmap, getOutfitLogs,
+  getWishlistItems, getItems, thumbnailUrl, imageUrl,
+  updateOutfit,
+} from "@/lib/api";
+import { outfitRefreshStore } from "@/lib/outfit-refresh";
+import { useUser } from "@/lib/user-context";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WearHeatmap } from "@/components/wear-heatmap";
-import { ShimmerImg } from "@/components/shimmer-img";
 import { OutfitCard } from "@/components/outfit-card";
-import { Lock, ExternalLink, Star } from "lucide-react";
+import { OutfitCanvas } from "@/components/outfit-canvas";
+import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
-import type { PublicProfile } from "@/lib/types";
-import Link from "next/link";
+import { CategoryPixelBox } from "@/components/category-pixel-box";
+import { Settings, Share2, Check, ChevronLeft, ChevronRight, Heart, ExternalLink } from "lucide-react";
+import type {
+  HangurStats, Outfit, HeatmapEntry, ProfileConfig,
+  WishlistItem, ClothingItem, OutfitLog, ProfileSections, PublicProfile,
+} from "@/lib/types";
 
-export default function PublicProfilePage() {
+const SECTION_KEYS: (keyof ProfileSections)[] = ["snapshot", "outfits", "calendar", "signature", "wishlist"];
+
+const CATEGORY_WEIGHT: Record<string, number> = {
+  outerwear: 5, top: 4, bottom: 3, shoes: 2, accessory: 1,
+};
+const sortByCategory = (items: ClothingItem[]) =>
+  [...items].sort(
+    (a, b) =>
+      (CATEGORY_WEIGHT[b.category?.toLowerCase() ?? ""] ?? 0) -
+      (CATEGORY_WEIGHT[a.category?.toLowerCase() ?? ""] ?? 0),
+  );
+
+const toKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+const buildMonthCells = (year: number, month: number): (Date | null)[] => {
+  const first = new Date(year, month, 1).getDay();
+  const total = new Date(year, month + 1, 0).getDate();
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < first; i++) cells.push(null);
+  for (let d = 1; d <= total; d++) cells.push(new Date(year, month, d));
+  return cells;
+};
+const isSameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+async function doShare(title: string, url: string, onCopied: () => void) {
+  if (typeof navigator === "undefined") return;
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); return; } catch {}
+  }
+  await navigator.clipboard.writeText(url);
+  onCopied();
+}
+
+function SectionHeader({
+  title,
+  sectionKey,
+  isSelf,
+  config,
+  onToggle,
+}: {
+  title: string;
+  sectionKey: keyof ProfileSections;
+  isSelf: boolean;
+  config: ProfileConfig | null;
+  onToggle: (key: keyof ProfileSections) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">{title}</h2>
+      {isSelf && config && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {config.sections[sectionKey] ? "Public" : "Private"}
+          </span>
+          <Switch
+            checked={config.sections[sectionKey]}
+            onCheckedChange={() => onToggle(sectionKey)}
+            className="scale-75 origin-right"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const [profile, setProfile] = useState<PublicProfile | null | "not-found">(null);
+  const { user, hydrated } = useUser();
+  const router = useRouter();
+  const isSelf = hydrated && !!user && user.username === username;
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+
+  // Self-view state
+  const outfitVersion = useSyncExternalStore(
+    outfitRefreshStore.subscribe,
+    outfitRefreshStore.getSnapshot,
+    () => 0,
+  );
+  const [config, setConfig] = useState<ProfileConfig | null>(null);
+  const [stats, setStats] = useState<HangurStats | null>(null);
+  const [outfits, setOutfits] = useState<Outfit[]>([]);
+  const [heatmapYear, setHeatmapYear] = useState(currentYear);
+  const [heatmap, setHeatmap] = useState<HeatmapEntry[]>([]);
+  const [wearLogs, setWearLogs] = useState<OutfitLog[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [neverWorn, setNeverWorn] = useState<ClothingItem[]>([]);
+  const [monthAnchor, setMonthAnchor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [galleryTab, setGalleryTab] = useState<"visible" | "hidden">("visible");
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Other-view state
+  const [publicProfile, setPublicProfile] = useState<PublicProfile | null | "not-found">(null);
+
+  // Load self data
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!isSelf) return;
+    Promise.all([
+      getProfileSettings(),
+      getHangurStats(),
+      getOutfitsPage(50),
+      getWishlistItems(),
+      getItems(),
+    ]).then(([cfg, s, page, wl, items]) => {
+      setConfig(cfg);
+      setStats(s);
+      setOutfits(page.data);
+      setWishlist(wl.filter((w) => !w.bought_at));
+      setNeverWorn(items.filter((i) => !i.last_worn));
+    }).finally(() => setLoading(false));
+  }, [hydrated, isSelf]);
 
   useEffect(() => {
-    getPublicProfile(username)
-      .then(setProfile)
-      .catch(() => setProfile("not-found"));
-  }, [username]);
+    if (!isSelf || outfitVersion === 0) return;
+    getOutfitsPage(50).then((page) => setOutfits(page.data));
+  }, [outfitVersion, isSelf]);
 
-  if (profile === null) {
+  useEffect(() => {
+    if (!isSelf) return;
+    const y = monthAnchor.getFullYear();
+    if (y !== heatmapYear) setHeatmapYear(y);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthAnchor]);
+
+  useEffect(() => {
+    if (!isSelf) return;
+    const start = `${heatmapYear}-01-01`;
+    const end = `${heatmapYear}-12-31`;
+    Promise.all([
+      getWearHeatmap(heatmapYear),
+      getOutfitLogs(start, end),
+    ]).then(([hm, logs]) => {
+      setHeatmap(hm);
+      setWearLogs([...logs].sort((a, b) => b.wear_date.localeCompare(a.wear_date)));
+    });
+  }, [heatmapYear, isSelf]);
+
+  // Load public data
+  useEffect(() => {
+    if (!hydrated) return;
+    if (isSelf) return;
+    getPublicProfile(username)
+      .then(setPublicProfile)
+      .catch(() => setPublicProfile("not-found"));
+  }, [hydrated, isSelf, username]);
+
+  const toggleSection = useCallback(async (key: keyof ProfileSections) => {
+    if (!config) return;
+    const updated: ProfileConfig = {
+      ...config,
+      sections: { ...config.sections, [key]: !config.sections[key] },
+    };
+    setConfig(updated);
+    await setProfileSettings(updated);
+  }, [config]);
+
+  const handleShare = () => {
+    const displayName = isSelf ? user!.display_name : (publicProfile as PublicProfile)?.display_name ?? username;
+    const url = `${window.location.origin}/p/${username}`;
+    doShare(`${displayName}'s Hangur`, url, () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  // Wait until we know if self or not
+  if (!hydrated) {
     return (
-      <div className="p-4 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 max-w-2xl mx-auto space-y-4">
         <Skeleton className="h-24 rounded-xl" />
         <Skeleton className="h-48 rounded-xl" />
       </div>
     );
   }
 
-  if (profile === "not-found") {
+  // Other-view: loading
+  if (!isSelf && publicProfile === null) {
+    return (
+      <div className="p-4 max-w-2xl mx-auto space-y-4">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
+      </div>
+    );
+  }
+
+  // Other-view: not found / private
+  if (!isSelf && (publicProfile === "not-found" || !publicProfile)) {
     return (
       <div className="p-4 max-w-lg mx-auto flex flex-col items-center justify-center py-24 text-center">
-        <Lock className="h-10 w-10 text-muted-foreground mb-4" />
         <p className="text-lg font-semibold">Profile not found</p>
-        <p className="text-sm text-muted-foreground mt-1">This profile is private or doesn't exist.</p>
+        <p className="text-sm text-muted-foreground mt-1">This profile is private or doesn&apos;t exist.</p>
       </div>
     );
   }
 
-  const hasAnything = !!(
-    profile.snapshot || profile.outfits?.length || profile.calendar || profile.signature?.length || profile.wishlist?.length
-  );
+  // Normalise data for rendering
+  const displayName = isSelf ? user!.display_name : (publicProfile as PublicProfile).display_name;
+  const usernameLabel = isSelf ? user!.username : (publicProfile as PublicProfile).username;
+  const avatarColors = isSelf
+    ? (stats?.colors ?? [])
+    : ((publicProfile as PublicProfile).avatar_colors ?? []);
 
-  if (!hasAnything) {
-    return (
-      <div className="p-4 max-w-lg mx-auto flex flex-col items-center justify-center py-24 text-center">
-        <Lock className="h-10 w-10 text-muted-foreground mb-4" />
-        <p className="text-lg font-semibold">{profile.display_name}'s profile is private</p>
-      </div>
-    );
-  }
+  const pub = !isSelf ? (publicProfile as PublicProfile) : null;
 
-  const year = new Date().getFullYear();
+  // Sections visible to other viewer
+  const showSnapshot = isSelf || !!pub?.snapshot;
+  const showOutfits = isSelf || !!(pub?.outfits?.length);
+  const showCalendar = isSelf || !!pub?.calendar;
+  const showSignature = isSelf || !!(pub?.signature?.length);
+  const showWishlist = isSelf || !!(pub?.wishlist?.length);
+
+  const shownOutfits = isSelf
+    ? outfits.filter((o) => galleryTab === "hidden" ? o.hidden : !o.hidden)
+    : (pub?.outfits ?? []);
+
+  const topWornItems = isSelf
+    ? (stats?.top_worn_items ?? [])
+    : (pub?.signature ?? []);
+
+  const calendarData = isSelf ? heatmap : (pub?.calendar ?? []);
+  const calYear = isSelf ? heatmapYear : currentYear;
+
+  const wishlistItems = isSelf
+    ? [...wishlist].sort((a, b) => b.priority - a.priority)
+    : [...(pub?.wishlist ?? [])].sort((a, b) => b.priority - a.priority);
 
   return (
-    <div className="p-4 max-w-4xl mx-auto space-y-8">
+    <div className="p-4 max-w-2xl mx-auto space-y-8 pb-24">
       {/* header */}
-      <div className="flex items-center gap-3">
-        <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
-          <HangurAvatar colors={profile.avatar_colors ?? []} username={profile.username} size={56} />
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full overflow-hidden shrink-0">
+            <HangurAvatar colors={avatarColors} username={usernameLabel} size={56} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">{displayName}</h1>
+            <p className="text-sm text-muted-foreground">@{usernameLabel}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">{profile.display_name}</h1>
-          <p className="text-sm text-muted-foreground">@{profile.username}</p>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleShare}>
+            {copied
+              ? <><Check className="h-4 w-4 text-green-500" />Copied</>
+              : <><Share2 className="h-4 w-4" />Share</>}
+          </Button>
+          {isSelf && (
+            <Button variant="ghost" size="icon" onClick={() => router.push("/profile/settings")}>
+              <Settings className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* snapshot */}
-      {profile.snapshot && (
+      {isSelf && loading ? (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold border-b pb-2">Style Snapshot</h2>
-          <div className="grid grid-cols-3 gap-3">
-            <Card className="p-4 text-center">
-              <p className="text-3xl font-bold">{profile.snapshot.total_items}</p>
-              <p className="text-xs text-muted-foreground mt-1">Items</p>
-            </Card>
-            <Card className="p-4 text-center">
-              <p className="text-3xl font-bold">{profile.snapshot.total_outfits}</p>
-              <p className="text-xs text-muted-foreground mt-1">Outfits</p>
-            </Card>
-            <Card className="p-4 text-center">
-              <p className="text-3xl font-bold">{profile.snapshot.total_wears}</p>
-              <p className="text-xs text-muted-foreground mt-1">Wears</p>
-            </Card>
-          </div>
-
-          {profile.snapshot.colors.length > 0 && (
-            <Card className="p-4">
-              <p className="text-sm font-medium mb-3">Color Palette</p>
-              <div className="flex flex-wrap gap-2">
-                {profile.snapshot.colors.map((c) => (
-                  <div
-                    key={c}
-                    className="w-8 h-8 rounded-full border border-border shadow-sm"
-                    style={{ backgroundColor: c }}
-                    title={c}
-                  />
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {profile.snapshot.items_by_category.length > 0 && (
-            <Card className="p-4">
-              <p className="text-sm font-medium mb-3">Categories</p>
-              <div className="space-y-2">
-                {profile.snapshot.items_by_category.map((cat) => (
-                  <div key={cat.category} className="flex items-center gap-3">
-                    <span className="text-sm capitalize w-24 shrink-0">{cat.category}</span>
-                    <div className="flex-1 h-2 bg-muted/50 rounded overflow-hidden">
-                      <div
-                        className="h-full bg-primary/70 rounded"
-                        style={{ width: `${(cat.count / (profile.snapshot!.total_items || 1)) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium w-6 text-right">{cat.count}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
-      )}
+      ) : (
+        <>
+          {/* overview / snapshot */}
+          {showSnapshot && (
+            <section className="space-y-3">
+              <SectionHeader title="Overview" sectionKey="snapshot" isSelf={isSelf} config={config} onToggle={toggleSection} />
+              {(() => {
+                const s = isSelf ? stats : pub?.snapshot;
+                if (!s) return null;
+                return (
+                  <>
+                    <Card className="p-4">
+                      <div className="grid grid-cols-3 divide-x divide-border">
+                        <div className="text-center pr-4">
+                          <p className="text-3xl font-bold tracking-tight">{s.total_items}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Items</p>
+                        </div>
+                        <div className="text-center px-4">
+                          <p className="text-3xl font-bold tracking-tight">{s.total_outfits}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Outfits</p>
+                        </div>
+                        <div className="text-center pl-4">
+                          <p className="text-3xl font-bold tracking-tight">{s.total_wears}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Wears</p>
+                          {isSelf && s.wears_this_month > 0 && (
+                            <p className="text-[10px] text-muted-foreground/60 mt-0.5">{s.wears_this_month} this month</p>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
 
-      {/* outfit gallery */}
-      {profile.outfits && profile.outfits.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold border-b pb-2">Outfit Gallery</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {profile.outfits.map((outfit) => (
-              <OutfitCard key={outfit.id} outfit={outfit} href={`/p/${username}/outfits/${outfit.id}`} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* wear calendar */}
-      {profile.calendar && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold border-b pb-2">Wear Calendar {year}</h2>
-          <Card className="p-4">
-            <WearHeatmap data={profile.calendar} year={year} />
-          </Card>
-        </div>
-      )}
-
-      {/* signature pieces */}
-      {profile.signature && profile.signature.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold border-b pb-2">Signature Pieces</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {profile.signature.map(({ item, wear_count }) => {
-              const src = item.image_status === "done" || item.raw_image_url
-                ? thumbnailUrl(item)
-                : null;
-              return (
-                <Card key={item.id} className="overflow-hidden">
-                  <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
-                    {src ? (
-                      <ShimmerImg src={src} alt={item.category} className="w-full h-full object-contain" />
-                    ) : (
-                      <span className="text-3xl">👕</span>
+                    {isSelf && s.never_worn_items > 0 && s.total_items > 0 && (
+                      <p className="text-sm text-muted-foreground px-1">
+                        You haven&apos;t worn{" "}
+                        <span className="font-semibold text-foreground">
+                          {Math.round((s.never_worn_items / s.total_items) * 100)}%
+                        </span>{" "}
+                        of your hangur.
+                      </p>
                     )}
-                    <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-medium">
-                      {wear_count}×
-                    </div>
-                  </div>
-                  <div className="p-2">
-                    <p className="text-sm font-medium capitalize">{item.sub_category || item.category}</p>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      {/* wishlist */}
-      {profile.wishlist && profile.wishlist.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold border-b pb-2">Wishlist</h2>
-          <div className="space-y-2">
-            {[...profile.wishlist].sort((a, b) => b.priority - a.priority).map((item) => (
-              <Card key={item.id} className="p-3 flex items-center gap-3">
-                {item.priority === 1 && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{item.name}</p>
-                  {item.notes && <p className="text-xs text-muted-foreground truncate">{item.notes}</p>}
+                    {s.items_by_category.length > 0 && (
+                      <Card className="p-4 space-y-2.5">
+                        {s.items_by_category.map((cat) => (
+                          <div key={cat.category} className="flex items-center gap-3">
+                            <span className="text-xs capitalize w-20 shrink-0 text-muted-foreground">{cat.category}</span>
+                            <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-foreground/30 rounded-full"
+                                style={{ width: `${(cat.count / (s.total_items || 1)) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-medium w-4 text-right tabular-nums text-muted-foreground">{cat.count}</span>
+                          </div>
+                        ))}
+                      </Card>
+                    )}
+
+                    {s.items_by_category.some((cat) => cat.colors?.length > 0) && (
+                      <Card className="p-4">
+                        <div className="flex flex-wrap gap-4">
+                          {s.items_by_category.filter((cat) => cat.colors?.length > 0).map((cat) => (
+                            <div key={cat.category} className="flex flex-col items-center gap-1.5">
+                              <CategoryPixelBox colors={cat.colors} size={48} />
+                              <span className="text-xs capitalize text-muted-foreground">{cat.category}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+                  </>
+                );
+              })()}
+            </section>
+          )}
+
+          {/* outfit gallery */}
+          {showOutfits && (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <SectionHeader title="Outfit Gallery" sectionKey="outfits" isSelf={isSelf} config={config} onToggle={toggleSection} />
+                {isSelf && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <button
+                      onClick={() => setGalleryTab("visible")}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${galleryTab === "visible" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Gallery
+                    </button>
+                    <button
+                      onClick={() => setGalleryTab("hidden")}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${galleryTab === "hidden" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Hidden {outfits.filter((o) => o.hidden).length > 0 && `(${outfits.filter((o) => o.hidden).length})`}
+                    </button>
+                  </div>
+                )}
+              </div>
+              {shownOutfits.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{isSelf && galleryTab === "hidden" ? "No hidden outfits." : "No outfits yet."}</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {shownOutfits.map((o) => (
+                    <OutfitCard
+                      key={o.id}
+                      outfit={o}
+                      href={isSelf ? undefined : `/p/${username}/outfits/${o.id}`}
+                      onToggleHidden={isSelf ? () => {
+                        updateOutfit(o.id, { hidden: !o.hidden }).then((updated) =>
+                          setOutfits((prev) => prev.map((x) => x.id === updated.id ? updated : x))
+                        );
+                      } : undefined}
+                      onTogglePinned={isSelf ? () => {
+                        updateOutfit(o.id, { pinned: !o.pinned }).then((updated) =>
+                          setOutfits((prev) => prev.map((x) => x.id === updated.id ? updated : x))
+                        );
+                      } : undefined}
+                    />
+                  ))}
                 </div>
-                {item.price_pkr > 0 && (
-                  <span className="text-sm font-medium shrink-0">PKR {item.price_pkr.toLocaleString()}</span>
-                )}
-                {item.product_url && (
-                  <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                )}
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+              )}
+            </section>
+          )}
 
-      <p className="text-xs text-muted-foreground text-center pt-4">
-        Made with <Link href="/" className="underline underline-offset-2">Hangur</Link>
-      </p>
+          {/* wear calendar */}
+          {showCalendar && (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <SectionHeader title="Wear Calendar" sectionKey="calendar" isSelf={isSelf} config={config} onToggle={toggleSection} />
+                {isSelf && (
+                  <div className="flex items-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="h-7 w-7"
+                      onClick={() => setHeatmapYear((y) => y - 1)} disabled={heatmapYear <= 2023}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium w-10 text-center">{heatmapYear}</span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7"
+                      onClick={() => setHeatmapYear((y) => y + 1)} disabled={heatmapYear >= currentYear}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <Card className="p-4">
+                <WearHeatmap data={calendarData} year={calYear} />
+              </Card>
+
+              {isSelf && (() => {
+                const logsMap = new Map(wearLogs.map((log) => [log.wear_date.split("T")[0], log]));
+                const cells = buildMonthCells(monthAnchor.getFullYear(), monthAnchor.getMonth());
+                const atCurrent =
+                  monthAnchor.getFullYear() === today.getFullYear() &&
+                  monthAnchor.getMonth() === today.getMonth();
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-0.5">
+                      <Button variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={() => setMonthAnchor((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm font-medium">
+                        {monthAnchor.toLocaleString("default", { month: "long", year: "numeric" })}
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={() => setMonthAnchor((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+                        disabled={atCurrent}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Card className="p-3">
+                      <div className="grid grid-cols-7 gap-1">
+                        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                          <div key={i} className="text-center text-[10px] text-muted-foreground py-1">{d}</div>
+                        ))}
+                        {cells.map((date, idx) => {
+                          const dateStr = date ? toKey(date) : null;
+                          const log = dateStr ? logsMap.get(dateStr) ?? null : null;
+                          const hasLog = !!log;
+                          const isToday = !!date && isSameDay(date, today);
+                          const sortedItems = log?.items ? sortByCategory(log.items) : [];
+                          return (
+                            <div
+                              key={idx}
+                              className={`relative aspect-square rounded-md flex items-center justify-center transition-colors ${
+                                !date ? "bg-transparent"
+                                  : hasLog ? "bg-primary/10 hover:bg-primary/20 cursor-pointer"
+                                  : "bg-muted/30 hover:bg-muted/40 cursor-pointer"
+                              } ${isToday ? "ring-1 ring-primary" : ""}`}
+                              onClick={() => date && router.push(`/logger/${toKey(date)}`)}
+                            >
+                              {date && (
+                                <>
+                                  <span className={`absolute top-0.5 left-1 text-[9px] font-medium leading-none z-10 ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                                    {date.getDate()}
+                                  </span>
+                                  {hasLog && sortedItems.length > 0 && (
+                                    <div className="absolute inset-[8px] top-[14px]">
+                                      <OutfitCanvas items={sortedItems.slice(0, 4)} />
+                                    </div>
+                                  )}
+                                  {hasLog && sortedItems.length === 0 && (
+                                    <div className="w-2 h-2 rounded-full bg-primary mt-3" />
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Card>
+                  </div>
+                );
+              })()}
+            </section>
+          )}
+
+          {/* favourites (signature pieces) */}
+          {showSignature && topWornItems.length > 0 && (
+            <section className="space-y-3">
+              <SectionHeader title={`${displayName}'s Favourites`} sectionKey="signature" isSelf={isSelf} config={config} onToggle={toggleSection} />
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {topWornItems.map(({ item, wear_count }) => {
+                  const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
+                  const itemHref = isSelf ? `/items/${item.id}` : `/p/${username}/items/${item.id}`;
+                  return (
+                    <Link key={item.id} href={itemHref}>
+                      <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
+                        <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
+                          {src
+                            ? <ShimmerImg src={src} alt={item.category} className="w-full h-full object-contain" />
+                            : <span className="text-2xl">👕</span>}
+                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1 py-0.5 rounded font-medium">
+                            {wear_count}×
+                          </div>
+                        </div>
+                        <div className="p-1.5">
+                          <p className="text-xs font-medium capitalize truncate">{item.sub_category || item.category}</p>
+                        </div>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* never worn (self only) */}
+          {isSelf && neverWorn.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
+                Never Worn <span className="text-xs font-normal">({neverWorn.length})</span>
+              </h2>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {neverWorn.slice(0, 8).map((item) => {
+                  const src = item.image_status === "done" && item.image_url
+                    ? imageUrl(item.image_url)
+                    : item.raw_image_url ? imageUrl(item.raw_image_url) : null;
+                  return (
+                    <Link key={item.id} href={`/items/${item.id}`}>
+                      <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
+                        <div className="aspect-square bg-muted/40 flex items-center justify-center">
+                          {src
+                            ? <img src={src} alt={item.category} className="w-full h-full object-contain p-1" />
+                            : <span className="text-2xl">👕</span>}
+                        </div>
+                        <div className="p-1.5">
+                          <p className="text-xs font-medium capitalize truncate">{item.sub_category || item.category}</p>
+                        </div>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+              {neverWorn.length > 8 && (
+                <p className="text-xs text-muted-foreground">+{neverWorn.length - 8} more</p>
+              )}
+            </section>
+          )}
+
+          {/* wishlist */}
+          {showWishlist && wishlistItems.length > 0 && (
+            <section className="space-y-3">
+              <SectionHeader title="Wishlist" sectionKey="wishlist" isSelf={isSelf} config={config} onToggle={toggleSection} />
+              <div className="flex gap-3 overflow-x-auto py-1 -mx-4 px-4">
+                {wishlistItems.map((item) => (
+                  <a
+                    key={item.id}
+                    href={item.product_url || undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 w-32"
+                  >
+                    <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
+                      <div className="aspect-square bg-muted/40 flex items-center justify-center">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl">🛍️</span>
+                        )}
+                      </div>
+                      <div className="p-1.5 space-y-0.5">
+                        <div className="flex items-center gap-1">
+                          {item.priority === 1 && (
+                            <Heart className="h-3 w-3 shrink-0 text-red-500 fill-red-500" />
+                          )}
+                          <p className="text-xs font-medium truncate">{item.name}</p>
+                        </div>
+                        {item.price_pkr > 0 && (
+                          <p className="text-[10px] text-muted-foreground">PKR {item.price_pkr.toLocaleString()}</p>
+                        )}
+                      </div>
+                    </Card>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {!isSelf && (
+            <p className="text-xs text-muted-foreground text-center pt-4">
+              Made with <Link href="/" className="underline underline-offset-2">Hangur</Link>
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

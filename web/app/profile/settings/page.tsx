@@ -16,7 +16,7 @@ const SECTION_META: { key: keyof ProfileSections; label: string; desc: string; i
   { key: "snapshot", label: "Style Snapshot", desc: "Hangur size, categories, and color palette", icon: BarChart3 },
   { key: "outfits", label: "Outfit Gallery", desc: "Grid of outfits you've created", icon: Sparkles },
   { key: "calendar", label: "Wear Calendar", desc: "Heatmap of days you wore outfits", icon: CalendarDays },
-  { key: "signature", label: "Signature Pieces", desc: "Your most-worn clothing items", icon: Trophy },
+  { key: "signature", label: "Favourites", desc: "Your most-worn clothing items", icon: Trophy },
   { key: "wishlist", label: "Wishlist", desc: "Items you want to get (unbought only)", icon: Heart },
 ];
 

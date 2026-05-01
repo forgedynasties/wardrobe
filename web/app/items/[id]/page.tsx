@@ -84,7 +84,7 @@ export default function ItemDetailPage() {
     setDeleting(true);
     try {
       await deleteItem(id);
-      router.push("/hangur");
+      router.push("/");
     } catch {
       setDeleting(false);
     }
@@ -126,7 +126,7 @@ export default function ItemDetailPage() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/hangur")} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" />
           Hangur
         </Button>

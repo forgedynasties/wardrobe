@@ -47,7 +47,7 @@ export default function ImageGuidePage() {
     <div className="p-4 max-w-lg mx-auto pb-24 space-y-6">
       <div className="flex items-center gap-2">
         <Link
-          href="/hangur"
+          href="/"
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

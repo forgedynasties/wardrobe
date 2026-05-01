@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { getPublicOutfit, thumbnailUrl } from "@/lib/api";
 import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Lock } from "lucide-react";
-import Link from "next/link";
 import type { Outfit } from "@/lib/types";
 
 export default function PublicOutfitPage() {
@@ -42,7 +42,7 @@ export default function PublicOutfitPage() {
       <h1 className="text-2xl font-bold">{outfit.name}</h1>
 
       {outfit.items && outfit.items.length > 0 && (
-        <div className="aspect-[3/4] w-full bg-muted/30 rounded-xl overflow-hidden">
+        <div className="aspect-[3/4] w-full bg-muted/30 rounded-xl overflow-hidden relative">
           <OutfitCanvas items={outfit.items} />
         </div>
       )}
@@ -54,11 +54,15 @@ export default function PublicOutfitPage() {
             {outfit.items.map((item) => {
               const src = thumbnailUrl(item) || null;
               return (
-                <div key={item.id} className="aspect-square bg-card rounded-lg overflow-hidden flex items-center justify-center">
+                <Link
+                  key={item.id}
+                  href={`/p/${username}/items/${item.id}`}
+                  className="aspect-square bg-card rounded-lg overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-primary/40 transition-all"
+                >
                   {src
                     ? <ShimmerImg src={src} alt={item.category} className="w-full h-full object-contain p-1" />
                     : <span className="text-xl">{item.category === "Shoes" ? "👟" : "👕"}</span>}
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -70,7 +74,7 @@ export default function PublicOutfitPage() {
         <Link href={`/p/${username}`} className="underline underline-offset-2">
           @{username}
         </Link>
-        's hangur
+        &apos;s hangur
       </p>
     </div>
   );
