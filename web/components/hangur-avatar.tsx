@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
 function hslToHex(h: number, s: number, l: number): string {
   s /= 100; l /= 100;
   const a = s * Math.min(l, 1 - l);
@@ -13,7 +11,7 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-function vibrate(hex: string): string {
+function soften(hex: string): string {
   if (!hex.startsWith("#") || hex.length < 7) return hex;
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -24,7 +22,7 @@ function vibrate(hex: string): string {
   const h = (max === r ? (g - b) / d + (g < b ? 6 : 0)
            : max === g ? (b - r) / d + 2
            : (r - g) / d + 4) / 6 * 360;
-  return hslToHex(h, 80, 52);
+  return hslToHex(h, 55, 58);
 }
 
 function hash(s: string): number {
@@ -35,27 +33,17 @@ function hash(s: string): number {
   return h >>> 0;
 }
 
-function seededRng(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    return (s >>> 0) / 0xffffffff;
-  };
-}
-
 function hashToColors(username: string): string[] {
   const h = hash(username);
   const hue1 = h % 360;
   const hue2 = (hue1 + 137) % 360;
   const hue3 = (hue1 + 74) % 360;
   return [
-    `hsl(${hue1},60%,55%)`,
-    `hsl(${hue2},60%,55%)`,
-    `hsl(${hue3},55%,45%)`,
+    hslToHex(hue1, 55, 58),
+    hslToHex(hue2, 55, 58),
+    hslToHex(hue3, 50, 50),
   ];
 }
-
-const GRID = 8;
 
 interface Props {
   colors: string[];
@@ -65,37 +53,44 @@ interface Props {
 }
 
 export function HangurAvatar({ colors, username = "", size = 48, className }: Props) {
-  const palette = colors.length > 0 ? [...new Set(colors)].slice(0, 10).map(vibrate) : hashToColors(username);
+  const palette = colors.length > 0
+    ? [...new Set(colors)].slice(0, 3).map(soften)
+    : hashToColors(username);
 
-  const cells = useMemo(() => {
-    const rand = seededRng(hash(username || "x"));
-    return Array.from({ length: GRID * GRID }, () => palette[Math.floor(rand() * palette.length)]);
-  }, [username, palette.join(",")]);
+  const c0 = palette[0];
+  const c1 = palette[1] ?? palette[0];
+  const c2 = palette[2] ?? palette[1] ?? palette[0];
 
-  const cell = size / GRID;
+  const id = `blob-${username || "x"}-${size}`;
 
   return (
     <svg
       width={size}
       height={size}
-      viewBox={`0 0 ${size} ${size}`}
+      viewBox="0 0 100 100"
       className={className}
-      shapeRendering="crispEdges"
+      style={{ borderRadius: "50%", display: "block" }}
     >
-      {cells.map((color, i) => {
-        const col = i % GRID;
-        const row = Math.floor(i / GRID);
-        return (
-          <rect
-            key={i}
-            x={col * cell}
-            y={row * cell}
-            width={cell}
-            height={cell}
-            fill={color}
-          />
-        );
-      })}
+      <defs>
+        <filter id={`${id}-blur`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="18" />
+        </filter>
+        <clipPath id={`${id}-clip`}>
+          <circle cx="50" cy="50" r="50" />
+        </clipPath>
+      </defs>
+
+      <g clipPath={`url(#${id}-clip)`}>
+        {/* dark base */}
+        <rect width="100" height="100" fill="#161616" />
+
+        {/* blobs */}
+        <g filter={`url(#${id}-blur)`}>
+          <circle cx="35" cy="40" r="45" fill={c0} fillOpacity="0.85" />
+          <circle cx="68" cy="62" r="40" fill={c1} fillOpacity="0.75" />
+          <circle cx="50" cy="18" r="36" fill={c2} fillOpacity="0.65" />
+        </g>
+      </g>
     </svg>
   );
 }

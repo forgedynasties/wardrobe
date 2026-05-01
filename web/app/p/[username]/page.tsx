@@ -95,6 +95,8 @@ export default function ProfilePage() {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const [avatarColors, setAvatarColors] = useState<string[]>([]);
+
   // Other-view state
   const [publicProfile, setPublicProfile] = useState<PublicProfile | null | "not-found">(null);
 
@@ -134,14 +136,16 @@ export default function ProfilePage() {
     });
   }, [heatmapYear, isSelf]);
 
-  // Load public data
+  // Load public data (always — avatar_colors must match what others see)
   useEffect(() => {
     if (!hydrated) return;
-    if (isSelf) return;
     getPublicProfile(username)
-      .then(setPublicProfile)
-      .catch(() => setPublicProfile("not-found"));
-  }, [hydrated, isSelf, username]);
+      .then((p) => {
+        setAvatarColors(p.avatar_colors ?? []);
+        if (!isSelf) setPublicProfile(p);
+      })
+      .catch(() => { if (!isSelf) setPublicProfile("not-found"); });
+  }, [hydrated, username, isSelf]);
 
   const handleShare = () => {
     const displayName = isSelf ? user!.display_name : (publicProfile as PublicProfile)?.display_name ?? username;
@@ -185,9 +189,6 @@ export default function ProfilePage() {
   // Normalise data for rendering
   const displayName = isSelf ? user!.display_name : (publicProfile as PublicProfile).display_name;
   const usernameLabel = isSelf ? user!.username : (publicProfile as PublicProfile).username;
-  const avatarColors = isSelf
-    ? (stats?.colors ?? [])
-    : ((publicProfile as PublicProfile).avatar_colors ?? []);
 
   const pub = !isSelf ? (publicProfile as PublicProfile) : null;
 
