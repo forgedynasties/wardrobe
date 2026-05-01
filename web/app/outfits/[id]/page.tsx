@@ -175,19 +175,42 @@ export default function OutfitDetailPage() {
             />
           </div>
 
+          {outfit.items && outfit.items.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Remove items</Label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {outfit.items.map((item) => {
+                  const src = thumbnailUrl(item) || null;
+                  return (
+                    <div key={item.id} className="relative">
+                      <div className="bg-card rounded-lg aspect-square flex items-center justify-center overflow-hidden">
+                        {src ? (
+                          <img src={src} alt={item.category} className="object-contain w-full h-full p-2" />
+                        ) : (
+                          <span className="text-3xl text-muted-foreground/50">
+                            {item.category === "Shoes" ? "👟" : "👕"}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleRemoveItem(item.id)}
+                        disabled={removingItem === item.id}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-xs"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
-            <Button
-              className="flex-1"
-              onClick={handleSave}
-              disabled={saving}
-            >
+            <Button className="flex-1" onClick={handleSave} disabled={saving}>
               {saving ? "Saving..." : "Save"}
             </Button>
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setEditing(false)}
-            >
+            <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>
               Cancel
             </Button>
           </div>
@@ -270,14 +293,7 @@ export default function OutfitDetailPage() {
                           </span>
                         )}
                       </Link>
-                      <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        disabled={removingItem === item.id}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
+                                    </div>
                   );
                 })}
               </div>

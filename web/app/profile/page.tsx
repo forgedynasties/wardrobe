@@ -96,6 +96,11 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!hydrated || !user) return;
+    router.replace(`/p/${user.username}`);
+  }, [hydrated, user, router]);
+
+  useEffect(() => {
+    if (!hydrated || !user) return;
     Promise.all([
       getProfileSettings(),
       getHangurStats(),
