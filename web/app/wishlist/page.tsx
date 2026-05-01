@@ -202,7 +202,8 @@ export default function WishlistPage() {
 
   // ── item card ──────────────────────────────────────────────────────────────
 
-  function WishlistCard({ item, bought = false }: { item: WishlistItem; bought?: boolean }) {
+  function WishlistCard({ item }: { item: WishlistItem }) {
+    const bought = !!item.bought_at;
     return (
       <Card className="overflow-hidden flex flex-col">
         <div className="aspect-square bg-muted/40 flex items-center justify-center overflow-hidden relative">
@@ -446,7 +447,7 @@ export default function WishlistPage() {
               </button>
               {showBought && (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 opacity-60">
-                  {boughtItems.map((item) => <WishlistCard key={item.id} item={item} bought />)}
+                  {boughtItems.map((item) => <WishlistCard key={item.id} item={item} />)}
                 </div>
               )}
             </div>
