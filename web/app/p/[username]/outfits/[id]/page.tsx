@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getPublicOutfit, thumbnailUrl } from "@/lib/api";
 import { OutfitCanvas } from "@/components/outfit-canvas";
+import { OutfitExportButton } from "@/components/outfit-export-button";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Lock } from "lucide-react";
@@ -39,7 +40,10 @@ export default function PublicOutfitPage() {
 
   return (
     <div className="p-4 max-w-sm mx-auto space-y-4">
-      <h1 className="text-2xl font-bold">{outfit.name}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">{outfit.name}</h1>
+        <OutfitExportButton items={outfit.items ?? []} name={outfit.name} />
+      </div>
 
       {outfit.items && outfit.items.length > 0 && (
         <div className="aspect-[3/4] w-full bg-muted/30 rounded-xl overflow-hidden relative">

@@ -22,10 +22,12 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 	api.GET("/profile/public/:username/items/:id", h.GetPublicItem)
 	api.GET("/profile/public/:username/outfits/:id", h.GetPublicOutfit)
 
+	// Public image proxy (no auth — needed for canvas export by guests)
+	api.GET("/image/*filepath", h.ServeImage)
+
 	// All other routes require a valid session
 	protected := api.Group("", h.AuthMiddleware())
 	{
-		protected.GET("/image/*filepath", h.ServeImage)
 
 		items := protected.Group("/items")
 		{
