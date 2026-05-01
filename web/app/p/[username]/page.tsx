@@ -394,61 +394,62 @@ export default function ProfilePage() {
               {(() => {
                 const logsMap = new Map(wearLogs.map((log) => [log.wear_date.split("T")[0], log]));
                 const heatmapMap = new Map(calendarData.map((e) => [e.date, e.count]));
-                const cells = buildMonthCells(monthAnchor.getFullYear(), monthAnchor.getMonth());
-                const atCurrent =
-                  monthAnchor.getFullYear() === today.getFullYear() &&
-                  monthAnchor.getMonth() === today.getMonth();
+                const weekDays = buildWeekDays(weekAnchor);
+                const weekEnd = weekDays[6];
+                const atCurrent = isSameDay(weekAnchor, startOfWeek(today));
+                const weekLabel = (() => {
+                  const s = weekDays[0];
+                  const e = weekDays[6];
+                  if (s.getMonth() === e.getMonth())
+                    return s.toLocaleString("default", { month: "long", year: "numeric" });
+                  return `${s.toLocaleString("default", { month: "short" })} – ${e.toLocaleString("default", { month: "short", year: "numeric" })}`;
+                })();
                 return (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between px-0.5">
                       <Button variant="ghost" size="icon" className="h-7 w-7"
-                        onClick={() => setMonthAnchor((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>
+                        onClick={() => setWeekAnchor((w) => { const d = new Date(w); d.setDate(d.getDate() - 7); return d; })}>
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <span className="text-sm font-medium">
-                        {monthAnchor.toLocaleString("default", { month: "long", year: "numeric" })}
-                      </span>
+                      <span className="text-sm font-medium">{weekLabel}</span>
                       <Button variant="ghost" size="icon" className="h-7 w-7"
-                        onClick={() => setMonthAnchor((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+                        onClick={() => setWeekAnchor((w) => { const d = new Date(w); d.setDate(d.getDate() + 7); return d; })}
                         disabled={atCurrent}>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
                     <Card className="p-3">
-                      <div className="grid grid-cols-7 gap-1">
+                      <div className="grid grid-cols-7 gap-1.5">
                         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                          <div key={i} className="text-center text-[10px] text-muted-foreground py-1">{d}</div>
+                          <div key={i} className="text-center text-[10px] text-muted-foreground pb-1">{d}</div>
                         ))}
-                        {cells.map((date, idx) => {
-                          const dateStr = date ? toKey(date) : null;
-                          const log = dateStr ? logsMap.get(dateStr) ?? null : null;
-                          const hasLog = isSelf ? !!log : !!(dateStr && heatmapMap.get(dateStr));
-                          const isToday = !!date && isSameDay(date, today);
+                        {weekDays.map((date, idx) => {
+                          const dateStr = toKey(date);
+                          const log = logsMap.get(dateStr) ?? null;
+                          const hasLog = isSelf ? !!log : !!(heatmapMap.get(dateStr));
+                          const isToday = isSameDay(date, today);
+                          const isFuture = date > today;
                           const sortedItems = log?.items ? sortByCategory(log.items) : [];
                           return (
                             <div
                               key={idx}
-                              className={`relative aspect-square rounded-md flex items-center justify-center transition-colors ${
-                                !date ? "bg-transparent"
+                              className={`relative aspect-square rounded-lg flex items-center justify-center transition-colors ${
+                                isFuture ? "bg-muted/20 opacity-40"
                                   : hasLog ? "bg-primary/10" + (isSelf ? " hover:bg-primary/20 cursor-pointer" : "")
-                                  : "bg-muted/30"
+                                  : "bg-muted/30" + (isSelf ? " hover:bg-muted/40 cursor-pointer" : "")
                               } ${isToday ? "ring-1 ring-primary" : ""}`}
-                              onClick={() => isSelf && date && router.push(`/logger/${toKey(date)}`)}
+                              onClick={() => isSelf && !isFuture && router.push(`/logger/${dateStr}`)}
                             >
-                              {date && (
-                                <>
-                                  <span className={`absolute top-0.5 left-1 text-[9px] font-medium leading-none z-10 ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                                    {date.getDate()}
-                                  </span>
-                                  {hasLog && sortedItems.length > 0 && (
-                                    <div className="absolute inset-[8px] top-[14px]">
-                                      <OutfitCanvas items={sortedItems.slice(0, 4)} />
-                                    </div>
-                                  )}
-                                  {hasLog && sortedItems.length === 0 && (
-                                    <div className="w-2 h-2 rounded-full bg-primary mt-3" />
-                                  )}
-                                </>
+                              <span className={`absolute top-1 left-1.5 text-[9px] font-medium leading-none z-10 ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                                {date.getDate()}
+                              </span>
+                              {hasLog && sortedItems.length > 0 && (
+                                <div className="absolute inset-[8px] top-[14px]">
+                                  <OutfitCanvas items={sortedItems.slice(0, 4)} />
+                                </div>
+                              )}
+                              {hasLog && sortedItems.length === 0 && (
+                                <div className="w-2 h-2 rounded-full bg-primary mt-3" />
                               )}
                             </div>
                           );
