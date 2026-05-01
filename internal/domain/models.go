@@ -228,6 +228,15 @@ type PublicProfile struct {
 	Wishlist     []WishlistItem `json:"wishlist,omitempty"`
 }
 
+type LeaderboardEntry struct {
+	Username    string   `json:"username"`
+	DisplayName string   `json:"display_name"`
+	AvatarColors []string `json:"avatar_colors"`
+	TotalItems  int      `json:"total_items"`
+	TotalOutfits int     `json:"total_outfits"`
+	TotalWears  int      `json:"total_wears"`
+}
+
 type HangurStats struct {
 	TotalItems      int              `json:"total_items"`
 	TotalOutfits    int              `json:"total_outfits"`

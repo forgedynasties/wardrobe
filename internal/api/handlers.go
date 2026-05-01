@@ -960,3 +960,12 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, profile)
 }
+
+func (h *Handler) GetLeaderboard(c *gin.Context) {
+	entries, err := h.store.GetLeaderboard()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, entries)
+}

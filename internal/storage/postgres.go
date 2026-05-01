@@ -1488,3 +1488,36 @@ func (s *Store) GetHangurStats(owner string) (*domain.HangurStats, error) {
 
 	return stats, nil
 }
+
+func (s *Store) GetLeaderboard() ([]domain.LeaderboardEntry, error) {
+	rows, err := s.db.Query(`
+		SELECT u.username, u.display_name,
+			COALESCE((
+				SELECT ARRAY_AGG(DISTINCT c ORDER BY c)
+				FROM clothing_items ci, LATERAL unnest(ci.colors) AS c
+				WHERE ci.owner = u.username
+			), '{}') AS avatar_colors,
+			COALESCE((SELECT COUNT(*) FROM clothing_items WHERE owner = u.username), 0) AS total_items,
+			COALESCE((SELECT COUNT(*) FROM outfits WHERE owner = u.username), 0) AS total_outfits,
+			COALESCE((SELECT COUNT(*) FROM outfit_logs WHERE owner = u.username), 0) AS total_wears
+		FROM users u
+		WHERE u.is_active = true
+		ORDER BY total_wears DESC, total_items DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []domain.LeaderboardEntry
+	for rows.Next() {
+		var e domain.LeaderboardEntry
+		if err := rows.Scan(&e.Username, &e.DisplayName, pq.Array(&e.AvatarColors), &e.TotalItems, &e.TotalOutfits, &e.TotalWears); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	if entries == nil {
+		entries = []domain.LeaderboardEntry{}
+	}
+	return entries, rows.Err()
+}

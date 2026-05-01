@@ -169,6 +169,15 @@ export interface TopItem {
   wear_count: number;
 }
 
+export interface LeaderboardEntry {
+  username: string;
+  display_name: string;
+  avatar_colors: string[];
+  total_items: number;
+  total_outfits: number;
+  total_wears: number;
+}
+
 export interface HangurStats {
   total_items: number;
   total_outfits: number;

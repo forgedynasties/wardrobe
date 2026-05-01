@@ -18,6 +18,7 @@ import type {
   HeatmapEntry,
   ProfileConfig,
   PublicProfile,
+  LeaderboardEntry,
 } from "./types";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
 
@@ -294,6 +295,10 @@ export function setProfileSettings(cfg: ProfileConfig): Promise<ProfileConfig> {
 
 export function getPublicProfile(username: string): Promise<PublicProfile> {
   return fetcher(`/api/profile/public/${username}`);
+}
+
+export function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  return fetcher("/api/leaderboard");
 }
 
 export function getPublicItem(username: string, id: string): Promise<ClothingItem> {

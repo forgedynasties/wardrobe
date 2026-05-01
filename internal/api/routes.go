@@ -18,6 +18,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 	}
 
 	// Public endpoints (no auth)
+	api.GET("/leaderboard", h.GetLeaderboard)
 	api.GET("/profile/public/:username", h.GetPublicProfile)
 	api.GET("/profile/public/:username/items/:id", h.GetPublicItem)
 	api.GET("/profile/public/:username/outfits/:id", h.GetPublicOutfit)
