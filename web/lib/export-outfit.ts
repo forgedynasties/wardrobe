@@ -54,6 +54,74 @@ function drawContain(
   ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(255 * c).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function softenHex(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const d = max - min;
+  if (d < 0.04) return hex;
+  const h = (max === r ? (g - b) / d + (g < b ? 6 : 0)
+           : max === g ? (b - r) / d + 2
+           : (r - g) / d + 4) / 6 * 360;
+  return hslToHex(h, 55, 58);
+}
+
+function colorsFromItems(items: Item[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of items) {
+    for (const c of (item.colors ?? [])) {
+      if (!seen.has(c)) { seen.add(c); out.push(c); }
+    }
+  }
+  return out;
+}
+
+function drawBlobBackground(
+  ctx: CanvasRenderingContext2D,
+  colors: string[],
+  w: number,
+  h: number,
+) {
+  ctx.fillStyle = "#161616";
+  ctx.fillRect(0, 0, w, h);
+
+  if (colors.length === 0) return;
+
+  const vivid = colors.slice(0, 3).map(softenHex);
+  const blobs = [
+    { cx: w * 0.30, cy: h * 0.35, r: w * 0.65 },
+    { cx: w * 0.72, cy: h * 0.62, r: w * 0.60 },
+    { cx: w * 0.50, cy: h * 0.12, r: w * 0.55 },
+  ];
+
+  ctx.save();
+  ctx.filter = "blur(160px)";
+
+  vivid.forEach((hex, i) => {
+    const { cx, cy, r } = blobs[i];
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, hex + "bb");
+    grad.addColorStop(1, hex + "00");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  });
+
+  ctx.restore();
+}
+
 function slugify(s: string): string {
   return s
     .toLowerCase()
@@ -88,8 +156,7 @@ export async function exportOutfitImage(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no canvas context");
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  drawBlobBackground(ctx, colorsFromItems(items), CANVAS_W, CANVAS_H);
 
   const cfg = outfitConfig.get();
   const useCustom = hasCustomLayout(items);
@@ -151,8 +218,8 @@ export async function exportOutfitImage(
   }
 
   ctx.save();
-  ctx.globalAlpha = 0.4;
-  ctx.fillStyle = "#111";
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = "#ffffff";
   ctx.font = "600 30px system-ui, -apple-system, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "bottom";
