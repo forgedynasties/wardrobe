@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserSwitcher } from "@/components/user-switcher";
+import { Button } from "@/components/ui/button";
 
 export function TopBar() {
   return (
@@ -14,6 +16,11 @@ export function TopBar() {
         <span className="font-heading text-sm font-semibold tracking-tight">Hangur</span>
       </Link>
       <div className="flex items-center gap-1">
+        <Link href="/leaderboard">
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="Leaderboard">
+            <Trophy className="h-4 w-4" />
+          </Button>
+        </Link>
         <ThemeToggle />
         <UserSwitcher />
       </div>
