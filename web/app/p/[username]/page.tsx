@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  getPublicProfile, getProfileSettings, setProfileSettings,
+  getPublicProfile, getProfileSettings,
   getHangurStats, getOutfitsPage, getWearHeatmap, getOutfitLogs,
   getWishlistItems, getItems, thumbnailUrl, imageUrl,
   updateOutfit,
@@ -13,7 +13,6 @@ import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import { useUser } from "@/lib/user-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WearHeatmap } from "@/components/wear-heatmap";
 import { OutfitCard } from "@/components/outfit-card";
@@ -21,13 +20,11 @@ import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
 import { CategoryPixelBox } from "@/components/category-pixel-box";
-import { Settings, Share2, Check, ChevronLeft, ChevronRight, Heart, ExternalLink } from "lucide-react";
+import { Settings, Share2, Check, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import type {
   HangurStats, Outfit, HeatmapEntry, ProfileConfig,
-  WishlistItem, ClothingItem, OutfitLog, ProfileSections, PublicProfile,
+  WishlistItem, ClothingItem, OutfitLog, PublicProfile,
 } from "@/lib/types";
-
-const SECTION_KEYS: (keyof ProfileSections)[] = ["snapshot", "outfits", "calendar", "signature", "wishlist"];
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   outerwear: 5, top: 4, bottom: 3, shoes: 2, accessory: 1,
@@ -45,14 +42,18 @@ const toKey = (d: Date) => {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
-const buildMonthCells = (year: number, month: number): (Date | null)[] => {
-  const first = new Date(year, month, 1).getDay();
-  const total = new Date(year, month + 1, 0).getDate();
-  const cells: (Date | null)[] = [];
-  for (let i = 0; i < first; i++) cells.push(null);
-  for (let d = 1; d <= total; d++) cells.push(new Date(year, month, d));
-  return cells;
+const startOfWeek = (d: Date): Date => {
+  const copy = new Date(d);
+  copy.setDate(d.getDate() - d.getDay());
+  copy.setHours(0, 0, 0, 0);
+  return copy;
 };
+const buildWeekDays = (weekStart: Date): Date[] =>
+  Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  });
 const isSameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() &&
   a.getMonth() === b.getMonth() &&
@@ -65,38 +66,6 @@ async function doShare(title: string, url: string, onCopied: () => void) {
   }
   await navigator.clipboard.writeText(url);
   onCopied();
-}
-
-function SectionHeader({
-  title,
-  sectionKey,
-  isSelf,
-  config,
-  onToggle,
-}: {
-  title: string;
-  sectionKey: keyof ProfileSections;
-  isSelf: boolean;
-  config: ProfileConfig | null;
-  onToggle: (key: keyof ProfileSections) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">{title}</h2>
-      {isSelf && config && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {config.sections[sectionKey] ? "Public" : "Private"}
-          </span>
-          <Switch
-            checked={config.sections[sectionKey]}
-            onCheckedChange={() => onToggle(sectionKey)}
-            className="scale-75 origin-right"
-          />
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ProfilePage() {
@@ -114,7 +83,6 @@ export default function ProfilePage() {
     outfitRefreshStore.getSnapshot,
     () => 0,
   );
-  const [config, setConfig] = useState<ProfileConfig | null>(null);
   const [stats, setStats] = useState<HangurStats | null>(null);
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [heatmapYear, setHeatmapYear] = useState(currentYear);
@@ -122,7 +90,7 @@ export default function ProfilePage() {
   const [wearLogs, setWearLogs] = useState<OutfitLog[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [neverWorn, setNeverWorn] = useState<ClothingItem[]>([]);
-  const [monthAnchor, setMonthAnchor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(today));
   const [galleryTab, setGalleryTab] = useState<"visible" | "hidden">("visible");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -140,8 +108,7 @@ export default function ProfilePage() {
       getOutfitsPage(50),
       getWishlistItems(),
       getItems(),
-    ]).then(([cfg, s, page, wl, items]) => {
-      setConfig(cfg);
+    ]).then(([_cfg, s, page, wl, items]) => {
       setStats(s);
       setOutfits(page.data);
       setWishlist(wl.filter((w) => !w.bought_at));
@@ -153,13 +120,6 @@ export default function ProfilePage() {
     if (!isSelf || outfitVersion === 0) return;
     getOutfitsPage(50).then((page) => setOutfits(page.data));
   }, [outfitVersion, isSelf]);
-
-  useEffect(() => {
-    if (!isSelf) return;
-    const y = monthAnchor.getFullYear();
-    if (y !== heatmapYear) setHeatmapYear(y);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthAnchor]);
 
   useEffect(() => {
     if (!isSelf) return;
@@ -182,16 +142,6 @@ export default function ProfilePage() {
       .then(setPublicProfile)
       .catch(() => setPublicProfile("not-found"));
   }, [hydrated, isSelf, username]);
-
-  const toggleSection = useCallback(async (key: keyof ProfileSections) => {
-    if (!config) return;
-    const updated: ProfileConfig = {
-      ...config,
-      sections: { ...config.sections, [key]: !config.sections[key] },
-    };
-    setConfig(updated);
-    await setProfileSettings(updated);
-  }, [config]);
 
   const handleShare = () => {
     const displayName = isSelf ? user!.display_name : (publicProfile as PublicProfile)?.display_name ?? username;
@@ -299,7 +249,7 @@ export default function ProfilePage() {
           {/* overview / snapshot */}
           {showSnapshot && (
             <section className="space-y-3">
-              <SectionHeader title="Overview" sectionKey="snapshot" isSelf={isSelf} config={config} onToggle={toggleSection} />
+              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Overview</h2>
               {(() => {
                 const s = isSelf ? stats : pub?.snapshot;
                 if (!s) return null;
@@ -374,7 +324,7 @@ export default function ProfilePage() {
           {showOutfits && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <SectionHeader title="Outfit Gallery" sectionKey="outfits" isSelf={isSelf} config={config} onToggle={toggleSection} />
+                <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Outfit Gallery</h2>
                 {isSelf && (
                   <div className="flex items-center gap-1 text-sm">
                     <button
@@ -422,7 +372,7 @@ export default function ProfilePage() {
           {showCalendar && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <SectionHeader title="Wear Calendar" sectionKey="calendar" isSelf={isSelf} config={config} onToggle={toggleSection} />
+                <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Wear Calendar</h2>
                 {isSelf && (
                   <div className="flex items-center gap-0.5">
                     <Button variant="ghost" size="icon" className="h-7 w-7"
@@ -441,8 +391,9 @@ export default function ProfilePage() {
                 <WearHeatmap data={calendarData} year={calYear} />
               </Card>
 
-              {isSelf && (() => {
+              {(() => {
                 const logsMap = new Map(wearLogs.map((log) => [log.wear_date.split("T")[0], log]));
+                const heatmapMap = new Map(calendarData.map((e) => [e.date, e.count]));
                 const cells = buildMonthCells(monthAnchor.getFullYear(), monthAnchor.getMonth());
                 const atCurrent =
                   monthAnchor.getFullYear() === today.getFullYear() &&
@@ -471,7 +422,7 @@ export default function ProfilePage() {
                         {cells.map((date, idx) => {
                           const dateStr = date ? toKey(date) : null;
                           const log = dateStr ? logsMap.get(dateStr) ?? null : null;
-                          const hasLog = !!log;
+                          const hasLog = isSelf ? !!log : !!(dateStr && heatmapMap.get(dateStr));
                           const isToday = !!date && isSameDay(date, today);
                           const sortedItems = log?.items ? sortByCategory(log.items) : [];
                           return (
@@ -479,10 +430,10 @@ export default function ProfilePage() {
                               key={idx}
                               className={`relative aspect-square rounded-md flex items-center justify-center transition-colors ${
                                 !date ? "bg-transparent"
-                                  : hasLog ? "bg-primary/10 hover:bg-primary/20 cursor-pointer"
-                                  : "bg-muted/30 hover:bg-muted/40 cursor-pointer"
+                                  : hasLog ? "bg-primary/10" + (isSelf ? " hover:bg-primary/20 cursor-pointer" : "")
+                                  : "bg-muted/30"
                               } ${isToday ? "ring-1 ring-primary" : ""}`}
-                              onClick={() => date && router.push(`/logger/${toKey(date)}`)}
+                              onClick={() => isSelf && date && router.push(`/logger/${toKey(date)}`)}
                             >
                               {date && (
                                 <>
@@ -513,7 +464,7 @@ export default function ProfilePage() {
           {/* favourites (signature pieces) */}
           {showSignature && topWornItems.length > 0 && (
             <section className="space-y-3">
-              <SectionHeader title={`${displayName}'s Favourites`} sectionKey="signature" isSelf={isSelf} config={config} onToggle={toggleSection} />
+              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">{displayName}&apos;s Favourites</h2>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {topWornItems.map(({ item, wear_count }) => {
                   const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
@@ -576,7 +527,7 @@ export default function ProfilePage() {
           {/* wishlist */}
           {showWishlist && wishlistItems.length > 0 && (
             <section className="space-y-3">
-              <SectionHeader title="Wishlist" sectionKey="wishlist" isSelf={isSelf} config={config} onToggle={toggleSection} />
+              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Wishlist</h2>
               <div className="flex gap-3 overflow-x-auto py-1 -mx-4 px-4">
                 {wishlistItems.map((item) => (
                   <a
