@@ -3,7 +3,8 @@
 README.md
 CLAUDE.md
 AGENTS.md
-web
+web/node_modules
+web/.next
 node_modules
 uploads
 articles

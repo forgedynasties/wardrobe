@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"strings"
 
@@ -90,6 +93,22 @@ func main() {
 		AllowCredentials: true,
 	}))
 	api.RegisterRoutes(r, handler)
+
+	// Proxy all non-API requests to the Next.js server.
+	nextURL := os.Getenv("NEXT_URL")
+	if nextURL == "" {
+		nextURL = "http://localhost:3000"
+	}
+	if target, err := url.Parse(nextURL); err == nil {
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, err error) {
+			log.Printf("next.js proxy error: %v", err)
+			http.Error(w, "frontend unavailable", http.StatusBadGateway)
+		}
+		r.NoRoute(func(c *gin.Context) {
+			proxy.ServeHTTP(c.Writer, c.Request)
+		})
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
