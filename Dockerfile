@@ -25,7 +25,7 @@ COPY --from=webuild /web/.next/standalone /app/web
 COPY migrations /app/migrations
 
 # start.sh: launch Next.js then Go (Go is the public-facing server)
-RUN printf '#!/bin/sh\ncd /app/web && node server.js &\nexec /app/server\n' > /app/start.sh && \
+RUN printf '#!/bin/sh\ncd /app/web && PORT=3000 HOSTNAME=0.0.0.0 node server.js &\nexec /app/server\n' > /app/start.sh && \
     chmod +x /app/start.sh
 
 ENV NEXT_URL=http://localhost:3000
