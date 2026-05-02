@@ -21,12 +21,12 @@ export function FitBuilder({ onSelect, initialItems }: FitBuilderProps) {
   );
   const [filter, setFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getItems()
       .then(setItems)
-      .catch(() => setError(true))
+      .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
@@ -58,15 +58,19 @@ export function FitBuilder({ onSelect, initialItems }: FitBuilderProps) {
     );
   }
 
-  if (error || (!loading && items.length === 0)) {
+  if (error !== null || (!loading && items.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg bg-muted/20">
         <span className="text-4xl mb-4">{error ? "⚠️" : "👕"}</span>
         <p className="text-muted-foreground font-medium">
-          {error ? "Connection Error" : "Your hangur is empty"}
+          {error
+            ? error.includes("authenticated") ? "Session Expired" : "Connection Error"
+            : "Your hangur is empty"}
         </p>
         <p className="text-sm text-muted-foreground mt-1 text-center px-4">
-          {error ? "The backend might not be reachable. Check the console for details." : "Start by uploading some clothes to your hangur!"}
+          {error
+            ? error.includes("authenticated") ? "Log out and log back in to continue." : "The backend might not be reachable. Check the console for details."
+            : "Start by uploading some clothes to your hangur!"}
         </p>
       </div>
     );
