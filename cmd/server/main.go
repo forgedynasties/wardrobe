@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -68,22 +69,21 @@ func main() {
 	handler := api.NewHandler(store, imageStore, worker)
 
 	r := gin.Default()
-	// CORS configuration with proper origin handling
-	allowedOrigins := []string{
-		"https://wardrobe.cd4li.space",
-		"https://srv-d7hsitho3t8c73akfq5g.onrender.com",
-		"https://wardrobe-front-production.up.railway.app",
-		"http://localhost:3000",
-		"http://localhost:3001",
+	// CORS configuration with proper origin handling.
+	// Override via ALLOWED_ORIGINS env var (comma-separated).
+	rawOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if rawOrigins == "" {
+		rawOrigins = "http://localhost:3000,http://localhost:3001"
+	}
+	allowedOrigins := strings.Split(rawOrigins, ",")
+	allowedSet := make(map[string]struct{}, len(allowedOrigins))
+	for _, o := range allowedOrigins {
+		allowedSet[strings.TrimSpace(o)] = struct{}{}
 	}
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			for _, allowed := range allowedOrigins {
-				if origin == allowed {
-					return true
-				}
-			}
-			return false
+			_, ok := allowedSet[origin]
+			return ok
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Content-Type", "Authorization", "X-User"},
