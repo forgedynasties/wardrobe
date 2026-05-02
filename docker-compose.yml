@@ -21,7 +21,6 @@ services:
     container_name: hangur-backend
     env_file: .env
     environment:
-      DATABASE_URL: postgres://wardrobe:wardrobe@db:5432/wardrobe?sslmode=disable
       PORT: "8081"
     ports:
       - "8081:8081"

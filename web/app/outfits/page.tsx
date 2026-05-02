@@ -4,11 +4,9 @@ import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import Link from "next/link";
 import { Plus, Sparkles, ArrowUpDown } from "lucide-react";
-import { getOutfitsPage, getOutfitRecommendations, getOutfitSuggestions } from "@/lib/api";
+import { getOutfitsPage } from "@/lib/api";
 import { OutfitCard } from "@/components/outfit-card";
 import { OutfitStats } from "@/components/outfit-stats";
-import { OutfitRecommendations } from "@/components/outfit-recommendations";
-import { OutfitSuggestions } from "@/components/outfit-suggestions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -18,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Outfit, OutfitRecommendation, OutfitSuggestion } from "@/lib/types";
+import type { Outfit } from "@/lib/types";
 
 type SortOption = "recent" | "most-worn" | "least-worn" | "last-worn" | "never-worn";
 
@@ -30,8 +28,6 @@ export default function OutfitsPage() {
   );
 
   const [outfits, setOutfits] = useState<Outfit[]>([]);
-  const [recommendations, setRecommendations] = useState<OutfitRecommendation[]>([]);
-  const [suggestions, setSuggestions] = useState<OutfitSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
@@ -39,12 +35,10 @@ export default function OutfitsPage() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([getOutfitsPage(20), getOutfitRecommendations(5), getOutfitSuggestions(3)])
-      .then(([page, recs, sugs]) => {
+    getOutfitsPage(20)
+      .then((page) => {
         setOutfits(page.data);
         setNextCursor(page.next_cursor);
-        setRecommendations(recs);
-        setSuggestions(sugs);
       })
       .finally(() => setLoading(false));
   }, [refreshVersion]);
@@ -60,10 +54,6 @@ export default function OutfitsPage() {
       setLoadingMore(false);
     }
   }, [nextCursor, loadingMore]);
-
-  const handleShuffle = () => {
-    getOutfitSuggestions(3).then(setSuggestions);
-  };
 
   const sortedOutfits = [...outfits].sort((a, b) => {
     switch (sortBy) {
@@ -135,10 +125,6 @@ export default function OutfitsPage() {
       ) : (
         <>
           <OutfitStats outfits={outfits} />
-
-          <OutfitRecommendations recommendations={recommendations} />
-
-          <OutfitSuggestions suggestions={suggestions} onRefresh={handleShuffle} />
 
           <div className="flex gap-2 items-center">
             <span className="text-sm font-medium flex items-center gap-1.5"><ArrowUpDown className="h-3.5 w-3.5" />Sort by:</span>

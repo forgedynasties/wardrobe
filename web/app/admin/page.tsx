@@ -17,8 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Shield, RotateCcw, UserX, UserCheck, Users,
   ShieldCheck, ShieldOff, ExternalLink, Trash2,
-  ImageIcon, ChevronDown, ChevronUp, AlertTriangle,
+  ImageIcon, ChevronDown, ChevronUp, AlertTriangle, PanelLeft,
 } from "lucide-react";
+
+const LAYOUT_PANEL_KEY = "hangur.admin.layoutPanel";
 
 type Action = "reset-pw" | "delete" | null;
 
@@ -199,6 +201,9 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [recropStatus, setRecropStatus] = useState<string | null>(null);
   const [recropping, setRecropping] = useState(false);
+  const [layoutPanelEnabled, setLayoutPanelEnabled] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem(LAYOUT_PANEL_KEY) !== "false" : true
+  );
 
   useEffect(() => {
     if (!hydrated) return;
@@ -279,6 +284,24 @@ export default function AdminPage() {
           </div>
           <Button variant="outline" size="sm" onClick={handleRecrop} disabled={recropping} className="shrink-0">
             {recropping ? "Running..." : "Run"}
+          </Button>
+        </Card>
+        <Card className="p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-medium flex items-center gap-2"><PanelLeft className="h-4 w-4" />Layout panel</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Show or hide the outfit layout config panel (bottom-left floating button)</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => {
+              const next = !layoutPanelEnabled;
+              setLayoutPanelEnabled(next);
+              localStorage.setItem(LAYOUT_PANEL_KEY, String(next));
+            }}
+          >
+            {layoutPanelEnabled ? "Disable" : "Enable"}
           </Button>
         </Card>
       </section>

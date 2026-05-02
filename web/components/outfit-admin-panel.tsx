@@ -1,6 +1,8 @@
 "use client";
 
-import { useSyncExternalStore, useState } from "react";
+import { useSyncExternalStore, useState, useEffect } from "react";
+
+const LAYOUT_PANEL_KEY = "hangur.admin.layoutPanel";
 import { Settings2, RotateCcw, X } from "lucide-react";
 import { outfitConfig } from "@/lib/outfit-config";
 import { useUser } from "@/lib/user-context";
@@ -54,9 +56,19 @@ function SliderRow({ label, value, min, max, step, onChange, suffix }: SliderRow
 export function OutfitAdminPanel() {
   const { user } = useUser();
   const [open, setOpen] = useState(false);
+  const [enabled, setEnabled] = useState(true);
   const cfg = useCfg();
 
-  if (!user?.is_admin) return null;
+  useEffect(() => {
+    setEnabled(localStorage.getItem(LAYOUT_PANEL_KEY) !== "false");
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === LAYOUT_PANEL_KEY) setEnabled(e.newValue !== "false");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  if (!user?.is_admin || !enabled) return null;
 
   return (
     <>
