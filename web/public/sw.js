@@ -17,6 +17,11 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+const OFFLINE_RESPONSE = new Response(
+  JSON.stringify({ error: "offline" }),
+  { status: 503, headers: { "Content-Type": "application/json" } },
+);
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -26,22 +31,24 @@ self.addEventListener("fetch", (event) => {
 
   // Network-first for API + dynamic data.
   if (url.pathname.startsWith("/api/")) {
-    event.respondWith(fetch(req).catch(() => caches.match(req)));
+    event.respondWith(
+      fetch(req).catch(() => caches.match(req).then((c) => c ?? OFFLINE_RESPONSE.clone())),
+    );
     return;
   }
 
   // Stale-while-revalidate for Next build assets + page shell.
   event.respondWith(
-    caches.match(req).then((cached) => {
+    caches.match(req).catch(() => null).then((cached) => {
       const network = fetch(req)
         .then((res) => {
           if (res && res.status === 200 && res.type === "basic") {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => undefined);
           }
           return res;
         })
-        .catch(() => cached);
+        .catch(() => cached ?? OFFLINE_RESPONSE.clone());
       return cached || network;
     }),
   );
