@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // HTML entry points must revalidate on every deploy
+        source: "/((?!_next/static|_next/image|favicon.ico).*)",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
         source: "/sw.js",
         headers: [
           { key: "Content-Type", value: "application/javascript; charset=utf-8" },
