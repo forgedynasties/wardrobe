@@ -5,10 +5,12 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"path/filepath"
 )
 
 // CropTransparent rewrites the PNG at path with transparent margins trimmed.
 // Pixels with alpha below threshold are considered background.
+// Writes atomically: original is untouched if any step fails.
 func CropTransparent(path string, alphaThreshold uint8) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -60,13 +62,24 @@ func CropTransparent(path string, alphaThreshold uint8) error {
 	}
 	cropped := si.SubImage(cropRect)
 
-	out, err := os.Create(path)
+	tmp, err := os.CreateTemp(filepath.Dir(path), "crop-*.png")
 	if err != nil {
-		return fmt.Errorf("create: %w", err)
+		return fmt.Errorf("create tmp: %w", err)
 	}
-	defer out.Close()
-	if err := png.Encode(out, cropped); err != nil {
+	tmpName := tmp.Name()
+
+	if err := png.Encode(tmp, cropped); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
 		return fmt.Errorf("encode: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpName)
+		return fmt.Errorf("close tmp: %w", err)
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		os.Remove(tmpName)
+		return fmt.Errorf("rename: %w", err)
 	}
 	return nil
 }

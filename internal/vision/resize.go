@@ -5,12 +5,14 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/image/draw"
 )
 
 // ResizePNG rewrites the PNG at path so neither dimension exceeds maxSide.
 // If the image already fits, it is left untouched.
+// Writes atomically: original is untouched if any step fails.
 func ResizePNG(path string, maxSide int) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -28,7 +30,6 @@ func ResizePNG(path string, maxSide int) error {
 		return nil
 	}
 
-	// Scale down preserving aspect ratio
 	var dw, dh int
 	if w > h {
 		dw = maxSide
@@ -47,13 +48,24 @@ func ResizePNG(path string, maxSide int) error {
 	dst := image.NewNRGBA(image.Rect(0, 0, dw, dh))
 	draw.CatmullRom.Scale(dst, dst.Bounds(), src, b, draw.Over, nil)
 
-	out, err := os.Create(path)
+	tmp, err := os.CreateTemp(filepath.Dir(path), "resize-*.png")
 	if err != nil {
-		return fmt.Errorf("create: %w", err)
+		return fmt.Errorf("create tmp: %w", err)
 	}
-	defer out.Close()
-	if err := png.Encode(out, dst); err != nil {
+	tmpName := tmp.Name()
+
+	if err := png.Encode(tmp, dst); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
 		return fmt.Errorf("encode: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpName)
+		return fmt.Errorf("close tmp: %w", err)
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		os.Remove(tmpName)
+		return fmt.Errorf("rename: %w", err)
 	}
 	return nil
 }
