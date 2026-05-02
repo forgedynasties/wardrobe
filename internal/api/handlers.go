@@ -936,11 +936,17 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 	}
 
 	if s.Calendar {
-		if entries, err := h.store.GetWearHeatmap(username, time.Now().Year()); err == nil {
+		year := time.Now().Year()
+		if entries, err := h.store.GetWearHeatmap(username, year); err == nil {
 			profile.Calendar = entries
 			if profile.Calendar == nil {
 				profile.Calendar = []domain.HeatmapEntry{}
 			}
+		}
+		start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(year, 12, 31, 23, 59, 59, 0, time.UTC)
+		if logs, err := h.store.GetOutfitLogs(start, end, username); err == nil {
+			profile.OutfitLogs = logs
 		}
 	}
 

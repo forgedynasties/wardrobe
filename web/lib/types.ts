@@ -23,6 +23,7 @@ export interface PublicProfile {
   snapshot?: HangurStats;
   outfits?: Outfit[];
   calendar?: HeatmapEntry[];
+  outfit_logs?: OutfitLog[];
   signature?: TopItem[];
   wishlist?: WishlistItem[];
 }

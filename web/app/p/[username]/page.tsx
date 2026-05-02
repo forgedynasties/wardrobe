@@ -425,7 +425,8 @@ export default function ProfilePage() {
               </Card>
 
               {(() => {
-                const logsMap = new Map(wearLogs.map((log) => [log.wear_date.split("T")[0], log]));
+                const pubLogs = isSelf ? wearLogs : (pub?.outfit_logs ?? []);
+                const logsMap = new Map(pubLogs.map((log) => [log.wear_date.split("T")[0], log]));
                 const heatmapMap = new Map(calendarData.map((e) => [e.date, e.count]));
                 const weekDays = buildWeekDays(weekAnchor);
                 const weekEnd = weekDays[6];
@@ -459,7 +460,7 @@ export default function ProfilePage() {
                         {weekDays.map((date, idx) => {
                           const dateStr = toKey(date);
                           const log = logsMap.get(dateStr) ?? null;
-                          const hasLog = isSelf ? !!log : !!(heatmapMap.get(dateStr));
+                          const hasLog = !!log || !!(heatmapMap.get(dateStr));
                           const isToday = isSameDay(date, today);
                           const isFuture = date > today;
                           const sortedItems = log?.items ? sortByCategory(log.items) : [];

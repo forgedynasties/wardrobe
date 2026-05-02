@@ -225,6 +225,7 @@ type PublicProfile struct {
 	Snapshot     *HangurStats     `json:"snapshot,omitempty"`
 	Outfits      []Outfit         `json:"outfits,omitempty"`
 	Calendar     []HeatmapEntry   `json:"calendar,omitempty"`
+	OutfitLogs   []OutfitLog      `json:"outfit_logs,omitempty"`
 	Signature    []TopItem        `json:"signature,omitempty"`
 	Wishlist     []WishlistItem   `json:"wishlist,omitempty"`
 }
