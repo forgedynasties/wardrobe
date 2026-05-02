@@ -20,7 +20,9 @@ import type {
   PublicProfile,
   LeaderboardEntry,
 } from "./types";
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+// Empty string = same-origin (uses Next.js rewrites → no cross-site cookie issues on Safari).
+// Set NEXT_PUBLIC_API_URL only to override (e.g. direct backend in dev without rewrites).
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
