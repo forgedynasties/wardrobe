@@ -84,7 +84,7 @@ function load(): OutfitConfig {
   }
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 function persist(cfg: OutfitConfig) {
   if (typeof window === "undefined") return;
