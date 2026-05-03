@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"log"
 	"net/http"
 	"time"
 
@@ -120,6 +121,91 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	// Log them in immediately
+	token, err := generateToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if _, err := h.store.CreateSession(user.ID, token, sessionExpiry); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	setSessionCookie(c, token, cookieMaxAge)
+	c.JSON(http.StatusCreated, gin.H{
+		"username":     user.Username,
+		"display_name": user.DisplayName,
+		"is_admin":     user.IsAdmin,
+	})
+}
+
+func (h *Handler) InitiateSignup(c *gin.Context) {
+	var req domain.SignupInitiateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(req.Password) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 6 characters"})
+		return
+	}
+
+	// Check username not taken by an active user
+	existing, err := h.store.GetUserByUsername(req.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if existing != nil && existing.IsActive {
+		c.JSON(http.StatusConflict, gin.H{"error": "username already taken"})
+		return
+	}
+
+	// Check email not taken by an active user
+	existingEmail, err := h.store.GetUserByEmail(req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if existingEmail != nil && existingEmail.IsActive {
+		c.JSON(http.StatusConflict, gin.H{"error": "an account with this email already exists"})
+		return
+	}
+
+	code, err := h.store.StorePendingSignup(req.Email, req.Username, req.DisplayName, req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	if h.mailer != nil {
+		if err := h.mailer.SendOTP(req.Email, code); err != nil {
+			log.Printf("resend error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send verification email"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"email": req.Email})
+}
+
+func (h *Handler) VerifySignup(c *gin.Context) {
+	var req domain.SignupVerifyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.store.VerifyPendingSignup(req.Email, req.Code)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired code"})
+		return
+	}
+
 	token, err := generateToken()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})

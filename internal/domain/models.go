@@ -179,6 +179,7 @@ type User struct {
 	ID           uuid.UUID `json:"id"`
 	Username     string    `json:"username"`
 	DisplayName  string    `json:"display_name"`
+	Email        string    `json:"email,omitempty"`
 	PasswordHash string    `json:"-"`
 	IsAdmin      bool      `json:"is_admin"`
 	IsActive     bool      `json:"is_active"`
@@ -204,6 +205,18 @@ type RegisterRequest struct {
 	Username    string `json:"username" binding:"required"`
 	DisplayName string `json:"display_name" binding:"required"`
 	Password    string `json:"password" binding:"required"`
+}
+
+type SignupInitiateRequest struct {
+	Email       string `json:"email" binding:"required"`
+	Username    string `json:"username" binding:"required"`
+	DisplayName string `json:"display_name" binding:"required"`
+	Password    string `json:"password" binding:"required"`
+}
+
+type SignupVerifyRequest struct {
+	Email string `json:"email" binding:"required"`
+	Code  string `json:"code" binding:"required"`
 }
 
 type TopItem struct {

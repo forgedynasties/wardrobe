@@ -19,6 +19,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"hangur/internal/api"
+	"hangur/internal/email"
 	"hangur/internal/storage"
 	"hangur/internal/vision"
 )
@@ -69,7 +70,17 @@ func main() {
 	}
 	worker := vision.NewWorker(store, imageStore, 3)
 	defer worker.Shutdown()
-	handler := api.NewHandler(store, imageStore, worker)
+
+	var mailer *email.Sender
+	if resendKey := os.Getenv("RESEND_API_KEY"); resendKey != "" {
+		fromEmail := os.Getenv("EMAIL_FROM")
+		if fromEmail == "" {
+			fromEmail = "Hangur <noreply@hangur.app>"
+		}
+		mailer = email.NewSender(resendKey, fromEmail)
+	}
+
+	handler := api.NewHandler(store, imageStore, worker, mailer)
 
 	r := gin.Default()
 	// CORS configuration with proper origin handling.

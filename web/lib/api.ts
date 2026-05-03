@@ -37,7 +37,7 @@ async function fetcher<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API error ${res.status}`);
+    throw new Error(body.error || `API error ${res.status} (${path})`);
   }
   if (res.status === 204) return undefined as T;
   

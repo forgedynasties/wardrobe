@@ -130,12 +130,12 @@ export default function ProfilePage() {
       setWishlist(wl.filter((w) => !w.bought_at));
       setNeverWorn(items.filter((i) => !i.last_worn));
       setAllItems(items);
-    }).finally(() => setLoading(false));
+    }).catch(console.error).finally(() => setLoading(false));
   }, [hydrated, isSelf]);
 
   useEffect(() => {
     if (!isSelf || outfitVersion === 0) return;
-    getOutfitsPage(50).then((page) => setOutfits(page.data));
+    getOutfitsPage(50).then((page) => setOutfits(page.data)).catch(console.error);
   }, [outfitVersion, isSelf]);
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function ProfilePage() {
     ]).then(([hm, logs]) => {
       setHeatmap(hm);
       setWearLogs([...logs].sort((a, b) => b.wear_date.localeCompare(a.wear_date)));
-    });
+    }).catch(console.error);
   }, [heatmapYear, isSelf]);
 
   // Load public data (always — avatar_colors must match what others see)

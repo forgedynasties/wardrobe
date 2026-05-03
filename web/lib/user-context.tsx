@@ -17,6 +17,8 @@ type AuthContextValue = {
   hydrated: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, displayName: string, password: string) => Promise<void>;
+  initiateSignup: (email: string, username: string, displayName: string, password: string) => Promise<void>;
+  verifySignup: (email: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -67,13 +69,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setUser(data);
   }, []);
 
+  const initiateSignup = useCallback(async (email: string, username: string, displayName: string, password: string) => {
+    await apiFetch("/api/auth/signup/initiate", {
+      method: "POST",
+      body: JSON.stringify({ email, username, display_name: displayName, password }),
+    });
+  }, []);
+
+  const verifySignup = useCallback(async (email: string, code: string) => {
+    const data = await apiFetch("/api/auth/signup/verify", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
+    setUser(data);
+  }, []);
+
   const logout = useCallback(async () => {
     await apiFetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, hydrated, login, register, logout }}>
+    <AuthContext.Provider value={{ user, hydrated, login, register, initiateSignup, verifySignup, logout }}>
       {children}
     </AuthContext.Provider>
   );

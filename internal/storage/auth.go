@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
@@ -171,4 +172,96 @@ func (s *Store) DeleteUser(username string) error {
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (s *Store) GetUserByEmail(email string) (*domain.User, error) {
+	var u domain.User
+	err := s.db.QueryRow(`
+		SELECT id, username, display_name, password_hash, is_admin, is_active, created_at, updated_at
+		FROM users WHERE email = $1`, email).
+		Scan(&u.ID, &u.Username, &u.DisplayName, &u.PasswordHash, &u.IsAdmin, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &u, err
+}
+
+// StorePendingSignup upserts a pending signup row (keyed on email).
+// Returns the generated 6-digit OTP code (plain text) for sending.
+func (s *Store) StorePendingSignup(email, username, displayName, password string) (string, error) {
+	pwHash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return "", fmt.Errorf("hash password: %w", err)
+	}
+
+	code := fmt.Sprintf("%06d", mustRandInt(1000000))
+	h := sha256.Sum256([]byte(code))
+	otpHash := fmt.Sprintf("%x", h)
+	expiresAt := time.Now().Add(10 * time.Minute)
+
+	_, err = s.db.Exec(`
+		INSERT INTO pending_signups (email, username, display_name, password_hash, otp_hash, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (email) DO UPDATE SET
+			username = EXCLUDED.username,
+			display_name = EXCLUDED.display_name,
+			password_hash = EXCLUDED.password_hash,
+			otp_hash = EXCLUDED.otp_hash,
+			expires_at = EXCLUDED.expires_at,
+			created_at = NOW()`,
+		email, username, displayName, string(pwHash), otpHash, expiresAt)
+	if err != nil {
+		return "", err
+	}
+	return code, nil
+}
+
+// VerifyPendingSignup checks the OTP, creates the user, and cleans up the pending row.
+// Returns the new User on success, nil if OTP is invalid/expired.
+func (s *Store) VerifyPendingSignup(email, code string) (*domain.User, error) {
+	h := sha256.Sum256([]byte(code))
+	otpHash := fmt.Sprintf("%x", h)
+
+	var ps struct {
+		Username     string
+		DisplayName  string
+		PasswordHash string
+	}
+	err := s.db.QueryRow(`
+		SELECT username, display_name, password_hash FROM pending_signups
+		WHERE email = $1 AND otp_hash = $2 AND expires_at > NOW()`,
+		email, otpHash).
+		Scan(&ps.Username, &ps.DisplayName, &ps.PasswordHash)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var u domain.User
+	err = s.db.QueryRow(`
+		INSERT INTO users (username, display_name, email, password_hash, is_admin, is_active)
+		VALUES ($1, $2, $3, $4, false, true)
+		RETURNING id, username, display_name, password_hash, is_admin, is_active, created_at, updated_at`,
+		ps.Username, ps.DisplayName, email, ps.PasswordHash).
+		Scan(&u.ID, &u.Username, &u.DisplayName, &u.PasswordHash, &u.IsAdmin, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = s.db.Exec(`DELETE FROM pending_signups WHERE email = $1`, email)
+	return &u, nil
+}
+
+func mustRandInt(max int) int {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	n := int(b[0])<<24 | int(b[1])<<16 | int(b[2])<<8 | int(b[3])
+	if n < 0 {
+		n = -n
+	}
+	return n % max
 }

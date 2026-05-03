@@ -18,6 +18,7 @@ import (
 
 	"hangur/internal/cache"
 	"hangur/internal/domain"
+	"hangur/internal/email"
 	"hangur/internal/storage"
 	"hangur/internal/vision"
 )
@@ -26,15 +27,17 @@ type Handler struct {
 	store      *storage.Store
 	imageStore *storage.ImageStore
 	worker     *vision.Worker
+	mailer     *email.Sender
 	statsCache *cache.TTLCache[string, *domain.HangurStats]
 	recsCache  *cache.TTLCache[string, []domain.OutfitRecommendation]
 }
 
-func NewHandler(store *storage.Store, imageStore *storage.ImageStore, worker *vision.Worker) *Handler {
+func NewHandler(store *storage.Store, imageStore *storage.ImageStore, worker *vision.Worker, mailer *email.Sender) *Handler {
 	return &Handler{
 		store:      store,
 		imageStore: imageStore,
 		worker:     worker,
+		mailer:     mailer,
 		statsCache: cache.New[string, *domain.HangurStats](60 * time.Second),
 		recsCache:  cache.New[string, []domain.OutfitRecommendation](5 * time.Minute),
 	}

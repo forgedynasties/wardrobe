@@ -53,7 +53,7 @@ export default function OutfitDetailPage() {
     getOutfit(id).then((o) => {
       setOutfit(o);
       setName(o.name);
-    });
+    }).catch(console.error);
   }, [id]);
 
   const handleWear = async () => {
