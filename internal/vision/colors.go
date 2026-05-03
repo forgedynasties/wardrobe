@@ -6,13 +6,128 @@ import (
 	"math"
 	"os"
 	"sort"
+	"strconv"
 )
 
-const maxColors = 4
-const coverageThreshold = 0.85
+// ── Extraction ────────────────────────────────────────────────────────────────
+const maxColors         = 4    // hard upper bound on colors returned
+const coverageThreshold = 0.85 // stop once this fraction of pixels is covered
+const colorDistanceMin  = 40.0 // min Euclidean RGB distance between chosen colors
+
+// ── Boost: snap extremes ──────────────────────────────────────────────────────
+const snapBlackL    = 15.0 // lightness ≤ this → #000000
+const snapWhiteL    = 85.0 // lightness ≥ this → #ffffff
+const neutralSatMax = 12.0 // saturation below this → skip hue boost
+
+// ── Boost: chroma ─────────────────────────────────────────────────────────────
+const boostSatFactor = 1.6  // multiply existing saturation by this
+const boostSatAdd    = 25.0 // then add this (percentage points)
+
+// ── Boost: lightness contrast ─────────────────────────────────────────────────
+const boostDarkLFactor  = 0.8  // darks: multiply lightness by this
+const boostDarkLMin     = 12.0 // darks: floor after multiplication
+const boostLightLFactor = 0.8  // lights: push distance-to-100 by this factor
+const boostLightLMax    = 88.0 // lights: ceiling
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+func rgbToHsl(r, g, b float64) (h, s, l float64) {
+	max := math.Max(r, math.Max(g, b))
+	min := math.Min(r, math.Min(g, b))
+	l = (max + min) / 2
+	if max == min {
+		return 0, 0, l * 100
+	}
+	d := max - min
+	if l > 0.5 {
+		s = d / (2 - max - min)
+	} else {
+		s = d / (max + min)
+	}
+	switch max {
+	case r:
+		h = (g - b) / d
+		if g < b {
+			h += 6
+		}
+		h /= 6
+	case g:
+		h = ((b-r)/d + 2) / 6
+	default:
+		h = ((r-g)/d + 4) / 6
+	}
+	return h * 360, s * 100, l * 100
+}
+
+func hslToHex(h, s, l float64) string {
+	h1, s1, l1 := h/360, s/100, l/100
+	hue2rgb := func(p, q, t float64) float64 {
+		t = math.Mod(t+1, 1)
+		if t < 1.0/6 {
+			return p + (q-p)*6*t
+		}
+		if t < 0.5 {
+			return q
+		}
+		if t < 2.0/3 {
+			return p + (q-p)*(2.0/3-t)*6
+		}
+		return p
+	}
+	var r, g, b float64
+	if s1 == 0 {
+		r, g, b = l1, l1, l1
+	} else {
+		var q float64
+		if l1 < 0.5 {
+			q = l1 * (1 + s1)
+		} else {
+			q = l1 + s1 - l1*s1
+		}
+		p := 2*l1 - q
+		r = hue2rgb(p, q, h1+1.0/3)
+		g = hue2rgb(p, q, h1)
+		b = hue2rgb(p, q, h1-1.0/3)
+	}
+	ri := int(math.Round(r * 255))
+	gi := int(math.Round(g * 255))
+	bi := int(math.Round(b * 255))
+	return fmt.Sprintf("#%02x%02x%02x", ri, gi, bi)
+}
+
+func boostColor(hex string) string {
+	if len(hex) < 7 {
+		return hex
+	}
+	rv, _ := strconv.ParseUint(hex[1:3], 16, 64)
+	gv, _ := strconv.ParseUint(hex[3:5], 16, 64)
+	bv, _ := strconv.ParseUint(hex[5:7], 16, 64)
+	h, s, l := rgbToHsl(float64(rv)/255, float64(gv)/255, float64(bv)/255)
+
+	if l <= snapBlackL {
+		return "#000000"
+	}
+	if l >= snapWhiteL {
+		return "#ffffff"
+	}
+
+	newS := s
+	if s >= neutralSatMax {
+		newS = math.Min(100, s*boostSatFactor+boostSatAdd)
+	}
+
+	var newL float64
+	if l < 50 {
+		newL = math.Max(boostDarkLMin, l*boostDarkLFactor)
+	} else {
+		newL = math.Min(boostLightLMax, 100-(100-l)*boostLightLFactor)
+	}
+
+	return hslToHex(h, newS, newL)
+}
 
 // ExtractColors returns dominant hex colors from non-transparent pixels in the PNG at path.
-// The count is dynamic: colors are added until 85% of pixels are covered, up to 4 max.
+// Count is dynamic: colors are added until coverageThreshold of pixels is covered, up to maxColors.
 func ExtractColors(path string) ([]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -32,8 +147,7 @@ func ExtractColors(path string) ([]string, error) {
 	b := img.Bounds()
 	totalPixels := 0
 
-	// Sample every 4th pixel for speed on large images.
-	step := 4
+	step := 4 // sample every 4th pixel for speed
 	for y := b.Min.Y; y < b.Max.Y; y += step {
 		for x := b.Min.X; x < b.Max.X; x += step {
 			r, g, bl, a := img.At(x, y).RGBA()
@@ -63,7 +177,6 @@ func ExtractColors(path string) ([]string, error) {
 	}
 	sort.Slice(pairs, func(i, j int) bool { return pairs[i].count > pairs[j].count })
 
-	// Add distinct colors until coverage threshold reached or max hit.
 	chosen := make([]uint32, 0, maxColors)
 	covered := 0
 	for _, p := range pairs {
@@ -72,7 +185,7 @@ func ExtractColors(path string) ([]string, error) {
 		}
 		distinct := true
 		for _, c := range chosen {
-			if colorDistance(p.key, c) < 40 {
+			if colorDistance(p.key, c) < colorDistanceMin {
 				distinct = false
 				break
 			}
@@ -91,7 +204,7 @@ func ExtractColors(path string) ([]string, error) {
 		r := (c >> 16) & 0xff
 		g := (c >> 8) & 0xff
 		b := c & 0xff
-		hexColors[i] = fmt.Sprintf("#%02x%02x%02x", r, g, b)
+		hexColors[i] = boostColor(fmt.Sprintf("#%02x%02x%02x", r, g, b))
 	}
 	return hexColors, nil
 }
@@ -107,4 +220,3 @@ func colorDistance(a, b uint32) float64 {
 	br, bg, bb := float64((b>>16)&0xff), float64((b>>8)&0xff), float64(b&0xff)
 	return math.Sqrt((ar-br)*(ar-br) + (ag-bg)*(ag-bg) + (ab-bb)*(ab-bb))
 }
-

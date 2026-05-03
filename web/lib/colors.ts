@@ -1,6 +1,28 @@
 // Client-side dominant color extraction using an offscreen canvas.
 // Mirrors the quantize + distinct-color logic in internal/vision/colors.go.
 
+// ── Extraction ────────────────────────────────────────────────────────────────
+const MAX_COLORS = 4;           // hard upper bound on colors returned
+const COVERAGE_THRESHOLD = 0.85; // stop adding colors once this fraction of pixels is covered
+const COLOR_DISTANCE_MIN = 40;  // min Euclidean RGB distance between chosen colors
+
+// ── Boost: snap extremes ──────────────────────────────────────────────────────
+const SNAP_BLACK_L = 15;        // lightness ≤ this → #000000
+const SNAP_WHITE_L = 85;        // lightness ≥ this → #ffffff
+const NEUTRAL_SAT_MAX = 12;     // saturation below this → skip hue boost (keep gray as gray)
+
+// ── Boost: chroma ─────────────────────────────────────────────────────────────
+const BOOST_SAT_FACTOR = 1.6;   // multiply existing saturation by this
+const BOOST_SAT_ADD = 25;       // then add this (percentage points)
+
+// ── Boost: lightness contrast ─────────────────────────────────────────────────
+const BOOST_DARK_L_FACTOR = 0.8;  // darks: multiply lightness by this
+const BOOST_DARK_L_MIN = 12;      // darks: floor after multiplication
+const BOOST_LIGHT_L_FACTOR = 0.8; // lights: push distance-to-100 by this factor
+const BOOST_LIGHT_L_MAX = 88;     // lights: ceiling
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function hexToHsl(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -40,8 +62,18 @@ function hslToHex(h: number, s: number, l: number): string {
 export function boostColor(hex: string): string {
   if (!hex || hex.length < 7) return hex;
   const [h, s, l] = hexToHsl(hex);
-  const newS = Math.min(100, s * 1.6 + 25);
-  const newL = l < 50 ? Math.max(12, l * 0.8) : Math.min(88, 100 - (100 - l) * 0.8);
+
+  if (l <= SNAP_BLACK_L) return "#000000";
+  if (l >= SNAP_WHITE_L) return "#ffffff";
+
+  const newS = s < NEUTRAL_SAT_MAX
+    ? s
+    : Math.min(100, s * BOOST_SAT_FACTOR + BOOST_SAT_ADD);
+
+  const newL = l < 50
+    ? Math.max(BOOST_DARK_L_MIN, l * BOOST_DARK_L_FACTOR)
+    : Math.min(BOOST_LIGHT_L_MAX, 100 - (100 - l) * BOOST_LIGHT_L_FACTOR);
+
   return hslToHex(h, newS, newL);
 }
 
@@ -54,9 +86,6 @@ function colorDistance(a: number[], b: number[]): number {
     (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2,
   );
 }
-
-const MAX_COLORS = 4;
-const COVERAGE_THRESHOLD = 0.85;
 
 export async function extractColorsFromImage(src: string): Promise<string[]> {
   return new Promise((resolve) => {
@@ -92,7 +121,7 @@ export async function extractColorsFromImage(src: string): Promise<string[]> {
         let covered = 0;
         for (const { rgb, count } of sorted) {
           if (chosen.length >= MAX_COLORS) break;
-          if (chosen.every((c) => colorDistance(c, rgb) >= 40)) {
+          if (chosen.every((c) => colorDistance(c, rgb) >= COLOR_DISTANCE_MIN)) {
             chosen.push(rgb);
             covered += count;
             if (covered / totalPixels >= COVERAGE_THRESHOLD) break;
