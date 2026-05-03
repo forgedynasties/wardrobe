@@ -11,6 +11,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Check, ExternalLink, BarChart3, Sparkles, CalendarDays, Trophy, Heart } from "lucide-react";
 import type { ProfileConfig, ProfileSections } from "@/lib/types";
 import Link from "next/link";
+import { applyTheme, saveTheme, loadTheme, type ThemeId } from "@/lib/theme";
+
+const THEMES: { id: ThemeId; label: string; swatches: string[] }[] = [
+  { id: "",             label: "Amber",  swatches: ["#c2853a", "#f5efe8", "#e8d5be"] },
+  { id: "theme-sage",   label: "Sage",   swatches: ["#3a7a52", "#edf5ef", "#c5dece"] },
+  { id: "theme-mauve",  label: "Mauve",  swatches: ["#7a3a9e", "#f5edf9", "#dfc5ee"] },
+  { id: "theme-ocean",  label: "Ocean",  swatches: ["#2e5fa3", "#edf2fb", "#bfd0ef"] },
+  { id: "theme-clay",   label: "Clay",   swatches: ["#b84a2e", "#faf0ec", "#f0c9be"] },
+  { id: "theme-noir",   label: "Noir",   swatches: ["#111111", "#f9f9f9", "#cccccc"] },
+];
 
 const SECTION_META: { key: keyof ProfileSections; label: string; desc: string; icon: React.ElementType }[] = [
   { key: "snapshot", label: "Style Snapshot", desc: "Hangur size, categories, and color palette", icon: BarChart3 },
@@ -50,6 +60,19 @@ export default function ProfilePage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const [theme, setThemeState] = useState<ThemeId>("");
+
+  useEffect(() => {
+    if (!user) return;
+    setThemeState(user.username === "alishba" ? "theme-alishba" : loadTheme(user.username));
+  }, [user]);
+
+  const pickTheme = (id: ThemeId) => {
+    applyTheme(id);
+    if (user) saveTheme(user.username, id);
+    setThemeState(id);
   };
 
   const isPublic = config ? Object.values(config.sections).some(Boolean) : false;
@@ -126,6 +149,35 @@ export default function ProfilePage() {
           ))}
         </div>
       )}
+
+      {/* theme picker */}
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Color theme</p>
+        <div className="grid grid-cols-3 gap-3">
+          {THEMES.map(({ id, label, swatches }) => {
+            const active = theme === id;
+            return (
+              <button
+                key={id || "default"}
+                onClick={() => pickTheme(id)}
+                className={`relative rounded-xl p-3 border-2 transition-all text-left ${active ? "border-primary" : "border-border hover:border-muted-foreground/40"}`}
+              >
+                <div className="flex gap-1 mb-2">
+                  {swatches.map((c, i) => (
+                    <div key={i} className="h-4 flex-1 rounded-sm first:rounded-l-md last:rounded-r-md" style={{ backgroundColor: c }} />
+                  ))}
+                </div>
+                <p className="text-xs font-medium">{label}</p>
+                {active && (
+                  <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <Button onClick={handleSave} disabled={saving || config === null} className="w-full gap-2">
         {saved ? <><Check className="h-4 w-4" />Saved</> : saving ? "Saving..." : "Save"}

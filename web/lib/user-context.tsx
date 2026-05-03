@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { applyTheme, loadTheme } from "./theme";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -46,11 +47,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setHydrated(true));
   }, []);
 
-  // Apply per-user theme class
   useEffect(() => {
-    const root = document.documentElement;
-    if (user?.username === "alishba") root.classList.add("theme-alishba");
-    else root.classList.remove("theme-alishba");
+    if (!user) { applyTheme(""); return; }
+    const saved = user.username === "alishba" ? "theme-alishba" : loadTheme(user.username);
+    applyTheme(saved);
   }, [user]);
 
   const login = useCallback(async (username: string, password: string) => {
