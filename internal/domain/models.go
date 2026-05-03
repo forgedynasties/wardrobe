@@ -8,6 +8,8 @@ import (
 
 type ClothingItem struct {
 	ID           uuid.UUID  `json:"id"`
+	Name         string     `json:"name"`
+	Brand        string     `json:"brand"`
 	Category     string     `json:"category"`
 	SubCategory  string     `json:"sub_category"`
 	Colors       []string   `json:"colors"`
@@ -59,6 +61,8 @@ type Outfit struct {
 
 
 type CreateItemRequest struct {
+	Name        string   `json:"name"`
+	Brand       string   `json:"brand"`
 	Category    string   `json:"category" binding:"required"`
 	SubCategory string   `json:"sub_category"`
 	Colors      []string `json:"colors"`
@@ -68,6 +72,8 @@ type CreateItemRequest struct {
 }
 
 type UpdateItemRequest struct {
+	Name         *string  `json:"name"`
+	Brand        *string  `json:"brand"`
 	Category     *string  `json:"category"`
 	SubCategory  *string  `json:"sub_category"`
 	Colors       []string `json:"colors"`

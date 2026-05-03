@@ -40,6 +40,8 @@ export default function ItemDetailPage() {
   const [shareCopied, setShareCopied] = useState(false);
   const [stats, setStats] = useState<ItemStats | null>(null);
   const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [brand, setBrand] = useState("");
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [colors, setColors] = useState<string[]>([]);
@@ -52,6 +54,8 @@ export default function ItemDetailPage() {
   useEffect(() => {
     getItem(id).then((i) => {
       setItem(i);
+      setName(i.name ?? "");
+      setBrand(i.brand ?? "");
       setCategory(i.category);
       setSubCategory(i.sub_category);
       setColors(i.colors ?? []);
@@ -68,6 +72,8 @@ export default function ItemDetailPage() {
     setSaving(true);
     try {
       const updated = await updateItem(id, {
+        name,
+        brand,
         category,
         sub_category: subCategory,
         colors,
@@ -181,6 +187,16 @@ export default function ItemDetailPage() {
       {editing ? (
         <div className="space-y-4">
           <div className="space-y-2">
+            <Label>Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Vintage Levi's jacket" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Brand</Label>
+            <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Levi's, Nike, Zara" />
+          </div>
+
+          <div className="space-y-2">
             <Label>Category</Label>
             <Select value={category} onValueChange={(v) => v && setCategory(v)}>
               <SelectTrigger>
@@ -244,6 +260,8 @@ export default function ItemDetailPage() {
         </div>
       ) : (
         <div className="space-y-3">
+          {item.name && <h2 className="text-lg font-semibold">{item.name}</h2>}
+          {item.brand && <p className="text-sm text-muted-foreground">{item.brand}</p>}
           <div className="flex items-center gap-2">
             <Badge>{item.category}</Badge>
             {item.sub_category && (

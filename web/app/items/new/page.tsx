@@ -23,6 +23,8 @@ import { CATEGORIES as categories, SUB_CATEGORIES as subCategories } from "@/lib
 export default function NewItemPage() {
   const router = useRouter();
 
+  const [name, setName] = useState("");
+  const [brand, setBrand] = useState("");
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [colors, setColors] = useState<string[]>([]);
@@ -49,6 +51,8 @@ export default function NewItemPage() {
     setError(null);
     try {
       const item = await createItem({
+        name,
+        brand,
         category,
         sub_category: subCategory,
         colors,
@@ -81,6 +85,24 @@ export default function NewItemPage() {
           preview={preview}
           uploading={saving}
         />
+
+        <div className="space-y-2">
+          <Label>Name</Label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Vintage Levi's jacket"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Brand</Label>
+          <Input
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+            placeholder="e.g. Khushposh, Asphalt Attire, Nike"
+          />
+        </div>
 
         <div className="space-y-2">
           <Label>Category *</Label>

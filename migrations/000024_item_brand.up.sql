@@ -1,0 +1,1 @@
+ALTER TABLE clothing_items ADD COLUMN brand VARCHAR(100) NOT NULL DEFAULT '';
