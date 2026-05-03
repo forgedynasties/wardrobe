@@ -1505,6 +1505,7 @@ func (s *Store) GetLeaderboard() ([]domain.LeaderboardEntry, error) {
 			COALESCE((SELECT COUNT(*) FROM outfit_logs WHERE owner = u.username), 0) AS total_wears
 		FROM users u
 		WHERE u.is_active = true
+			AND (SELECT COUNT(*) FROM clothing_items WHERE owner = u.username) > 0
 		ORDER BY total_wears DESC, total_items DESC`)
 	if err != nil {
 		return nil, err
