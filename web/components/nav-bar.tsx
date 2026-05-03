@@ -54,7 +54,9 @@ export function NavBar() {
       <div className="flex items-center justify-around h-16 max-w-3xl mx-auto">
         {navItems.map((item) => {
           const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+            pathname === item.href ||
+            pathname.startsWith(item.href + "/") ||
+            (item.href === "/profile" && !!user && pathname === `/p/${user.username}`);
           const Icon = item.icon;
           return (
             <Link
