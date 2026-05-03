@@ -74,9 +74,13 @@ func main() {
 
 		tmp, err := imageStore.DownloadClean(ctx, item.ID)
 		if err != nil {
-			log.Printf("  FAIL %s — download: %v", item.ID, err)
-			failed++
-			continue
+			// fall back to raw image if clean doesn't exist yet
+			tmp, err = imageStore.DownloadRaw(ctx, item.ID)
+			if err != nil {
+				log.Printf("  FAIL %s — download: %v", item.ID, err)
+				failed++
+				continue
+			}
 		}
 
 		colors, err := vision.ExtractColors(tmp)

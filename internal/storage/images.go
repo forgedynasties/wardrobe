@@ -148,6 +148,31 @@ func (s *ImageStore) DownloadClean(ctx context.Context, id uuid.UUID) (string, e
 	return tmp.Name(), nil
 }
 
+// DownloadRaw fetches raw/<id>.png from R2 into a tmp file and returns its path.
+// Caller is responsible for removing the tmp.
+func (s *ImageStore) DownloadRaw(ctx context.Context, id uuid.UUID) (string, error) {
+	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(s.rawKey(id)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("download raw: %w", err)
+	}
+	defer out.Body.Close()
+
+	tmp, err := os.CreateTemp("", fmt.Sprintf("raw-%s-*.png", id))
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(tmp, out.Body); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return "", err
+	}
+	tmp.Close()
+	return tmp.Name(), nil
+}
+
 // Fetch returns a ReadCloser for the object at the given key. Caller must Close it.
 func (s *ImageStore) Fetch(ctx context.Context, key string) (io.ReadCloser, error) {
 	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{
