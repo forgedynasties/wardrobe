@@ -25,6 +25,7 @@ export default function NewItemPage() {
 
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
+  const [productUrl, setProductUrl] = useState("");
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [colors, setColors] = useState<string[]>([]);
@@ -53,6 +54,7 @@ export default function NewItemPage() {
       const item = await createItem({
         name,
         brand,
+        product_url: productUrl,
         category,
         sub_category: subCategory,
         colors,
@@ -101,6 +103,15 @@ export default function NewItemPage() {
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
             placeholder="e.g. Khushposh, Asphalt Attire, Nike"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Product link <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <Input
+            value={productUrl}
+            onChange={(e) => setProductUrl(e.target.value)}
+            placeholder="https://..."
           />
         </div>
 

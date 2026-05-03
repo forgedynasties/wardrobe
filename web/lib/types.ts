@@ -47,6 +47,7 @@ export interface ClothingItem {
   id: string;
   name: string;
   brand: string;
+  product_url: string;
   category: string;
   sub_category: string;
   colors: string[];
@@ -85,6 +86,7 @@ export interface Outfit {
 export interface CreateItemRequest {
   name?: string;
   brand?: string;
+  product_url?: string;
   category: string;
   sub_category?: string;
   colors?: string[];
@@ -94,6 +96,7 @@ export interface CreateItemRequest {
 export interface UpdateItemRequest {
   name?: string;
   brand?: string;
+  product_url?: string;
   category?: string;
   sub_category?: string;
   colors?: string[];

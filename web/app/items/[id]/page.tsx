@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Trash2, Pencil, ArrowLeft, Share2, Check } from "lucide-react";
+import { Trash2, Pencil, ArrowLeft, Share2, Check, ExternalLink } from "lucide-react";
 import { getItem, updateItem, deleteItem, uploadImage, imageUrl, getItemStats } from "@/lib/api";
 import { ImageUpload } from "@/components/image-upload";
 import { ColorPicker } from "@/components/color-picker";
@@ -42,6 +42,7 @@ export default function ItemDetailPage() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
+  const [productUrl, setProductUrl] = useState("");
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [colors, setColors] = useState<string[]>([]);
@@ -56,6 +57,7 @@ export default function ItemDetailPage() {
       setItem(i);
       setName(i.name ?? "");
       setBrand(i.brand ?? "");
+      setProductUrl(i.product_url ?? "");
       setCategory(i.category);
       setSubCategory(i.sub_category);
       setColors(i.colors ?? []);
@@ -74,6 +76,7 @@ export default function ItemDetailPage() {
       const updated = await updateItem(id, {
         name,
         brand,
+        product_url: productUrl,
         category,
         sub_category: subCategory,
         colors,
@@ -197,6 +200,11 @@ export default function ItemDetailPage() {
           </div>
 
           <div className="space-y-2">
+            <Label>Product link <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+            <Input value={productUrl} onChange={(e) => setProductUrl(e.target.value)} placeholder="https://..." />
+          </div>
+
+          <div className="space-y-2">
             <Label>Category</Label>
             <Select value={category} onValueChange={(v) => v && setCategory(v)}>
               <SelectTrigger>
@@ -262,6 +270,17 @@ export default function ItemDetailPage() {
         <div className="space-y-3">
           {item.name && <h2 className="text-lg font-semibold">{item.name}</h2>}
           {item.brand && <p className="text-sm text-muted-foreground">{item.brand}</p>}
+          {item.product_url && (
+            <a
+              href={item.product_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              View product
+            </a>
+          )}
           <div className="flex items-center gap-2">
             <Badge>{item.category}</Badge>
             {item.sub_category && (

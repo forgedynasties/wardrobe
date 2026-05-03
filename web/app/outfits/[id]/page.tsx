@@ -219,14 +219,13 @@ export default function OutfitDetailPage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold">{outfit.name}</h1>
-            <div className="mt-2 space-y-1">
-              <p className="text-muted-foreground">
-                Used {outfit.usage_count} time{outfit.usage_count !== 1 ? "s" : ""}
-              </p>
+            <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+              <span>{outfit.usage_count} {outfit.usage_count === 1 ? "wear" : "wears"}</span>
               {outfit.last_worn && (
-                <p className="text-sm text-muted-foreground">
-                  Last worn {new Date(outfit.last_worn).toLocaleDateString()}
-                </p>
+                <>
+                  <span>·</span>
+                  <span>last worn {new Date(outfit.last_worn).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                </>
               )}
             </div>
           </div>
@@ -277,23 +276,24 @@ export default function OutfitDetailPage() {
 
                   return (
                     <div key={item.id} className="relative group">
-                      <Link
-                        href={`/items/${item.id}`}
-                        className="bg-card rounded-lg aspect-square flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all block"
-                      >
-                        {src ? (
-                          <img
-                            src={src}
-                            alt={item.category}
-                            className="object-contain w-full h-full p-2"
-                          />
-                        ) : (
-                          <span className="text-3xl text-muted-foreground/50">
-                            {item.category === "Shoes" ? "👟" : "👕"}
-                          </span>
+                      <Link href={`/items/${item.id}`} className="block">
+                        <div className="bg-card rounded-lg aspect-square flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
+                          {src ? (
+                            <img src={src} alt={item.category} className="object-contain w-full h-full p-2" />
+                          ) : (
+                            <span className="text-3xl text-muted-foreground/50">
+                              {item.category === "Shoes" ? "👟" : "👕"}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] font-medium truncate mt-1 capitalize">
+                          {item.name || item.sub_category || item.category}
+                        </p>
+                        {item.brand && (
+                          <p className="text-[10px] text-muted-foreground truncate">{item.brand}</p>
                         )}
                       </Link>
-                                    </div>
+                    </div>
                   );
                 })}
               </div>
