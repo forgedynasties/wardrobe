@@ -132,13 +132,14 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
 
   const activePointers = useRef<Map<number, PointerEvent>>(new Map());
 
-  // Load natural image dimensions for all items via Image objects (browser cache hit).
+  // Load natural image dimensions. Handles both fresh loads and browser-cached images.
   useEffect(() => {
     items.forEach(item => {
       const src = thumbnailUrl(item);
       if (!src) return;
       const img = new window.Image();
-      img.onload = () => {
+      const record = () => {
+        if (!img.naturalWidth) return;
         setNaturalDims(prev => {
           if (prev.has(item.id)) return prev;
           const next = new Map(prev);
@@ -146,7 +147,10 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
           return next;
         });
       };
+      img.onload = record;
       img.src = src;
+      // If already cached, onload may not fire — check immediately.
+      if (img.complete) record();
     });
   }, [items]);
 
@@ -358,19 +362,24 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
   function getBBox(item: OutfitItem, layout: ItemLayout) {
     const canvas = canvasRef.current;
     if (!canvas) return null;
-    const dims = naturalDims.get(item.id);
-    if (!dims) return null;
 
     const cW = canvas.clientWidth;
     const cH = canvas.clientHeight;
     const effectiveScale = layout.scale * (item.display_scale || 1);
-    const box = containBox(cW, cH, dims.w, dims.h);
-    const scaledW = box.width * effectiveScale;
-    const scaledH = box.height * effectiveScale;
     const cx = cW / 2 + (layout.position_x / 100) * cW;
     const cy = cH / 2 + (layout.position_y / 100) * cH;
 
-    return { left: cx - scaledW / 2, top: cy - scaledH / 2, width: scaledW, height: scaledH };
+    const dims = naturalDims.get(item.id);
+    if (dims) {
+      const box = containBox(cW, cH, dims.w, dims.h);
+      const scaledW = box.width * effectiveScale;
+      const scaledH = box.height * effectiveScale;
+      return { left: cx - scaledW / 2, top: cy - scaledH / 2, width: scaledW, height: scaledH };
+    }
+
+    // Fallback before dims load: portrait approximation so the box is immediately visible.
+    const side = Math.min(cW, cH) * effectiveScale;
+    return { left: cx - side * 0.4, top: cy - side * 0.6, width: side * 0.8, height: side * 1.2 };
   }
 
   const HANDLE = 14;
@@ -407,6 +416,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
               const layout = layouts.get(item.id) ?? { position_x: 0, position_y: 0, scale: 1, z_index: 0, rotation: 0 };
               const effectiveScale = layout.scale * (item.display_scale || 1);
 
+              const isSelected = selectedId === item.id;
               return (
                 <div
                   key={item.id}
@@ -418,7 +428,11 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                 >
                   <div
                     className="w-full h-full flex items-center justify-center"
-                    style={{ transform: `scale(${effectiveScale}) rotate(${layout.rotation}deg)` }}
+                    style={{
+                      transform: `scale(${effectiveScale}) rotate(${layout.rotation}deg)`,
+                      outline: isSelected ? "2px solid hsl(var(--primary))" : "none",
+                      outlineOffset: "-1px",
+                    }}
                   >
                     {src ? (
                       <ShimmerImg
