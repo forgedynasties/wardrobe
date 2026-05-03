@@ -17,7 +17,7 @@ func NewSender(apiKey, from string) *Sender {
 	return &Sender{client: resend.NewClient(apiKey), from: from}
 }
 
-func emailTemplate(title, bodyHTML string) string {
+func emailTemplate(bodyHTML string) string {
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -49,7 +49,7 @@ func emailTemplate(title, bodyHTML string) string {
     </td></tr>
   </table>
 </body>
-</html>`, logoURL, title, bodyHTML)
+</html>`, logoURL, bodyHTML)
 }
 
 func (s *Sender) SendOTP(toEmail, code string) error {
@@ -67,7 +67,7 @@ func (s *Sender) SendOTP(toEmail, code string) error {
       This code is single-use and expires in 10 minutes.
     </p>`, code)
 
-	html := emailTemplate("Verify your email", body)
+	html := emailTemplate(body)
 
 	_, err := s.client.Emails.Send(&resend.SendEmailRequest{
 		From:    s.from,
@@ -93,7 +93,7 @@ func (s *Sender) SendPasswordReset(toEmail, code string) error {
       If you didn't request a password reset, your account is safe — just ignore this email.
     </p>`, code)
 
-	html := emailTemplate("Reset your password", body)
+	html := emailTemplate(body)
 
 	_, err := s.client.Emails.Send(&resend.SendEmailRequest{
 		From:    s.from,
