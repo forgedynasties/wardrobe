@@ -239,7 +239,7 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 
 	// Always return 200 — don't reveal whether email exists
 	if code != "" && h.mailer != nil {
-		if err := h.mailer.SendOTP(req.Email, code); err != nil {
+		if err := h.mailer.SendPasswordReset(req.Email, code); err != nil {
 			log.Printf("resend error (password reset): %v", err)
 		}
 	}
