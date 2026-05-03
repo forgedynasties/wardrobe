@@ -427,12 +427,8 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                   }}
                 >
                   <div
-                    className="w-full h-full flex items-center justify-center"
-                    style={{
-                      transform: `scale(${effectiveScale}) rotate(${layout.rotation}deg)`,
-                      outline: isSelected ? "2px solid var(--primary)" : "none",
-                      outlineOffset: "-1px",
-                    }}
+                    className={`w-full h-full flex items-center justify-center ${isSelected ? "outline outline-2 outline-primary -outline-offset-1" : ""}`}
+                    style={{ transform: `scale(${effectiveScale}) rotate(${layout.rotation}deg)` }}
                   >
                     {src ? (
                       <ShimmerImg
@@ -477,17 +473,8 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                 ] as const).map(({ k, style, cursor }) => (
                   <div
                     key={k}
-                    style={{
-                      position: "absolute",
-                      width: HANDLE,
-                      height: HANDLE,
-                      background: "var(--background)",
-                      border: "2px solid var(--primary)",
-                      borderRadius: 3,
-                      cursor,
-                      pointerEvents: "all",
-                      ...style,
-                    }}
+                    className="absolute bg-background border-2 border-primary rounded-sm"
+                    style={{ width: HANDLE, height: HANDLE, cursor, pointerEvents: "all", ...style }}
                     onPointerDown={(e) => onHandlePointerDown(e, "scale", selectedItem.id)}
                   />
                 ))}
@@ -508,23 +495,12 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                   onPointerDown={(e) => onHandlePointerDown(e, "rotate", selectedItem.id)}
                 >
                   <div
-                    style={{
-                      width: HANDLE,
-                      height: HANDLE,
-                      background: "var(--background)",
-                      border: "2px solid var(--primary)",
-                      borderRadius: "50%",
-                      flexShrink: 0,
-                      pointerEvents: "none",
-                    }}
+                    className="rounded-full bg-background border-2 border-primary shrink-0"
+                    style={{ width: HANDLE, height: HANDLE, pointerEvents: "none" }}
                   />
                   <div
-                    style={{
-                      width: 2,
-                      height: ROT_STEM,
-                      background: "var(--primary)",
-                      pointerEvents: "none",
-                    }}
+                    className="bg-primary"
+                    style={{ width: 2, height: ROT_STEM, pointerEvents: "none" }}
                   />
                 </div>
               </div>
