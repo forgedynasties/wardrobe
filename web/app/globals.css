@@ -140,8 +140,15 @@
 /* ── Sage ── muted green, editorial */
 .theme-sage {
   --background: oklch(0.982 0.007 148);
+  --foreground: oklch(0.175 0.02 148);
+  --card: oklch(0.99 0.004 148);
+  --card-foreground: oklch(0.175 0.02 148);
+  --popover: oklch(0.99 0.004 148);
+  --popover-foreground: oklch(0.175 0.02 148);
   --primary: oklch(0.50 0.14 148);
   --primary-foreground: oklch(0.99 0.01 148);
+  --secondary: oklch(0.955 0.02 148);
+  --secondary-foreground: oklch(0.25 0.03 148);
   --accent: oklch(0.87 0.07 148);
   --accent-foreground: oklch(0.22 0.09 148);
   --muted: oklch(0.944 0.016 148);
@@ -149,10 +156,13 @@
   --border: oklch(0.893 0.023 148);
   --input: oklch(0.893 0.023 148);
   --ring: oklch(0.50 0.14 148);
+  --sidebar: oklch(0.975 0.005 148);
+  --sidebar-foreground: oklch(0.175 0.02 148);
   --sidebar-primary: oklch(0.50 0.14 148);
   --sidebar-primary-foreground: oklch(0.99 0.01 148);
   --sidebar-accent: oklch(0.93 0.04 148);
   --sidebar-accent-foreground: oklch(0.22 0.09 148);
+  --sidebar-border: oklch(0.893 0.023 148);
   --sidebar-ring: oklch(0.50 0.14 148);
   --chart-1: oklch(0.68 0.14 148);
   --chart-2: oklch(0.58 0.12 160);
@@ -181,8 +191,15 @@
 /* ── Mauve ── dusty purple, luxe */
 .theme-mauve {
   --background: oklch(0.982 0.007 312);
+  --foreground: oklch(0.175 0.02 312);
+  --card: oklch(0.99 0.004 312);
+  --card-foreground: oklch(0.175 0.02 312);
+  --popover: oklch(0.99 0.004 312);
+  --popover-foreground: oklch(0.175 0.02 312);
   --primary: oklch(0.50 0.16 312);
   --primary-foreground: oklch(0.99 0.01 312);
+  --secondary: oklch(0.955 0.02 312);
+  --secondary-foreground: oklch(0.25 0.03 312);
   --accent: oklch(0.88 0.07 312);
   --accent-foreground: oklch(0.22 0.09 312);
   --muted: oklch(0.944 0.016 312);
@@ -190,10 +207,13 @@
   --border: oklch(0.893 0.023 312);
   --input: oklch(0.893 0.023 312);
   --ring: oklch(0.50 0.16 312);
+  --sidebar: oklch(0.975 0.005 312);
+  --sidebar-foreground: oklch(0.175 0.02 312);
   --sidebar-primary: oklch(0.50 0.16 312);
   --sidebar-primary-foreground: oklch(0.99 0.01 312);
   --sidebar-accent: oklch(0.93 0.04 312);
   --sidebar-accent-foreground: oklch(0.22 0.09 312);
+  --sidebar-border: oklch(0.893 0.023 312);
   --sidebar-ring: oklch(0.50 0.16 312);
   --chart-1: oklch(0.68 0.16 312);
   --chart-2: oklch(0.58 0.13 325);
@@ -271,8 +291,15 @@
 /* ── Clay ── terracotta, earthy */
 .theme-clay {
   --background: oklch(0.984 0.010 42);
+  --foreground: oklch(0.175 0.02 42);
+  --card: oklch(0.99 0.005 42);
+  --card-foreground: oklch(0.175 0.02 42);
+  --popover: oklch(0.99 0.005 42);
+  --popover-foreground: oklch(0.175 0.02 42);
   --primary: oklch(0.54 0.17 28);
   --primary-foreground: oklch(0.99 0.01 28);
+  --secondary: oklch(0.955 0.02 42);
+  --secondary-foreground: oklch(0.25 0.03 42);
   --accent: oklch(0.88 0.08 42);
   --accent-foreground: oklch(0.22 0.09 28);
   --muted: oklch(0.946 0.018 42);
@@ -280,10 +307,13 @@
   --border: oklch(0.895 0.025 42);
   --input: oklch(0.895 0.025 42);
   --ring: oklch(0.54 0.17 28);
+  --sidebar: oklch(0.975 0.006 42);
+  --sidebar-foreground: oklch(0.175 0.02 42);
   --sidebar-primary: oklch(0.54 0.17 28);
   --sidebar-primary-foreground: oklch(0.99 0.01 28);
   --sidebar-accent: oklch(0.93 0.05 42);
   --sidebar-accent-foreground: oklch(0.22 0.09 28);
+  --sidebar-border: oklch(0.895 0.025 42);
   --sidebar-ring: oklch(0.54 0.17 28);
   --chart-1: oklch(0.70 0.16 28);
   --chart-2: oklch(0.60 0.13 40);

@@ -163,7 +163,7 @@ export function UserGate({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const OtpBoxes = () => (
+  const otpBoxes = (
     <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
       {otp.map((digit, i) => (
         <input
@@ -294,7 +294,7 @@ export function UserGate({ children }: { children: React.ReactNode }) {
 
         {mode === "otp" && (
           <form onSubmit={handleOtp} className="space-y-6">
-            <OtpBoxes />
+            {otpBoxes}
             {error && <p className="text-sm text-destructive text-center">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading || otp.join("").length < 6}>
               {loading ? "Verifying..." : "Verify"}
@@ -331,7 +331,7 @@ export function UserGate({ children }: { children: React.ReactNode }) {
 
         {mode === "reset" && (
           <form onSubmit={handleReset} className="space-y-6">
-            <OtpBoxes />
+            {otpBoxes}
             <div className="space-y-1.5">
               <Label htmlFor="new-password">New password</Label>
               <Input
