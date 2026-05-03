@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { thumbnailUrl } from "@/lib/api";
 import { outfitConfig } from "@/lib/outfit-config";
 import { ShimmerImg } from "@/components/shimmer-img";
@@ -106,6 +107,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
   const [naturalDims, setNaturalDims] = useState<NaturalDims>(new Map());
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvasScreenPos, setCanvasScreenPos] = useState<{ left: number; top: number } | null>(null);
 
   const dragRef = useRef<{
     itemId: string;
@@ -131,6 +133,29 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
   } | null>(null);
 
   const activePointers = useRef<Map<number, PointerEvent>>(new Map());
+
+  // Keep canvas screen position in sync with scroll and resize.
+  useEffect(() => {
+    const update = () => {
+      if (!canvasRef.current) return;
+      const r = canvasRef.current.getBoundingClientRect();
+      setCanvasScreenPos({ left: r.left, top: r.top });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  // Re-read rect when selection changes (canvas may have reflowed).
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const r = canvasRef.current.getBoundingClientRect();
+    setCanvasScreenPos({ left: r.left, top: r.top });
+  }, [selectedId]);
 
   // Load natural image dimensions. Handles both fresh loads and browser-cached images.
   useEffect(() => {
@@ -417,17 +442,19 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
               const effectiveScale = layout.scale * (item.display_scale || 1);
 
               const isSelected = selectedId === item.id;
+              const maxZ = Math.max(...canvasSorted.map(i => layouts.get(i.id)?.z_index ?? 0));
+              const renderZ = isSelected ? maxZ + 10 : layout.z_index + 1;
               return (
                 <div
                   key={item.id}
                   className="absolute inset-0 flex items-center justify-center pointer-events-none"
                   style={{
                     transform: `translate(${layout.position_x}%, ${layout.position_y}%)`,
-                    zIndex: layout.z_index + 1,
+                    zIndex: renderZ,
                   }}
                 >
                   <div
-                    className={`w-full h-full flex items-center justify-center ${isSelected ? "outline outline-2 outline-primary -outline-offset-1" : ""}`}
+                    className="w-full h-full flex items-center justify-center"
                     style={{ transform: `scale(${effectiveScale}) rotate(${layout.rotation}deg)` }}
                   >
                     {src ? (
@@ -445,17 +472,18 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
             })}
           </div>
 
-          {/* Unclipped overlay: bounding box + handles render on top, outside overflow:hidden */}
-          {selectedItem && selectedLayout && (() => {
+          {/* Portal overlay: mounts into document.body so no ancestor stacking context can obscure it */}
+          {selectedItem && selectedLayout && canvasScreenPos && (() => {
             const bbox = getBBox(selectedItem, selectedLayout);
             if (!bbox) return null;
 
-            return (
+            return createPortal(
               <div
+                className="border-2 border-primary"
                 style={{
-                  position: "absolute",
-                  left: bbox.left,
-                  top: bbox.top,
+                  position: "fixed",
+                  left: canvasScreenPos.left + bbox.left,
+                  top: canvasScreenPos.top + bbox.top,
                   width: bbox.width,
                   height: bbox.height,
                   transform: `rotate(${selectedLayout.rotation}deg)`,
@@ -503,7 +531,8 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                     style={{ width: 2, height: ROT_STEM, pointerEvents: "none" }}
                   />
                 </div>
-              </div>
+              </div>,
+              document.body,
             );
           })()}
         </div>
