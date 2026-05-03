@@ -87,6 +87,7 @@ export default function OutfitLoggerPage() {
   const [loading, setLoading] = useState(true);
 
   const [deleteTarget, setDeleteTarget] = useState<{ dateStr: string; log: OutfitLog } | null>(null);
+  const [deletingLog, setDeletingLog] = useState(false);
   const [peek, setPeek] = useState<{ log: OutfitLog; x: number; y: number } | null>(null);
   const peekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -144,13 +145,16 @@ export default function OutfitLoggerPage() {
   };
 
   const handleDeleteLog = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || deletingLog) return;
+    setDeletingLog(true);
     try {
       await deleteOutfitLog(deleteTarget.log.id);
       setDeleteTarget(null);
       await loadLogs();
     } catch (err) {
       console.error(err);
+    } finally {
+      setDeletingLog(false);
     }
   };
 
@@ -473,8 +477,8 @@ export default function OutfitLoggerPage() {
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteLog}>
-              Delete
+            <Button variant="destructive" onClick={handleDeleteLog} disabled={deletingLog}>
+              {deletingLog ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
