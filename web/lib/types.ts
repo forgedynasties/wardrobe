@@ -26,6 +26,7 @@ export interface PublicProfile {
   outfit_logs?: OutfitLog[];
   signature?: TopItem[];
   wishlist?: WishlistItem[];
+  items?: ClothingItem[];
 }
 
 export interface OutfitItemLayoutUpdate {

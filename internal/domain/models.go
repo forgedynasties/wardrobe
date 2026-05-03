@@ -228,6 +228,7 @@ type PublicProfile struct {
 	OutfitLogs   []OutfitLog      `json:"outfit_logs,omitempty"`
 	Signature    []TopItem        `json:"signature,omitempty"`
 	Wishlist     []WishlistItem   `json:"wishlist,omitempty"`
+	Items        []ClothingItem   `json:"items,omitempty"`
 }
 
 type LeaderboardEntry struct {

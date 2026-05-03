@@ -965,6 +965,13 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 		}
 	}
 
+	if items, err := h.store.ListItems(username, 0, nil); err == nil {
+		if items == nil {
+			items = []domain.ClothingItem{}
+		}
+		profile.Items = items
+	}
+
 	c.JSON(http.StatusOK, profile)
 }
 

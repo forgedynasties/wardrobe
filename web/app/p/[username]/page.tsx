@@ -157,7 +157,10 @@ export default function ProfilePage() {
     getPublicProfile(username)
       .then((p) => {
         setAvatarColors(p.avatar_colors ?? []);
-        if (!isSelf) setPublicProfile(p);
+        if (!isSelf) {
+          setPublicProfile(p);
+          setAllItems(p.items ?? []);
+        }
       })
       .catch(() => { if (!isSelf) setPublicProfile("not-found"); });
   }, [hydrated, username, isSelf]);
@@ -504,8 +507,8 @@ export default function ProfilePage() {
             <PrivateSection label="Wear Calendar" />
           )}
 
-          {/* all items with category tabs (self only) */}
-          {isSelf && (() => {
+          {/* all items with category tabs */}
+          {(() => {
             const knownCats = ["top", "bottom", "outerwear", "shoes", "accessory"];
             const TABS = [
               { key: "all", label: "All", Icon: LayoutGrid },
@@ -552,7 +555,7 @@ export default function ProfilePage() {
                     {filtered.map((item) => {
                       const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
                       return (
-                        <Link key={item.id} href={`/items/${item.id}`}>
+                        <Link key={item.id} href={isSelf ? `/items/${item.id}` : `/p/${username}/items/${item.id}`}>
                           <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
                             <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
                               {src
