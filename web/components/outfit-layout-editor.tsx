@@ -183,6 +183,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
 
+
     // Hit test front-to-back (highest z_index first)
     const frontToBack = [...items].sort((a, b) => {
       const az = layouts.get(a.id)?.z_index ?? 0;
@@ -194,11 +195,10 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
     for (const item of frontToBack) {
       const layout = layouts.get(item.id);
       if (!layout) continue;
-      if (hitTest(px, py, layout, naturalDims.get(item.id), canvas.clientWidth, canvas.clientHeight, item.display_scale || 1)) {
-        hit = item;
-        break;
-      }
+      const result = hitTest(px, py, layout, naturalDims.get(item.id), canvas.clientWidth, canvas.clientHeight, item.display_scale || 1);
+      if (result) { hit = item; break; }
     }
+
 
     if (!hit) {
       setSelectedId(null);
@@ -468,16 +468,6 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                   pointerEvents: "none",
                 }}
               >
-                {/* Box outline */}
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    border: "2px solid hsl(var(--primary))",
-                    pointerEvents: "none",
-                  }}
-                />
-
                 {/* Corner scale handles */}
                 {([
                   { k: "tl", style: { top: -h2, left: -h2 }, cursor: "nw-resize" },
@@ -502,7 +492,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                   />
                 ))}
 
-                {/* Rotation handle — circle above top center, connected by a line */}
+                {/* Rotation handle */}
                 <div
                   style={{
                     position: "absolute",
