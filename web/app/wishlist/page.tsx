@@ -137,24 +137,34 @@ export default function WishlistPage() {
 
   // ── actions ────────────────────────────────────────────────────────────────
 
-  const handleLinkBlur = async (url: string) => {
+  const fetchMeta = useCallback(async (url: string) => {
     if (!url.trim() || (!url.startsWith("http://") && !url.startsWith("https://"))) return;
     setFetchingMeta(true);
     try {
       const meta = await fetchWishlistMeta(url.trim());
       if (meta.title && !name.trim()) setName(meta.title);
       if (meta.image_url && !image.trim()) setImage(meta.image_url);
-      if (meta.price && !price.trim()) setPrice(meta.price);
+      if (meta.price && !price.trim()) {
+        const cleaned = meta.price.replace(/[^\d.]/g, "");
+        if (cleaned) setPrice(cleaned);
+      }
       if (meta.currency && CURRENCY_SYMBOLS[meta.currency]) {
         setCurrency(meta.currency);
         localStorage.setItem("wishlist_currency", meta.currency);
       }
     } catch {
-      // silently ignore — user can fill in manually
+      setError("Couldn't fetch info from that link — the site may be blocking it. Fill in the details manually.");
     } finally {
       setFetchingMeta(false);
     }
-  };
+  }, [name, image, price]);
+
+  // Trigger fetch 500ms after link settles — handles paste and typing.
+  useEffect(() => {
+    if (!link.startsWith("http")) return;
+    const t = setTimeout(() => fetchMeta(link), 500);
+    return () => clearTimeout(t);
+  }, [link]);
 
   const handleAdd = async () => {
     setError(null);
@@ -390,8 +400,7 @@ export default function WishlistPage() {
               <Label className="flex items-center gap-1.5 text-xs"><Link2 className="h-3 w-3" />Product link <span className="text-destructive">*</span></Label>
               <Input
                 value={link}
-                onChange={(e) => setLink(e.target.value)}
-                onBlur={(e) => handleLinkBlur(e.target.value)}
+                onChange={(e) => { setLink(e.target.value); setError(null); }}
                 placeholder="https://..."
               />
             </div>
