@@ -137,10 +137,10 @@ type WishlistItem struct {
 }
 
 type CreateWishlistItemRequest struct {
-	Name       string `json:"name" binding:"required"`
+	Name       string `json:"name"`
 	ImageURL   string `json:"image_url"`
 	ProductURL string `json:"product_url" binding:"required"`
-	PricePKR   int64  `json:"price_pkr" binding:"required"`
+	PricePKR   int64  `json:"price_pkr"`
 }
 
 type UpdateWishlistItemRequest struct {

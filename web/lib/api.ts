@@ -296,6 +296,10 @@ export function deleteWishlistItem(id: string): Promise<void> {
   return fetcher(`/api/wishlist/${id}`, { method: "DELETE" });
 }
 
+export function fetchWishlistMeta(url: string): Promise<{ image_url: string; title: string; price: string; currency: string }> {
+  return fetcher(`/api/wishlist/fetch-meta?url=${encodeURIComponent(url)}`);
+}
+
 // --- Heatmap & profile ---
 
 export function getWearHeatmap(year: number): Promise<HeatmapEntry[]> {

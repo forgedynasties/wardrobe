@@ -44,6 +44,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		wishlist := protected.Group("/wishlist")
 		{
 			wishlist.GET("", h.ListWishlistItems)
+			wishlist.GET("/fetch-meta", h.FetchWishlistMeta)
 			wishlist.POST("", h.CreateWishlistItem)
 			wishlist.PATCH("/:id", h.UpdateWishlistItem)
 			wishlist.DELETE("/:id", h.DeleteWishlistItem)

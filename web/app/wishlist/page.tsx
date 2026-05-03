@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-  ExternalLink, Heart, Trash2, Plus, Link2, DollarSign, Image, Tag,
-  Star, ShoppingBag, ChevronDown, ChevronUp, Wallet,
+  ExternalLink, Heart, Trash2, Plus, Link2, DollarSign, Tag,
+  Star, ShoppingBag, ChevronDown, ChevronUp, Wallet, Loader2,
 } from "lucide-react";
 import {
   createWishlistItem, deleteWishlistItem, updateWishlistItem,
-  getWishlistPage, getExchangeRates,
+  getWishlistPage, getExchangeRates, fetchWishlistMeta,
 } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ export default function WishlistPage() {
   const [formNotes, setFormNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [fetchingMeta, setFetchingMeta] = useState(false);
 
   // currency
   const [currency, setCurrency] = useState("PKR");
@@ -136,18 +137,29 @@ export default function WishlistPage() {
 
   // ── actions ────────────────────────────────────────────────────────────────
 
-  const handleImageUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setImage(reader.result);
-    };
-    reader.readAsDataURL(file);
+  const handleLinkBlur = async (url: string) => {
+    if (!url.trim() || (!url.startsWith("http://") && !url.startsWith("https://"))) return;
+    setFetchingMeta(true);
+    try {
+      const meta = await fetchWishlistMeta(url.trim());
+      if (meta.title && !name.trim()) setName(meta.title);
+      if (meta.image_url && !image.trim()) setImage(meta.image_url);
+      if (meta.price && !price.trim()) setPrice(meta.price);
+      if (meta.currency && CURRENCY_SYMBOLS[meta.currency]) {
+        setCurrency(meta.currency);
+        localStorage.setItem("wishlist_currency", meta.currency);
+      }
+    } catch {
+      // silently ignore — user can fill in manually
+    } finally {
+      setFetchingMeta(false);
+    }
   };
 
   const handleAdd = async () => {
     setError(null);
-    if (!name.trim() || !link.trim() || !price.trim()) {
-      setError("Name, link, and price are required.");
+    if (!link.trim()) {
+      setError("Product link is required.");
       return;
     }
     setSaving(true);
@@ -156,7 +168,7 @@ export default function WishlistPage() {
         name: name.trim(),
         image_url: image.trim(),
         product_url: link.trim(),
-        price_pkr: Math.round(Number(price) / (rates[currency] ?? 1)),
+        price_pkr: price.trim() ? Math.round(Number(price) / (rates[currency] ?? 1)) : 0,
       });
       setItems((prev) => [created, ...(prev ?? [])]);
       setName(""); setImage(""); setLink(""); setPrice(""); setFormNotes("");
@@ -360,43 +372,45 @@ export default function WishlistPage() {
 
       {/* add form */}
       <Card className="p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" />Item name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Vintage leather jacket" />
+        <div className="flex gap-4">
+          {/* image preview */}
+          <div className="w-20 h-20 shrink-0 rounded-lg bg-muted/40 overflow-hidden flex items-center justify-center border">
+            {fetchingMeta ? (
+              <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+            ) : image ? (
+              <img src={image} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <Heart className="h-6 w-6 text-muted-foreground/40" />
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" />Price ({currency})</Label>
-            <Input
-              value={price}
-              onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ""))}
-              placeholder="2500"
-              inputMode="decimal"
-            />
-          </div>
+          <div className="flex-1 space-y-3">
+            {/* URL — primary field */}
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5 text-xs"><Link2 className="h-3 w-3" />Product link <span className="text-destructive">*</span></Label>
+              <Input
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                onBlur={(e) => handleLinkBlur(e.target.value)}
+                placeholder="https://..."
+              />
+            </div>
 
-          <div className="space-y-2 md:col-span-2">
-            <Label className="flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" />Product link</Label>
-            <Input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label className="flex items-center gap-1.5"><Image className="h-3.5 w-3.5" />Item image</Label>
-            <div className="flex flex-col gap-3 md:flex-row">
-              <Input value={image} onChange={(e) => setImage(e.target.value)} placeholder="Paste image URL or upload below" />
-              <Button
-                type="button" variant="outline"
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file"; input.accept = "image/*";
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) handleImageUpload(file);
-                  };
-                  input.click();
-                }}
-              >Upload image</Button>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5 text-xs"><Tag className="h-3 w-3" />Name</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Auto-filled from link" className="text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5 text-xs"><DollarSign className="h-3 w-3" />Price ({currency})</Label>
+                <Input
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ""))}
+                  placeholder="Optional"
+                  inputMode="decimal"
+                  className="text-sm"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -405,7 +419,7 @@ export default function WishlistPage() {
           <div className="bg-destructive/10 border border-destructive/40 text-destructive px-3 py-2 rounded-lg text-sm">{error}</div>
         )}
 
-        <Button onClick={handleAdd} disabled={saving} className="gap-2">
+        <Button onClick={handleAdd} disabled={saving || fetchingMeta} className="gap-2">
           <Plus className="h-4 w-4" />
           {saving ? "Saving..." : "Add to Wishlist"}
         </Button>

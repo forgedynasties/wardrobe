@@ -3,10 +3,12 @@ package api
 import (
 	"crypto/md5"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -205,6 +207,155 @@ func (h *Handler) DeleteItem(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
+}
+
+func (h *Handler) FetchWishlistMeta(c *gin.Context) {
+	rawURL := c.Query("url")
+	if rawURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url required"})
+		return
+	}
+
+	client := &http.Client{Timeout: 8 * time.Second}
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid url"})
+		return
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Hangur/1.0; +https://hangur.app)")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "could not fetch url"})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 512*1024))
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "could not read response"})
+		return
+	}
+	html := strings.ToLower(string(body))
+
+	extractMeta := func(props ...string) string {
+		for _, prop := range props {
+			needle := `property="` + prop + `"`
+			if idx := strings.Index(html, needle); idx != -1 {
+				rest := html[idx+len(needle):]
+				if ci := strings.Index(rest, `content="`); ci != -1 {
+					rest = rest[ci+len(`content="`):]
+					if end := strings.Index(rest, `"`); end != -1 {
+						return strings.TrimSpace(string(body)[idx+len(needle):][ci+len(`content="`) : ci+len(`content="`)+end])
+					}
+				}
+			}
+			needle2 := `name="` + prop + `"`
+			if idx := strings.Index(html, needle2); idx != -1 {
+				rest := html[idx+len(needle2):]
+				if ci := strings.Index(rest, `content="`); ci != -1 {
+					rest = rest[ci+len(`content="`):]
+					if end := strings.Index(rest, `"`); end != -1 {
+						return strings.TrimSpace(string(body)[idx+len(needle2):][ci+len(`content="`) : ci+len(`content="`)+end])
+					}
+				}
+			}
+		}
+		return ""
+	}
+
+	imageURL := extractMeta("og:image", "twitter:image")
+	title := extractMeta("og:title", "twitter:title")
+	priceStr := extractMeta("og:price:amount", "product:price:amount")
+	currency := extractMeta("og:price:currency", "product:price:currency")
+
+	// Fallback: <title> tag
+	if title == "" {
+		if ti := strings.Index(html, "<title>"); ti != -1 {
+			rest := html[ti+7:]
+			if end := strings.Index(rest, "</title>"); end != -1 {
+				title = strings.TrimSpace(string(body)[ti+7 : ti+7+end])
+			}
+		}
+	}
+
+	// Fallback: JSON-LD schema.org Product offers
+	if priceStr == "" || currency == "" {
+		ldRe := regexp.MustCompile(`(?i)<script[^>]+type=["']application/ld\+json["'][^>]*>([\s\S]*?)</script>`)
+		for _, match := range ldRe.FindAllSubmatch(body, -1) {
+			if len(match) < 2 {
+				continue
+			}
+			var obj map[string]any
+			if err := json.Unmarshal(match[1], &obj); err != nil {
+				continue
+			}
+			// unwrap @graph array if present
+			if graph, ok := obj["@graph"].([]any); ok {
+				for _, node := range graph {
+					if m, ok := node.(map[string]any); ok {
+						if p, c := extractSchemaPrice(m); p != "" || c != "" {
+							if priceStr == "" { priceStr = p }
+							if currency == "" { currency = c }
+						}
+					}
+				}
+			} else {
+				p, c := extractSchemaPrice(obj)
+				if priceStr == "" { priceStr = p }
+				if currency == "" { currency = c }
+			}
+			if priceStr != "" && currency != "" {
+				break
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"image_url": imageURL, "title": title, "price": priceStr, "currency": strings.ToUpper(currency)})
+}
+
+// extractSchemaPrice pulls price/priceCurrency from a schema.org Product or Offer node.
+func extractSchemaPrice(obj map[string]any) (price, currency string) {
+	getStr := func(m map[string]any, keys ...string) string {
+		for _, k := range keys {
+			if v, ok := m[k]; ok {
+				switch s := v.(type) {
+				case string:
+					return s
+				case float64:
+					return strconv.FormatFloat(s, 'f', -1, 64)
+				}
+			}
+		}
+		return ""
+	}
+
+	// Direct Offer node
+	if t, _ := obj["@type"].(string); strings.EqualFold(t, "offer") {
+		return getStr(obj, "price"), getStr(obj, "priceCurrency")
+	}
+
+	// Product node — dig into offers
+	offers := obj["offers"]
+	if offers == nil {
+		return
+	}
+	switch v := offers.(type) {
+	case map[string]any:
+		return getStr(v, "price"), getStr(v, "priceCurrency")
+	case []any:
+		for _, o := range v {
+			if m, ok := o.(map[string]any); ok {
+				p := getStr(m, "price")
+				c := getStr(m, "priceCurrency")
+				if p != "" || c != "" {
+					return p, c
+				}
+			}
+		}
+	}
+	return
 }
 
 func (h *Handler) ListWishlistItems(c *gin.Context) {
