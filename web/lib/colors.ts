@@ -2,79 +2,132 @@
 // Mirrors the quantize + distinct-color logic in internal/vision/colors.go.
 
 // ── Extraction ────────────────────────────────────────────────────────────────
-const MAX_COLORS = 4;           // hard upper bound on colors returned
-const COVERAGE_THRESHOLD = 0.85; // stop adding colors once this fraction of pixels is covered
-const COLOR_DISTANCE_MIN = 40;  // min Euclidean RGB distance between chosen colors
+const MAX_COLORS = 2;            // hard upper bound on colors returned
+const COVERAGE_THRESHOLD = 0.85; // stop once this fraction of pixels is covered
+const COLOR_DISTANCE_MIN = 40;   // min Euclidean RGB distance between chosen candidates
 
-// ── Boost: snap extremes ──────────────────────────────────────────────────────
-const SNAP_BLACK_L = 15;        // lightness ≤ this → #000000
-const SNAP_WHITE_L = 85;        // lightness ≥ this → #ffffff
-const NEUTRAL_SAT_MAX = 12;     // saturation below this → skip hue boost (keep gray as gray)
+// ── Named color library ───────────────────────────────────────────────────────
+// Extracted colors are snapped to the nearest entry here using CIELAB ΔE.
+// Tune by adding / removing / adjusting entries.
+export const COLOR_LIBRARY = [
+  // Neutrals
+  { name: "Black",       hex: "#000000" },
+  { name: "Charcoal",    hex: "#333333" },
+  { name: "Dark Gray",   hex: "#555555" },
+  { name: "Gray",        hex: "#888888" },
+  { name: "Light Gray",  hex: "#bbbbbb" },
+  { name: "Off White",   hex: "#f0f0ec" },
+  { name: "White",       hex: "#ffffff" },
 
-// ── Boost: chroma ─────────────────────────────────────────────────────────────
-const BOOST_SAT_FACTOR = 1.6;   // multiply existing saturation by this
-const BOOST_SAT_ADD = 25;       // then add this (percentage points)
+  // Creams & Browns
+  { name: "Cream",       hex: "#fffdd0" },
+  { name: "Beige",       hex: "#e8dcc8" },
+  { name: "Khaki",       hex: "#c8b896" },
+  { name: "Camel",       hex: "#c19a6b" },
+  { name: "Tan",         hex: "#d2b48c" },
+  { name: "Brown",       hex: "#7b4f2e" },
+  { name: "Dark Brown",  hex: "#3e1c00" },
 
-// ── Boost: lightness contrast ─────────────────────────────────────────────────
-const BOOST_DARK_L_FACTOR = 0.8;  // darks: multiply lightness by this
-const BOOST_DARK_L_MIN = 12;      // darks: floor after multiplication
-const BOOST_LIGHT_L_FACTOR = 0.8; // lights: push distance-to-100 by this factor
-const BOOST_LIGHT_L_MAX = 88;     // lights: ceiling
+  // Blues
+  { name: "Light Blue",  hex: "#add8e6" },
+  { name: "Sky Blue",    hex: "#87ceeb" },
+  { name: "Cornflower",  hex: "#6495ed" },
+  { name: "Blue",        hex: "#2255cc" },
+  { name: "Royal Blue",  hex: "#4169e1" },
+  { name: "Denim",       hex: "#1560bd" },
+  { name: "Dark Blue",   hex: "#002266" },
+  { name: "Navy",        hex: "#001040" },
+
+  // Teals & Cyans
+  { name: "Turquoise",   hex: "#40e0d0" },
+  { name: "Teal",        hex: "#008080" },
+  { name: "Dark Teal",   hex: "#004c4c" },
+
+  // Greens
+  { name: "Mint",        hex: "#98d8a8" },
+  { name: "Sage",        hex: "#8fad88" },
+  { name: "Lime",        hex: "#32cd32" },
+  { name: "Green",       hex: "#008000" },
+  { name: "Forest",      hex: "#228b22" },
+  { name: "Olive",       hex: "#6b6b00" },
+  { name: "Dark Green",  hex: "#013220" },
+
+  // Yellows & Golds
+  { name: "Yellow",      hex: "#ffee00" },
+  { name: "Mustard",     hex: "#e3a800" },
+  { name: "Gold",        hex: "#ffd700" },
+  { name: "Amber",       hex: "#ffbf00" },
+
+  // Oranges
+  { name: "Peach",       hex: "#ffcba4" },
+  { name: "Orange",      hex: "#ff6600" },
+  { name: "Rust",        hex: "#b7410e" },
+  { name: "Terracotta",  hex: "#c96a3a" },
+
+  // Reds
+  { name: "Coral",       hex: "#ff6b6b" },
+  { name: "Red",         hex: "#cc0000" },
+  { name: "Crimson",     hex: "#dc143c" },
+  { name: "Burgundy",    hex: "#800028" },
+  { name: "Maroon",      hex: "#5c0a0a" },
+  { name: "Wine",        hex: "#722f37" },
+
+  // Pinks
+  { name: "Blush",       hex: "#f4c2c2" },
+  { name: "Pink",        hex: "#ff80b0" },
+  { name: "Hot Pink",    hex: "#ff1493" },
+  { name: "Rose",        hex: "#e0006a" },
+  { name: "Deep Pink",   hex: "#aa0055" },
+
+  // Purples
+  { name: "Lavender",    hex: "#d8c8f0" },
+  { name: "Lilac",       hex: "#b89cd0" },
+  { name: "Violet",      hex: "#8b00ff" },
+  { name: "Purple",      hex: "#7700aa" },
+  { name: "Dark Purple", hex: "#3d0066" },
+  { name: "Indigo",      hex: "#3a006f" },
+] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function hexToHsl(hex: string): [number, number, number] {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  if (max === min) return [0, 0, l * 100];
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  const h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) / 6
-          : max === g ? ((b - r) / d + 2) / 6
-          : ((r - g) / d + 4) / 6;
-  return [h * 360, s * 100, l * 100];
+function srgbToLinear(c: number): number {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
-function hslToHex(h: number, s: number, l: number): string {
-  const h1 = h / 360, s1 = s / 100, l1 = l / 100;
-  const hue2rgb = (p: number, q: number, t: number) => {
-    const t2 = ((t % 1) + 1) % 1;
-    if (t2 < 1 / 6) return p + (q - p) * 6 * t2;
-    if (t2 < 1 / 2) return q;
-    if (t2 < 2 / 3) return p + (q - p) * (2 / 3 - t2) * 6;
-    return p;
-  };
-  if (s1 === 0) {
-    const v = Math.round(l1 * 255).toString(16).padStart(2, "0");
-    return `#${v}${v}${v}`;
-  }
-  const q = l1 < 0.5 ? l1 * (1 + s1) : l1 + s1 - l1 * s1;
-  const p = 2 * l1 - q;
-  const r = Math.round(hue2rgb(p, q, h1 + 1 / 3) * 255);
-  const g = Math.round(hue2rgb(p, q, h1) * 255);
-  const b = Math.round(hue2rgb(p, q, h1 - 1 / 3) * 255);
-  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+function hexToLab(hex: string): [number, number, number] {
+  const r = srgbToLinear(parseInt(hex.slice(1, 3), 16) / 255);
+  const g = srgbToLinear(parseInt(hex.slice(3, 5), 16) / 255);
+  const b = srgbToLinear(parseInt(hex.slice(5, 7), 16) / 255);
+
+  // D65 illuminant
+  const x = (r * 0.4124564 + g * 0.3575761 + b * 0.1804375) / 0.95047;
+  const y = (r * 0.2126729 + g * 0.7151522 + b * 0.0721750) / 1.00000;
+  const z = (r * 0.0193339 + g * 0.1191920 + b * 0.9503041) / 1.08883;
+
+  const f = (t: number) => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const L = 116 * f(y) - 16;
+  const a = 500 * (f(x) - f(y));
+  const bb = 200 * (f(y) - f(z));
+  return [L, a, bb];
 }
 
-export function boostColor(hex: string): string {
+function deltaE(a: [number, number, number], b: [number, number, number]): number {
+  return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2);
+}
+
+export function snapToLibrary(hex: string): string {
   if (!hex || hex.length < 7) return hex;
-  const [h, s, l] = hexToHsl(hex);
-
-  if (l <= SNAP_BLACK_L) return "#000000";
-  if (l >= SNAP_WHITE_L) return "#ffffff";
-
-  const newS = s < NEUTRAL_SAT_MAX
-    ? s
-    : Math.min(100, s * BOOST_SAT_FACTOR + BOOST_SAT_ADD);
-
-  const newL = l < 50
-    ? Math.max(BOOST_DARK_L_MIN, l * BOOST_DARK_L_FACTOR)
-    : Math.min(BOOST_LIGHT_L_MAX, 100 - (100 - l) * BOOST_LIGHT_L_FACTOR);
-
-  return hslToHex(h, newS, newL);
+  const input = hexToLab(hex);
+  let bestHex = hex;
+  let bestDist = Infinity;
+  for (const entry of COLOR_LIBRARY) {
+    const dist = deltaE(input, hexToLab(entry.hex));
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestHex = entry.hex;
+    }
+  }
+  return bestHex;
 }
 
 function quantize(v: number): number {
@@ -129,7 +182,9 @@ export async function extractColorsFromImage(src: string): Promise<string[]> {
         }
 
         resolve(
-          chosen.map(([r, g, b]) => boostColor(`#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`)),
+          chosen.map(([r, g, b]) =>
+            snapToLibrary(`#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`)
+          ),
         );
       } catch {
         resolve([]);
