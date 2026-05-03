@@ -107,7 +107,9 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
   const [naturalDims, setNaturalDims] = useState<NaturalDims>(new Map());
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [canvasScreenPos, setCanvasScreenPos] = useState<{ left: number; top: number } | null>(null);
+  const portalRootRef = useRef<HTMLDivElement>(null);
+  // Fires a React re-render when the window is resized so bbox recomputes.
+  const [, setResizeTick] = useState(0);
 
   const dragRef = useRef<{
     itemId: string;
@@ -134,28 +136,24 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
 
   const activePointers = useRef<Map<number, PointerEvent>>(new Map());
 
-  // Keep canvas screen position in sync with scroll and resize.
+  // Scroll: mutate portal root directly — zero React re-renders.
   useEffect(() => {
-    const update = () => {
-      if (!canvasRef.current) return;
+    const onScroll = () => {
+      if (!canvasRef.current || !portalRootRef.current) return;
       const r = canvasRef.current.getBoundingClientRect();
-      setCanvasScreenPos({ left: r.left, top: r.top });
+      portalRootRef.current.style.left = `${r.left}px`;
+      portalRootRef.current.style.top = `${r.top}px`;
     };
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
+    window.addEventListener("scroll", onScroll, true);
+    return () => window.removeEventListener("scroll", onScroll, true);
   }, []);
 
-  // Re-read rect when selection changes (canvas may have reflowed).
+  // Resize: full re-render so bbox dimensions recompute.
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const r = canvasRef.current.getBoundingClientRect();
-    setCanvasScreenPos({ left: r.left, top: r.top });
-  }, [selectedId]);
+    const onResize = () => setResizeTick(n => n + 1);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // Load natural image dimensions. Handles both fresh loads and browser-cached images.
   useEffect(() => {
@@ -472,64 +470,79 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
             })}
           </div>
 
-          {/* Portal overlay: mounts into document.body so no ancestor stacking context can obscure it */}
-          {selectedItem && selectedLayout && canvasScreenPos && (() => {
+          {/* Portal overlay: document.body root so no ancestor clips it.
+              Outer div tracks canvas screen position (mutated on scroll, no re-render).
+              Inner div holds bbox-relative layout (stable across scrolls). */}
+          {selectedItem && selectedLayout && canvasRef.current && (() => {
             const bbox = getBBox(selectedItem, selectedLayout);
             if (!bbox) return null;
+            const cr = canvasRef.current!.getBoundingClientRect();
 
             return createPortal(
               <div
-                className="border-2 border-primary"
+                ref={portalRootRef}
                 style={{
                   position: "fixed",
-                  left: canvasScreenPos.left + bbox.left,
-                  top: canvasScreenPos.top + bbox.top,
-                  width: bbox.width,
-                  height: bbox.height,
-                  transform: `rotate(${selectedLayout.rotation}deg)`,
-                  transformOrigin: "center",
-                  zIndex: 9999,
+                  left: cr.left,
+                  top: cr.top,
+                  width: cr.width,
+                  height: cr.height,
                   pointerEvents: "none",
+                  zIndex: 9999,
                 }}
               >
-                {/* Corner scale handles */}
-                {([
-                  { k: "tl", style: { top: -h2, left: -h2 }, cursor: "nw-resize" },
-                  { k: "tr", style: { top: -h2, right: -h2 }, cursor: "ne-resize" },
-                  { k: "bl", style: { bottom: -h2, left: -h2 }, cursor: "sw-resize" },
-                  { k: "br", style: { bottom: -h2, right: -h2 }, cursor: "se-resize" },
-                ] as const).map(({ k, style, cursor }) => (
-                  <div
-                    key={k}
-                    className="absolute bg-background border-2 border-primary rounded-sm"
-                    style={{ width: HANDLE, height: HANDLE, cursor, pointerEvents: "all", ...style }}
-                    onPointerDown={(e) => onHandlePointerDown(e, "scale", selectedItem.id)}
-                  />
-                ))}
-
-                {/* Rotation handle */}
                 <div
+                  className="border-2 border-primary"
                   style={{
                     position: "absolute",
-                    left: "50%",
-                    top: -(ROT_STEM + HANDLE),
-                    transform: "translateX(-50%)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    pointerEvents: "all",
-                    cursor: "crosshair",
+                    left: bbox.left,
+                    top: bbox.top,
+                    width: bbox.width,
+                    height: bbox.height,
+                    transform: `rotate(${selectedLayout.rotation}deg)`,
+                    transformOrigin: "center",
+                    pointerEvents: "none",
                   }}
-                  onPointerDown={(e) => onHandlePointerDown(e, "rotate", selectedItem.id)}
                 >
+                  {/* Corner scale handles */}
+                  {([
+                    { k: "tl", style: { top: -h2, left: -h2 }, cursor: "nw-resize" },
+                    { k: "tr", style: { top: -h2, right: -h2 }, cursor: "ne-resize" },
+                    { k: "bl", style: { bottom: -h2, left: -h2 }, cursor: "sw-resize" },
+                    { k: "br", style: { bottom: -h2, right: -h2 }, cursor: "se-resize" },
+                  ] as const).map(({ k, style, cursor }) => (
+                    <div
+                      key={k}
+                      className="absolute bg-background border-2 border-primary rounded-sm"
+                      style={{ width: HANDLE, height: HANDLE, cursor, pointerEvents: "all", ...style }}
+                      onPointerDown={(e) => onHandlePointerDown(e, "scale", selectedItem.id)}
+                    />
+                  ))}
+
+                  {/* Rotation handle */}
                   <div
-                    className="rounded-full bg-background border-2 border-primary shrink-0"
-                    style={{ width: HANDLE, height: HANDLE, pointerEvents: "none" }}
-                  />
-                  <div
-                    className="bg-primary"
-                    style={{ width: 2, height: ROT_STEM, pointerEvents: "none" }}
-                  />
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      top: -(ROT_STEM + HANDLE),
+                      transform: "translateX(-50%)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      pointerEvents: "all",
+                      cursor: "crosshair",
+                    }}
+                    onPointerDown={(e) => onHandlePointerDown(e, "rotate", selectedItem.id)}
+                  >
+                    <div
+                      className="rounded-full bg-background border-2 border-primary shrink-0"
+                      style={{ width: HANDLE, height: HANDLE, pointerEvents: "none" }}
+                    />
+                    <div
+                      className="bg-primary"
+                      style={{ width: 2, height: ROT_STEM, pointerEvents: "none" }}
+                    />
+                  </div>
                 </div>
               </div>,
               document.body,
