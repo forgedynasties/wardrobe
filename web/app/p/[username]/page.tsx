@@ -554,6 +554,7 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {filtered.map((item) => {
                       const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
+                      const neverWornItem = !item.last_worn;
                       return (
                         <Link key={item.id} href={isSelf ? `/items/${item.id}` : `/p/${username}/items/${item.id}`}>
                           <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
@@ -561,6 +562,9 @@ export default function ProfilePage() {
                               {src
                                 ? <ShimmerImg src={src} alt={item.category} className="w-full h-full object-contain" />
                                 : <span className="text-2xl">👕</span>}
+                              {neverWornItem && (
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+                              )}
                             </div>
                             <div className="p-1.5">
                               <p className="text-xs font-medium capitalize truncate">{item.sub_category || item.category}</p>
@@ -576,38 +580,6 @@ export default function ProfilePage() {
           })()}
 
 
-          {/* never worn (self only) */}
-          {isSelf && neverWorn.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
-                Never Worn <span className="text-xs font-normal">({neverWorn.length})</span>
-              </h2>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {neverWorn.slice(0, 8).map((item) => {
-                  const src = item.image_status === "done" && item.image_url
-                    ? imageUrl(item.image_url)
-                    : item.raw_image_url ? imageUrl(item.raw_image_url) : null;
-                  return (
-                    <Link key={item.id} href={`/items/${item.id}`}>
-                      <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
-                        <div className="aspect-square bg-muted/40 flex items-center justify-center">
-                          {src
-                            ? <img src={src} alt={item.category} className="w-full h-full object-contain p-1" />
-                            : <span className="text-2xl">👕</span>}
-                        </div>
-                        <div className="p-1.5">
-                          <p className="text-xs font-medium capitalize truncate">{item.sub_category || item.category}</p>
-                        </div>
-                      </Card>
-                    </Link>
-                  );
-                })}
-              </div>
-              {neverWorn.length > 8 && (
-                <p className="text-xs text-muted-foreground">+{neverWorn.length - 8} more</p>
-              )}
-            </section>
-          )}
 
           {/* wishlist hidden placeholder */}
           {!isSelf && !showWishlist && (
