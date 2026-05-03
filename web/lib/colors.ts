@@ -1,10 +1,10 @@
 // Client-side dominant color extraction using an offscreen canvas.
 // Mirrors the quantize + distinct-color logic in internal/vision/colors.go.
 
-// ── Extraction ────────────────────────────────────────────────────────────────
+// ── Extraction (keep in sync with constants in internal/vision/colors.go) ─────
 const MAX_COLORS = 2;            // hard upper bound on colors returned
-const COVERAGE_THRESHOLD = 0.85; // stop once this fraction of pixels is covered
-const COLOR_DISTANCE_MIN = 40;   // min Euclidean RGB distance between chosen candidates
+const COVERAGE_THRESHOLD = 0.8;  // stop once this fraction of pixels is covered
+const COLOR_DISTANCE_MIN = 70;   // min Euclidean RGB distance between chosen candidates
 
 // ── Named color library ───────────────────────────────────────────────────────
 // Extracted colors are snapped to the nearest entry here using CIELAB ΔE.

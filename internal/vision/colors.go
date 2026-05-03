@@ -10,9 +10,10 @@ import (
 )
 
 // ── Extraction ────────────────────────────────────────────────────────────────
-const maxColors        = 2    // hard upper bound on colors returned
-const coverageThreshold = 0.85 // stop once this fraction of pixels is covered
-const colorDistanceMin  = 40.0 // min Euclidean RGB distance between chosen candidates
+// Keep these in sync with the constants at the top of web/lib/colors.ts
+const maxColors         = 2    // hard upper bound on colors returned
+const coverageThreshold = 0.8  // stop once this fraction of pixels is covered
+const colorDistanceMin  = 70.0 // min Euclidean RGB distance between chosen candidates
 
 // ── Named color library ───────────────────────────────────────────────────────
 // Extracted colors are snapped to the nearest entry here using CIELAB ΔE.
