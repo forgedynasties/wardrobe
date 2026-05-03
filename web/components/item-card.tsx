@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ShimmerImg } from "@/components/shimmer-img";
 import type { ClothingItem } from "@/lib/types";
 import { thumbnailUrl } from "@/lib/api";
+import { boostColor } from "@/lib/colors";
 
 interface ItemCardProps {
   item: ClothingItem;
@@ -37,7 +38,7 @@ export function ItemCard({ item }: ItemCardProps) {
                 <div
                   key={i}
                   className="w-4 h-4 rounded-full border-2 border-background shadow-sm"
-                  style={{ backgroundColor: c }}
+                  style={{ backgroundColor: boostColor(c) }}
                 />
               ))}
             </div>
