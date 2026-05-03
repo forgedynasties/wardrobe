@@ -430,7 +430,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                     className="w-full h-full flex items-center justify-center"
                     style={{
                       transform: `scale(${effectiveScale}) rotate(${layout.rotation}deg)`,
-                      outline: isSelected ? "2px solid hsl(var(--primary))" : "none",
+                      outline: isSelected ? "2px solid var(--primary)" : "none",
                       outlineOffset: "-1px",
                     }}
                   >
@@ -481,8 +481,8 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                       position: "absolute",
                       width: HANDLE,
                       height: HANDLE,
-                      background: "hsl(var(--background))",
-                      border: "2px solid hsl(var(--primary))",
+                      background: "var(--background)",
+                      border: "2px solid var(--primary)",
                       borderRadius: 3,
                       cursor,
                       pointerEvents: "all",
@@ -511,8 +511,8 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                     style={{
                       width: HANDLE,
                       height: HANDLE,
-                      background: "hsl(var(--background))",
-                      border: "2px solid hsl(var(--primary))",
+                      background: "var(--background)",
+                      border: "2px solid var(--primary)",
                       borderRadius: "50%",
                       flexShrink: 0,
                       pointerEvents: "none",
@@ -522,7 +522,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                     style={{
                       width: 2,
                       height: ROT_STEM,
-                      background: "hsl(var(--primary))",
+                      background: "var(--primary)",
                       pointerEvents: "none",
                     }}
                   />
