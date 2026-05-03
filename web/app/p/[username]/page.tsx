@@ -575,40 +575,6 @@ export default function ProfilePage() {
             );
           })()}
 
-          {/* favourites (signature pieces) for other viewers */}
-          {!isSelf && showSignature && topWornItems.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">{displayName}&apos;s Favourites</h2>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {topWornItems.map(({ item, wear_count }) => {
-                  const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
-                  const itemHref = `/p/${username}/items/${item.id}`;
-                  return (
-                    <Link key={item.id} href={itemHref}>
-                      <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
-                        <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
-                          {src
-                            ? <ShimmerImg src={src} alt={item.category} className="w-full h-full object-contain" />
-                            : <span className="text-2xl">👕</span>}
-                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1 py-0.5 rounded font-medium">
-                            {wear_count}×
-                          </div>
-                        </div>
-                        <div className="p-1.5">
-                          <p className="text-xs font-medium capitalize truncate">{item.sub_category || item.category}</p>
-                        </div>
-                      </Card>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* favourites hidden placeholder */}
-          {!isSelf && !showSignature && (
-            <PrivateSection label="Favourites" />
-          )}
 
           {/* never worn (self only) */}
           {isSelf && neverWorn.length > 0 && (
