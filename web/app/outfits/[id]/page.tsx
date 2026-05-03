@@ -38,7 +38,7 @@ export default function OutfitDetailPage() {
   const { user } = useUser();
   const id = params.id as string;
 
-  const [outfit, setOutfit] = useState<Outfit | null>(null);
+  const [outfit, setOutfit] = useState<Outfit | null | "not-found">(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -53,7 +53,7 @@ export default function OutfitDetailPage() {
     getOutfit(id).then((o) => {
       setOutfit(o);
       setName(o.name);
-    }).catch(console.error);
+    }).catch(() => setOutfit("not-found"));
   }, [id]);
 
   const handleWear = async () => {
@@ -88,7 +88,7 @@ export default function OutfitDetailPage() {
   };
 
   const handleAddItems = async (itemIds: string[]) => {
-    const currentItemIds = new Set(outfit?.items?.map(i => i.id) || []);
+    const currentItemIds = new Set((outfit && outfit !== "not-found" ? outfit.items?.map((i: { id: string }) => i.id) : null) || []);
     const newIds = itemIds.filter(iid => !currentItemIds.has(iid));
     for (const itemId of newIds) {
       await addOutfitItem(id, itemId);
@@ -108,6 +108,16 @@ export default function OutfitDetailPage() {
       setRemovingItem(null);
     }
   };
+
+  if (outfit === "not-found") {
+    return (
+      <div className="p-4 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[50vh] gap-3 text-center">
+        <p className="font-semibold">Outfit not found</p>
+        <p className="text-sm text-muted-foreground">This outfit may have been deleted.</p>
+        <Button variant="outline" size="sm" onClick={() => router.push("/outfits")}>Back to outfits</Button>
+      </div>
+    );
+  }
 
   if (!outfit) {
     return (
