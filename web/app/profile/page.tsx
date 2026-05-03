@@ -443,7 +443,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="p-1.5">
                           <p className="text-xs font-medium capitalize truncate">{item.name || item.sub_category || item.category}</p>
-                          {item.name && item.brand && <p className="text-[10px] text-muted-foreground truncate">{item.brand}</p>}
+                          {item.brand && <p className="text-[10px] text-muted-foreground truncate">{item.brand}</p>}
                         </div>
                       </Card>
                     </Link>
@@ -474,7 +474,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="p-1.5">
                           <p className="text-xs font-medium capitalize truncate">{item.name || item.sub_category || item.category}</p>
-                          {item.name && item.brand && <p className="text-[10px] text-muted-foreground truncate">{item.brand}</p>}
+                          {item.brand && <p className="text-[10px] text-muted-foreground truncate">{item.brand}</p>}
                         </div>
                       </Card>
                     </Link>
