@@ -171,25 +171,6 @@ export default function ItemDetailPage() {
         )}
       </div>
 
-      {item.image_url && item.raw_image_url && (
-        <div className="flex gap-2 mb-4">
-          <Badge
-            variant={!showRaw ? "default" : "outline"}
-            className="cursor-pointer"
-            onClick={() => setShowRaw(false)}
-          >
-            Clean
-          </Badge>
-          <Badge
-            variant={showRaw ? "default" : "outline"}
-            className="cursor-pointer"
-            onClick={() => setShowRaw(true)}
-          >
-            Raw
-          </Badge>
-          <Badge variant="secondary">{imageStatusLabel}</Badge>
-        </div>
-      )}
 
       {!imgSrc && (
         <p className="text-sm text-muted-foreground mb-4">
