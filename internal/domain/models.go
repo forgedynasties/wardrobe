@@ -219,6 +219,16 @@ type SignupVerifyRequest struct {
 	Code  string `json:"code" binding:"required"`
 }
 
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required"`
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email" binding:"required"`
+	Code        string `json:"code" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
+}
+
 type TopItem struct {
 	Item      ClothingItem `json:"item"`
 	WearCount int          `json:"wear_count"`

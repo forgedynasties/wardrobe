@@ -254,6 +254,77 @@ func (s *Store) VerifyPendingSignup(email, code string) (*domain.User, error) {
 	return &u, nil
 }
 
+// StorePasswordReset generates an OTP for a password reset and stores it.
+// Returns the plain OTP code and nil error, or ("", nil) if the email has no active account.
+func (s *Store) StorePasswordReset(email string) (string, error) {
+	user, err := s.GetUserByEmail(email)
+	if err != nil {
+		return "", err
+	}
+	if user == nil || !user.IsActive {
+		return "", nil
+	}
+
+	code := fmt.Sprintf("%06d", mustRandInt(1000000))
+	h := sha256.Sum256([]byte(code))
+	otpHash := fmt.Sprintf("%x", h)
+	expiresAt := time.Now().Add(10 * time.Minute)
+
+	_, err = s.db.Exec(`
+		INSERT INTO password_resets (email, otp_hash, expires_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (email) DO UPDATE SET
+			otp_hash = EXCLUDED.otp_hash,
+			expires_at = EXCLUDED.expires_at,
+			created_at = NOW()`,
+		email, otpHash, expiresAt)
+	if err != nil {
+		return "", err
+	}
+	return code, nil
+}
+
+// VerifyPasswordReset checks the OTP, updates the password, and returns the user for session creation.
+// Returns nil user if OTP is invalid or expired.
+func (s *Store) VerifyPasswordReset(email, code, newPassword string) (*domain.User, error) {
+	h := sha256.Sum256([]byte(code))
+	otpHash := fmt.Sprintf("%x", h)
+
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COUNT(*) FROM password_resets
+		WHERE email = $1 AND otp_hash = $2 AND expires_at > NOW()`,
+		email, otpHash).Scan(&count)
+	if err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return nil, nil
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
+	if err != nil {
+		return nil, err
+	}
+
+	var u domain.User
+	err = s.db.QueryRow(`
+		UPDATE users SET password_hash = $1, updated_at = NOW()
+		WHERE email = $2 AND is_active = true
+		RETURNING id, username, display_name, password_hash, is_admin, is_active, created_at, updated_at`,
+		string(hash), email).
+		Scan(&u.ID, &u.Username, &u.DisplayName, &u.PasswordHash, &u.IsAdmin, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	_, _ = s.db.Exec(`DELETE FROM password_resets WHERE email = $1`, email)
+	return &u, nil
+}
+
 func mustRandInt(max int) int {
 	b := make([]byte, 4)
 	if _, err := rand.Read(b); err != nil {

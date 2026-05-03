@@ -7,7 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type Mode = "login" | "register" | "otp";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+
+async function apiFetch(path: string, body: object) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+  return data;
+}
+
+type Mode = "login" | "register" | "otp" | "forgot" | "reset";
 
 export function UserGate({ children }: { children: React.ReactNode }) {
   const { user, hydrated, login, initiateSignup, verifySignup } = useUser();
@@ -18,6 +32,7 @@ export function UserGate({ children }: { children: React.ReactNode }) {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [pendingEmail, setPendingEmail] = useState("");
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -28,6 +43,13 @@ export function UserGate({ children }: { children: React.ReactNode }) {
 
   if (!hydrated) return null;
   if (user || pathname.startsWith("/p/")) return <>{children}</>;
+
+  const go = (m: Mode) => { setMode(m); setError(""); };
+
+  const resetOtp = () => {
+    setOtp(["", "", "", "", "", ""]);
+    setTimeout(() => otpRefs.current[0]?.focus(), 50);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,8 +73,8 @@ export function UserGate({ children }: { children: React.ReactNode }) {
     try {
       await initiateSignup(email.trim(), username.trim(), displayName.trim(), password);
       setPendingEmail(email.trim());
-      setOtp(["", "", "", "", "", ""]);
-      setMode("otp");
+      resetOtp();
+      go("otp");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -68,6 +90,47 @@ export function UserGate({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       await verifySignup(pendingEmail, code);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid or expired code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) { setError("Email required"); return; }
+    setError("");
+    setLoading(true);
+    try {
+      await apiFetch("/api/auth/forgot-password", { email: email.trim() });
+      setPendingEmail(email.trim());
+      resetOtp();
+      setNewPassword("");
+      go("reset");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = otp.join("");
+    if (code.length < 6) { setError("Enter the 6-digit code"); return; }
+    if (newPassword.length < 6) { setError("Password must be at least 6 characters"); return; }
+    setError("");
+    setLoading(true);
+    try {
+      const data = await apiFetch("/api/auth/reset-password", {
+        email: pendingEmail,
+        code,
+        new_password: newPassword,
+      });
+      // reset-password returns user data + sets session cookie — refresh to pick up session
+      window.location.reload();
+      void data;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid or expired code");
     } finally {
@@ -100,16 +163,38 @@ export function UserGate({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const OtpBoxes = () => (
+    <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
+      {otp.map((digit, i) => (
+        <input
+          key={i}
+          ref={(el) => { otpRefs.current[i] = el; }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={digit}
+          onChange={(e) => handleOtpInput(i, e.target.value)}
+          onKeyDown={(e) => handleOtpKey(i, e)}
+          className="w-11 h-14 text-center text-2xl font-bold border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      ))}
+    </div>
+  );
+
+  const subtitle: Record<Mode, string> = {
+    login: "Sign in to your hangur",
+    register: "Create your account",
+    otp: `Enter the code sent to ${pendingEmail}`,
+    forgot: "Reset your password",
+    reset: `Enter the code sent to ${pendingEmail}`,
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background px-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="font-heading text-3xl font-semibold">Hangur</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "login" && "Sign in to your hangur"}
-            {mode === "register" && "Create your account"}
-            {mode === "otp" && `Enter the code sent to ${pendingEmail}`}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{subtitle[mode]}</p>
         </div>
 
         {mode === "login" && (
@@ -126,7 +211,16 @@ export function UserGate({ children }: { children: React.ReactNode }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                  onClick={() => { setEmail(""); go("forgot"); }}
+                >
+                  Forgot password?
+                </button>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -200,47 +294,82 @@ export function UserGate({ children }: { children: React.ReactNode }) {
 
         {mode === "otp" && (
           <form onSubmit={handleOtp} className="space-y-6">
-            <div className="flex justify-center gap-2" onPaste={handleOtpPaste}>
-              {otp.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={(el) => { otpRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpInput(i, e.target.value)}
-                  onKeyDown={(e) => handleOtpKey(i, e)}
-                  className="w-11 h-14 text-center text-2xl font-bold border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              ))}
-            </div>
+            <OtpBoxes />
             {error && <p className="text-sm text-destructive text-center">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading || otp.join("").length < 6}>
               {loading ? "Verifying..." : "Verify"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               Wrong email?{" "}
-              <button type="button" className="underline" onClick={() => { setMode("register"); setError(""); }}>
+              <button type="button" className="underline" onClick={() => go("register")}>
                 Go back
               </button>
             </p>
           </form>
         )}
 
-        {mode !== "otp" && (
+        {mode === "forgot" && (
+          <form onSubmit={handleForgot} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="forgot-email">Email</Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Sending code..." : "Send code"}
+            </Button>
+          </form>
+        )}
+
+        {mode === "reset" && (
+          <form onSubmit={handleReset} className="space-y-6">
+            <OtpBoxes />
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password">New password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading || otp.join("").length < 6}>
+              {loading ? "Resetting..." : "Reset password"}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Wrong email?{" "}
+              <button type="button" className="underline" onClick={() => go("forgot")}>
+                Go back
+              </button>
+            </p>
+          </form>
+        )}
+
+        {(mode === "login" || mode === "register" || mode === "forgot") && (
           <p className="text-center text-sm text-muted-foreground">
             {mode === "login" ? (
               <>No account?{" "}
-                <button className="underline" onClick={() => { setMode("register"); setError(""); }}>
-                  Sign up
-                </button>
+                <button className="underline" onClick={() => go("register")}>Sign up</button>
+              </>
+            ) : mode === "register" ? (
+              <>Already have an account?{" "}
+                <button className="underline" onClick={() => go("login")}>Sign in</button>
               </>
             ) : (
-              <>Already have an account?{" "}
-                <button className="underline" onClick={() => { setMode("login"); setError(""); }}>
-                  Sign in
-                </button>
+              <>Remember it?{" "}
+                <button className="underline" onClick={() => go("login")}>Sign in</button>
               </>
             )}
           </p>

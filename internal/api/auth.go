@@ -224,6 +224,68 @@ func (h *Handler) VerifySignup(c *gin.Context) {
 	})
 }
 
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var req domain.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	code, err := h.store.StorePasswordReset(req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	// Always return 200 — don't reveal whether email exists
+	if code != "" && h.mailer != nil {
+		if err := h.mailer.SendOTP(req.Email, code); err != nil {
+			log.Printf("resend error (password reset): %v", err)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req domain.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(req.NewPassword) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 6 characters"})
+		return
+	}
+
+	user, err := h.store.VerifyPasswordReset(req.Email, req.Code, req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired code"})
+		return
+	}
+
+	token, err := generateToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+	if _, err := h.store.CreateSession(user.ID, token, sessionExpiry); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	setSessionCookie(c, token, cookieMaxAge)
+	c.JSON(http.StatusOK, gin.H{
+		"username":     user.Username,
+		"display_name": user.DisplayName,
+		"is_admin":     user.IsAdmin,
+	})
+}
+
 func (h *Handler) ChangePassword(c *gin.Context) {
 	user := c.MustGet("user").(*domain.User)
 	var req struct {

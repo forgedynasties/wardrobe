@@ -15,6 +15,8 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		auth.POST("/register", h.Register)
 		auth.POST("/signup/initiate", h.InitiateSignup)
 		auth.POST("/signup/verify", h.VerifySignup)
+		auth.POST("/forgot-password", h.ForgotPassword)
+		auth.POST("/reset-password", h.ResetPassword)
 		auth.GET("/me", h.AuthMiddleware(), h.Me)
 		auth.PUT("/password", h.AuthMiddleware(), h.ChangePassword)
 	}
