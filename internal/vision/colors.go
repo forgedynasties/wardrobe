@@ -8,8 +8,12 @@ import (
 	"sort"
 )
 
-// ExtractColors returns up to maxColors dominant hex colors from non-transparent pixels in the PNG at path.
-func ExtractColors(path string, maxColors int) ([]string, error) {
+const maxColors = 4
+const coverageThreshold = 0.85
+
+// ExtractColors returns dominant hex colors from non-transparent pixels in the PNG at path.
+// The count is dynamic: colors are added until 85% of pixels are covered, up to 4 max.
+func ExtractColors(path string) ([]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open: %w", err)
@@ -20,8 +24,13 @@ func ExtractColors(path string, maxColors int) ([]string, error) {
 		return nil, fmt.Errorf("decode: %w", err)
 	}
 
-	counts := map[uint32]int{}
+	type entry struct {
+		key   uint32
+		count int
+	}
+	counts := map[uint32]*entry{}
 	b := img.Bounds()
+	totalPixels := 0
 
 	// Sample every 4th pixel for speed on large images.
 	step := 4
@@ -29,33 +38,34 @@ func ExtractColors(path string, maxColors int) ([]string, error) {
 		for x := b.Min.X; x < b.Max.X; x += step {
 			r, g, bl, a := img.At(x, y).RGBA()
 			if a < 0x8000 {
-				continue // skip transparent/near-transparent
+				continue
 			}
-			// Convert from 16-bit to 8-bit and quantize to reduce color space.
+			totalPixels++
 			r8 := quantize(uint8(r >> 8))
 			g8 := quantize(uint8(g >> 8))
 			b8 := quantize(uint8(bl >> 8))
 			key := (uint32(r8) << 16) | (uint32(g8) << 8) | uint32(b8)
-			counts[key]++
+			if e, ok := counts[key]; ok {
+				e.count++
+			} else {
+				counts[key] = &entry{key: key, count: 1}
+			}
 		}
 	}
 
-	if len(counts) == 0 {
+	if totalPixels == 0 {
 		return nil, nil
 	}
 
-	type kv struct {
-		key   uint32
-		count int
-	}
-	pairs := make([]kv, 0, len(counts))
-	for k, v := range counts {
-		pairs = append(pairs, kv{k, v})
+	pairs := make([]*entry, 0, len(counts))
+	for _, e := range counts {
+		pairs = append(pairs, e)
 	}
 	sort.Slice(pairs, func(i, j int) bool { return pairs[i].count > pairs[j].count })
 
-	// Pick top colors that are visually distinct from each other.
+	// Add distinct colors until coverage threshold reached or max hit.
 	chosen := make([]uint32, 0, maxColors)
+	covered := 0
 	for _, p := range pairs {
 		if len(chosen) >= maxColors {
 			break
@@ -69,6 +79,10 @@ func ExtractColors(path string, maxColors int) ([]string, error) {
 		}
 		if distinct {
 			chosen = append(chosen, p.key)
+			covered += p.count
+			if float64(covered)/float64(totalPixels) >= coverageThreshold {
+				break
+			}
 		}
 	}
 

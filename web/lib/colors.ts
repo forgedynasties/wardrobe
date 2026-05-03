@@ -55,7 +55,10 @@ function colorDistance(a: number[], b: number[]): number {
   );
 }
 
-export async function extractColorsFromImage(src: string, maxColors = 2): Promise<string[]> {
+const MAX_COLORS = 4;
+const COVERAGE_THRESHOLD = 0.85;
+
+export async function extractColorsFromImage(src: string): Promise<string[]> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -70,9 +73,11 @@ export async function extractColorsFromImage(src: string, maxColors = 2): Promis
         const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
         const counts = new Map<string, { count: number; rgb: number[] }>();
+        let totalPixels = 0;
         for (let i = 0; i < data.length; i += 4) {
           const a = data[i + 3];
-          if (a < 128) continue; // skip transparent
+          if (a < 128) continue;
+          totalPixels++;
           const r = quantize(data[i]);
           const g = quantize(data[i + 1]);
           const b = quantize(data[i + 2]);
@@ -84,10 +89,13 @@ export async function extractColorsFromImage(src: string, maxColors = 2): Promis
 
         const sorted = [...counts.values()].sort((a, b) => b.count - a.count);
         const chosen: number[][] = [];
-        for (const { rgb } of sorted) {
-          if (chosen.length >= maxColors) break;
+        let covered = 0;
+        for (const { rgb, count } of sorted) {
+          if (chosen.length >= MAX_COLORS) break;
           if (chosen.every((c) => colorDistance(c, rgb) >= 40)) {
             chosen.push(rgb);
+            covered += count;
+            if (covered / totalPixels >= COVERAGE_THRESHOLD) break;
           }
         }
 

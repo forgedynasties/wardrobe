@@ -37,7 +37,7 @@ export default function NewItemPage() {
     setFile(f);
     const objectUrl = URL.createObjectURL(f);
     setPreview(objectUrl);
-    extractColorsFromImage(objectUrl, 2).then((extracted) => {
+    extractColorsFromImage(objectUrl).then((extracted) => {
       if (extracted.length > 0) setColors(extracted);
     });
   };
