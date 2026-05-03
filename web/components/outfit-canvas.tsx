@@ -18,7 +18,7 @@ function isOutfitItem(i: ClothingItem | OutfitItem): i is OutfitItem {
 function hasCustomLayout(items: Array<OutfitItem | ClothingItem>): boolean {
   return items.some((i) => {
     if (!isOutfitItem(i)) return false;
-    return i.position_x !== 0 || i.position_y !== 0;
+    return i.position_x !== 0 || i.position_y !== 0 || (i.scale ?? 1) !== 1 || (i.rotation ?? 0) !== 0;
   });
 }
 
@@ -53,27 +53,31 @@ export function OutfitCanvas({ items, className }: Props) {
       <div className={`absolute inset-0 isolate ${className ?? ""}`}>
         {sorted.map((item, idx) => {
           const src = itemSrc(item);
-          const layout = isOutfitItem(item)
-            ? item
-            : { position_x: 0, position_y: 0, z_index: 0 };
+          const oi = isOutfitItem(item) ? item : null;
+          const px = oi?.position_x ?? 0;
+          const py = oi?.position_y ?? 0;
+          const scale = (oi?.scale ?? 1) * (item.display_scale || 1);
+          const rotation = oi?.rotation ?? 0;
           return (
             <div
               key={item.id ?? idx}
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
-              style={{
-                transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${(isOutfitItem(item) ? (item.scale ?? 1) : 1) * (item.display_scale || 1)})`,
-                zIndex: effectiveZ(item),
-              }}
+              style={{ transform: `translate(${px}%, ${py}%)`, zIndex: effectiveZ(item) }}
             >
-              {src ? (
-                <ShimmerImg
-                  src={src}
-                  alt={item.category}
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <span className="text-xl text-muted-foreground/50">👕</span>
-              )}
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{ transform: `scale(${scale}) rotate(${rotation}deg)` }}
+              >
+                {src ? (
+                  <ShimmerImg
+                    src={src}
+                    alt={item.category}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-xl text-muted-foreground/50">👕</span>
+                )}
+              </div>
             </div>
           );
         })}
