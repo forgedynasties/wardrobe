@@ -90,10 +90,13 @@ export function UserGate({ children }: { children: React.ReactNode }) {
   };
 
   const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
     const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (digits.length === 6) {
-      setOtp(digits.split(""));
-      otpRefs.current[5]?.focus();
+    if (digits.length > 0) {
+      const next = ["", "", "", "", "", ""];
+      digits.split("").forEach((d, i) => { next[i] = d; });
+      setOtp(next);
+      otpRefs.current[Math.min(digits.length, 5)]?.focus();
     }
   };
 
