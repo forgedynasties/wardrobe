@@ -516,7 +516,7 @@ export default function ProfilePage() {
               { key: "bottom", label: "Bottoms", Icon: Rows2 },
               { key: "outerwear", label: "Outer", Icon: Layers },
               { key: "shoes", label: "Shoes", Icon: Footprints },
-              { key: "accessory", label: "Acc.", Icon: Gem },
+              { key: "accessory", label: "Accessories", Icon: Gem },
               { key: "other", label: "Other", Icon: Package },
             ];
             const visibleTabs = TABS.filter(t => {
