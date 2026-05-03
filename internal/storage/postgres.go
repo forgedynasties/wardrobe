@@ -429,7 +429,7 @@ func (s *Store) loadOutfitItemsBatch(outfitIDs []uuid.UUID) (map[uuid.UUID][]dom
 
 	rows, err := s.db.Query(`
 		SELECT oi.outfit_id, ci.id, ci.category, ci.sub_category, ci.colors, ci.material, ci.image_url, ci.raw_image_url, COALESCE(ci.thumbnail_url, '') as thumbnail_url, ci.image_status, ci.display_scale, ci.last_worn, ci.created_at, ci.updated_at,
-			oi.position_x, oi.position_y, oi.scale, oi.z_index
+			oi.position_x, oi.position_y, oi.scale, oi.z_index, oi.rotation
 		FROM clothing_items ci
 		JOIN outfit_items oi ON oi.clothing_item_id = ci.id
 		WHERE oi.outfit_id = ANY($1)
@@ -444,7 +444,7 @@ func (s *Store) loadOutfitItemsBatch(outfitIDs []uuid.UUID) (map[uuid.UUID][]dom
 		var item domain.OutfitItem
 		if err := rows.Scan(&outfitID, &item.ID, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material,
 			&item.ImageURL, &item.RawImageURL, &item.ThumbnailURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt,
-			&item.PositionX, &item.PositionY, &item.Scale, &item.ZIndex); err != nil {
+			&item.PositionX, &item.PositionY, &item.Scale, &item.ZIndex, &item.Rotation); err != nil {
 			return nil, err
 		}
 		result[outfitID] = append(result[outfitID], item)
@@ -464,9 +464,9 @@ func (s *Store) UpdateOutfitLayout(outfitID uuid.UUID, owner string, updates []d
 	}
 	for _, u := range updates {
 		_, err := s.db.Exec(`
-			UPDATE outfit_items SET position_x = $1, position_y = $2, scale = $3, z_index = $4
-			WHERE outfit_id = $5 AND clothing_item_id = $6`,
-			u.PositionX, u.PositionY, u.Scale, u.ZIndex, outfitID, u.ItemID)
+			UPDATE outfit_items SET position_x = $1, position_y = $2, scale = $3, z_index = $4, rotation = $5
+			WHERE outfit_id = $6 AND clothing_item_id = $7`,
+			u.PositionX, u.PositionY, u.Scale, u.ZIndex, u.Rotation, outfitID, u.ItemID)
 		if err != nil {
 			return err
 		}

@@ -13,6 +13,7 @@ interface ItemLayout {
   position_y: number;
   scale: number;
   z_index: number;
+  rotation: number;
 }
 
 interface Props {
@@ -31,6 +32,9 @@ function pointerDist(p1: PointerEvent, p2: PointerEvent) {
 
 const DEFAULT_SLOT = { top: 20, height: 40, zIndex: 1 };
 
+// Canvas aspect ratio (matches aspect-[3/4] class)
+const CANVAS_ASPECT = 3 / 4;
+
 function initLayouts(items: OutfitItem[]): Map<string, ItemLayout> {
   const m = new Map<string, ItemLayout>();
   const cfg = outfitConfig.get();
@@ -43,10 +47,9 @@ function initLayouts(items: OutfitItem[]): Map<string, ItemLayout> {
         position_y: item.position_y ?? 0,
         scale: item.scale && item.scale > 0 ? item.scale : 1,
         z_index: item.z_index ?? idx,
+        rotation: item.rotation ?? 0,
       });
     } else {
-      // Convert mannequin slot → editor coordinates.
-      // Clothing images are portrait so they fill to slot height; use slot.height as the scale constraint.
       const subSlot = item.sub_category ? cfg.subcategorySlots[item.sub_category] : undefined;
       const slot = subSlot ?? cfg.mannequinSlots[item.category] ?? DEFAULT_SLOT;
       m.set(item.id, {
@@ -54,10 +57,28 @@ function initLayouts(items: OutfitItem[]): Map<string, ItemLayout> {
         position_y: slot.top + slot.height / 2 - 50,
         scale: (slot.height / 100) / (item.display_scale || 1),
         z_index: slot.zIndex ?? idx,
+        rotation: 0,
       });
     }
   });
   return m;
+}
+
+// Natural dimensions per item id, populated on image load
+type NaturalDims = Map<string, { w: number; h: number }>;
+
+// Compute the object-contain bounding box (in px) for an image inside a container.
+// Returns { left, top, width, height } relative to the container top-left.
+function containBox(
+  containerW: number,
+  containerH: number,
+  imgW: number,
+  imgH: number
+): { left: number; top: number; width: number; height: number } {
+  const scale = Math.min(containerW / imgW, containerH / imgH);
+  const w = imgW * scale;
+  const h = imgH * scale;
+  return { left: (containerW - w) / 2, top: (containerH - h) / 2, width: w, height: h };
 }
 
 export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
@@ -65,6 +86,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dragLayerId, setDragLayerId] = useState<string | null>(null);
+  const [naturalDims, setNaturalDims] = useState<NaturalDims>(new Map());
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +105,20 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
     origDist: number;
   } | null>(null);
 
+  // Handle drag state for transform handles
+  const handleDragRef = useRef<{
+    type: "scale" | "rotate";
+    itemId: string;
+    origScale: number;
+    origRotation: number;
+    // center of item in client coords at drag start
+    centerX: number;
+    centerY: number;
+    // distance/angle from center at drag start
+    origDist: number;
+    origAngle: number;
+  } | null>(null);
+
   const activePointers = useRef<Map<number, PointerEvent>>(new Map());
 
   const updateLayout = useCallback((id: string, patch: Partial<ItemLayout>) => {
@@ -94,14 +130,12 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
     });
   }, []);
 
-  // Canvas item sorted bottom→front for rendering
   const canvasSorted = [...items].sort((a, b) => {
     const az = layouts.get(a.id)?.z_index ?? 0;
     const bz = layouts.get(b.id)?.z_index ?? 0;
     return az - bz;
   });
 
-  // Layer panel sorted front→back (top of list = front)
   const layersSorted = [...canvasSorted].reverse();
 
   const handlePointerDown = (e: React.PointerEvent, itemId: string) => {
@@ -167,7 +201,6 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    // Select on click (no movement) — toggle if clicking same item
     if (dragRef.current && !dragRef.current.hasMoved) {
       const clickedId = dragRef.current.itemId;
       setSelectedId(prev => (prev === clickedId ? null : clickedId));
@@ -177,8 +210,67 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
     if (activePointers.current.size === 0) dragRef.current = null;
   };
 
-  // Layer panel drag-to-reorder
-  const handleLayerDragOver = (e: React.DragEvent, targetId: string) => {
+  // Handle pointer events for bounding box handles
+  const handleHandlePointerDown = (
+    e: React.PointerEvent,
+    type: "scale" | "rotate",
+    itemId: string
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+
+    const canvas = canvasRef.current;
+    const layout = layouts.get(itemId);
+    if (!canvas || !layout) return;
+
+    const rect = canvas.getBoundingClientRect();
+    // Item center in client coords
+    const centerX = rect.left + rect.width * (0.5 + layout.position_x / 100);
+    const centerY = rect.top + rect.height * (0.5 + layout.position_y / 100);
+
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+
+    handleDragRef.current = {
+      type,
+      itemId,
+      origScale: layout.scale,
+      origRotation: layout.rotation,
+      centerX,
+      centerY,
+      origDist: Math.hypot(dx, dy),
+      origAngle: Math.atan2(dy, dx),
+    };
+  };
+
+  const handleHandlePointerMove = (e: React.PointerEvent) => {
+    const h = handleDragRef.current;
+    if (!h) return;
+    e.stopPropagation();
+
+    const dx = e.clientX - h.centerX;
+    const dy = e.clientY - h.centerY;
+
+    if (h.type === "scale") {
+      const newDist = Math.hypot(dx, dy);
+      if (h.origDist > 1) {
+        const ratio = newDist / h.origDist;
+        updateLayout(h.itemId, { scale: clamp(h.origScale * ratio, 0.05, 4.0) });
+      }
+    } else {
+      const angle = Math.atan2(dy, dx);
+      const delta = angle - h.origAngle;
+      const deg = h.origRotation + (delta * 180) / Math.PI;
+      updateLayout(h.itemId, { rotation: deg });
+    }
+  };
+
+  const handleHandlePointerUp = () => {
+    handleDragRef.current = null;
+  };
+
+  const layerDragOver = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     if (!dragLayerId || dragLayerId === targetId) return;
 
@@ -204,6 +296,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
           position_y: slot.top + slot.height / 2 - 50,
           scale: (slot.height / 100) / (item.display_scale || 1),
           z_index: slot.zIndex ?? idx,
+          rotation: 0,
         });
       });
       return next;
@@ -214,7 +307,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
     setSaving(true);
     try {
       const updates: OutfitItemLayoutUpdate[] = items.map(item => {
-        const l = layouts.get(item.id) ?? { position_x: 0, position_y: 0, scale: 1, z_index: 0 };
+        const l = layouts.get(item.id) ?? { position_x: 0, position_y: 0, scale: 1, z_index: 0, rotation: 0 };
         return { item_id: item.id, ...l };
       });
       await onSave(updates);
@@ -225,6 +318,47 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
 
   const selectedItem = items.find(i => i.id === selectedId);
   const selectedLayout = selectedId ? layouts.get(selectedId) : null;
+
+  // Compute bounding box overlay dimensions for the selected item.
+  // The item div is `absolute inset-0` (fills canvas), so the image is object-contain inside it.
+  // We compute the contain rect, then apply scale, and produce a centered overlay.
+  function getBoundingBoxStyle(
+    item: OutfitItem,
+    layout: ItemLayout
+  ): React.CSSProperties | null {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const dims = naturalDims.get(item.id);
+    if (!dims) return null;
+
+    const canvasW = canvas.clientWidth;
+    const canvasH = canvas.clientHeight;
+    const effectiveScale = layout.scale * (item.display_scale || 1);
+
+    // The item's absolute inset-0 div is canvasW × canvasH.
+    // object-contain rect within that:
+    const box = containBox(canvasW, canvasH, dims.w, dims.h);
+
+    // After CSS scale(effectiveScale) applied at center of the inset-0 div:
+    const scaledW = box.width * effectiveScale;
+    const scaledH = box.height * effectiveScale;
+
+    // Center of item (in canvas coords, accounting for translation):
+    const cx = canvasW / 2 + (layout.position_x / 100) * canvasW;
+    const cy = canvasH / 2 + (layout.position_y / 100) * canvasH;
+
+    return {
+      position: "absolute",
+      left: cx - scaledW / 2,
+      top: cy - scaledH / 2,
+      width: scaledW,
+      height: scaledH,
+      transform: `rotate(${layout.rotation}deg)`,
+      transformOrigin: "center",
+      pointerEvents: "none",
+      zIndex: 9999,
+    };
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -246,42 +380,154 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
           <div
             ref={canvasRef}
             className="absolute inset-0"
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
+            onPointerMove={(e) => {
+              handlePointerMove(e);
+              handleHandlePointerMove(e);
+            }}
+            onPointerUp={(e) => {
+              handlePointerUp(e);
+              handleHandlePointerUp();
+            }}
+            onPointerCancel={(e) => {
+              handlePointerUp(e);
+              handleHandlePointerUp();
+            }}
           >
             {canvasSorted.map((item) => {
               const src = thumbnailUrl(item) || null;
-              const layout = layouts.get(item.id) ?? { position_x: 0, position_y: 0, scale: 1, z_index: 0 };
+              const layout = layouts.get(item.id) ?? { position_x: 0, position_y: 0, scale: 1, z_index: 0, rotation: 0 };
               const isSelected = selectedId === item.id;
               const effectiveScale = layout.scale * (item.display_scale || 1);
 
               return (
+                // Outer div: absolute inset-0 for translate (% is relative to this div size = canvas size)
                 <div
                   key={item.id}
                   className="absolute inset-0 flex items-center justify-center"
                   style={{
-                    transform: `translate(${layout.position_x}%, ${layout.position_y}%) scale(${effectiveScale})`,
+                    transform: `translate(${layout.position_x}%, ${layout.position_y}%)`,
                     zIndex: layout.z_index + 1,
                     cursor: "grab",
-                    outline: isSelected ? "2px solid hsl(var(--primary))" : "none",
-                    outlineOffset: "-2px",
                   }}
                   onPointerDown={(e) => handlePointerDown(e, item.id)}
                 >
-                  {src ? (
-                    <ShimmerImg
-                      src={src}
-                      alt={item.category}
-                      className="w-full h-full object-contain pointer-events-none"
-                      style={isSelected ? { filter: "drop-shadow(0 0 6px hsl(var(--primary) / 0.7))" } : undefined}
-                    />
-                  ) : (
-                    <span className="text-4xl pointer-events-none">👕</span>
-                  )}
+                  {/* Inner div: scale + rotate around item center */}
+                  <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{
+                      transform: `scale(${effectiveScale}) rotate(${layout.rotation}deg)`,
+                    }}
+                  >
+                    {src ? (
+                      <>
+                        <ShimmerImg
+                          src={src}
+                          alt={item.category}
+                          className="w-full h-full object-contain pointer-events-none"
+                        />
+                        {/* invisible img to capture natural dimensions */}
+                        {!naturalDims.has(item.id) && (
+                          <img
+                            src={src}
+                            alt=""
+                            aria-hidden
+                            className="absolute w-0 h-0 opacity-0 pointer-events-none"
+                            onLoad={(e) => {
+                              const img = e.currentTarget as HTMLImageElement;
+                              setNaturalDims(prev => {
+                                const next = new Map(prev);
+                                next.set(item.id, { w: img.naturalWidth, h: img.naturalHeight });
+                                return next;
+                              });
+                            }}
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-4xl pointer-events-none">👕</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
+
+            {/* Bounding box overlay for selected item */}
+            {selectedItem && selectedLayout && (() => {
+              const boxStyle = getBoundingBoxStyle(selectedItem, selectedLayout);
+              if (!boxStyle) return null;
+
+              const HANDLE_SIZE = 14;
+              const ROTATE_OFFSET = 28;
+
+              return (
+                <div style={boxStyle}>
+                  {/* border */}
+                  <div
+                    className="absolute inset-0 rounded-sm"
+                    style={{
+                      border: "2px solid hsl(var(--primary))",
+                      pointerEvents: "none",
+                    }}
+                  />
+
+                  {/* Corner scale handles */}
+                  {[
+                    { corner: "tl", cursor: "nw-resize", style: { top: -HANDLE_SIZE / 2, left: -HANDLE_SIZE / 2 } },
+                    { corner: "tr", cursor: "ne-resize", style: { top: -HANDLE_SIZE / 2, right: -HANDLE_SIZE / 2 } },
+                    { corner: "bl", cursor: "sw-resize", style: { bottom: -HANDLE_SIZE / 2, left: -HANDLE_SIZE / 2 } },
+                    { corner: "br", cursor: "se-resize", style: { bottom: -HANDLE_SIZE / 2, right: -HANDLE_SIZE / 2 } },
+                  ].map(({ corner, cursor, style }) => (
+                    <div
+                      key={corner}
+                      className="absolute bg-background border-2 border-primary rounded-sm"
+                      style={{
+                        width: HANDLE_SIZE,
+                        height: HANDLE_SIZE,
+                        cursor,
+                        pointerEvents: "all",
+                        ...style,
+                      }}
+                      onPointerDown={(e) => handleHandlePointerDown(e, "scale", selectedItem.id)}
+                    />
+                  ))}
+
+                  {/* Rotation handle — above center top */}
+                  <div
+                    className="absolute"
+                    style={{
+                      left: "50%",
+                      top: -ROTATE_OFFSET - HANDLE_SIZE / 2,
+                      transform: "translateX(-50%)",
+                      pointerEvents: "all",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 0,
+                    }}
+                    onPointerDown={(e) => handleHandlePointerDown(e, "rotate", selectedItem.id)}
+                  >
+                    {/* stem */}
+                    <div
+                      style={{
+                        width: 2,
+                        height: ROTATE_OFFSET - HANDLE_SIZE / 2,
+                        background: "hsl(var(--primary))",
+                        pointerEvents: "none",
+                      }}
+                    />
+                    {/* circle */}
+                    <div
+                      className="bg-background border-2 border-primary rounded-full"
+                      style={{
+                        width: HANDLE_SIZE,
+                        height: HANDLE_SIZE,
+                        cursor: "crosshair",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -299,7 +545,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                 draggable
                 onDragStart={() => setDragLayerId(item.id)}
                 onDragEnd={() => setDragLayerId(null)}
-                onDragOver={(e) => handleLayerDragOver(e, item.id)}
+                onDragOver={(e) => layerDragOver(e, item.id)}
                 onClick={() => setSelectedId(prev => prev === item.id ? null : item.id)}
                 className={`flex items-center gap-1.5 rounded-lg border px-1.5 py-1 cursor-pointer transition-colors ${
                   isSelected
@@ -329,27 +575,11 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
         </div>
       </div>
 
-      {/* item controls */}
+      {/* controls */}
       <div className="rounded-xl border bg-card p-3 space-y-3">
-        {selectedItem && selectedLayout ? (
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground w-10 shrink-0">Scale</span>
-            <input
-              type="range"
-              min="0.1"
-              max="3.0"
-              step="0.05"
-              value={selectedLayout.scale}
-              onChange={e => updateLayout(selectedItem.id, { scale: parseFloat(e.target.value) })}
-              className="flex-1 accent-primary"
-            />
-            <span className="text-xs text-muted-foreground w-8 text-right tabular-nums shrink-0">
-              {selectedLayout.scale.toFixed(2)}×
-            </span>
-          </div>
-        ) : (
+        {!selectedItem && (
           <p className="text-xs text-muted-foreground text-center">
-            Click an item or layer to select
+            Click an item to select · drag to move · corner handles to scale · top handle to rotate
           </p>
         )}
 

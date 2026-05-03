@@ -35,6 +35,7 @@ export interface OutfitItemLayoutUpdate {
   position_y: number;
   scale: number;
   z_index: number;
+  rotation: number;
 }
 
 export interface Page<T> {
@@ -63,6 +64,7 @@ export interface OutfitItem extends ClothingItem {
   position_y: number;
   scale: number;
   z_index: number;
+  rotation: number;
 }
 
 export interface Outfit {

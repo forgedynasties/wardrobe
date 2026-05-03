@@ -33,6 +33,7 @@ type OutfitItem struct {
 	PositionY float64 `json:"position_y"`
 	Scale     float64 `json:"scale"`
 	ZIndex    int     `json:"z_index"`
+	Rotation  float64 `json:"rotation"`
 }
 
 type OutfitItemLayout struct {
@@ -41,6 +42,7 @@ type OutfitItemLayout struct {
 	PositionY float64   `json:"position_y"`
 	Scale     float64   `json:"scale"`
 	ZIndex    int       `json:"z_index"`
+	Rotation  float64   `json:"rotation"`
 }
 
 type Outfit struct {

@@ -1,0 +1,1 @@
+ALTER TABLE outfit_items ADD COLUMN rotation REAL NOT NULL DEFAULT 0;
