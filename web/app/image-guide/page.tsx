@@ -101,10 +101,10 @@ export default function ImageGuidePage() {
               , <strong className="text-foreground">attach a photo of your clothing item</strong>, then add a prompt.
             </p>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
-              <li className="flex gap-2"><span className="text-primary mt-0.5">·</span> Attach the photo — no need to describe the item</li>
-              <li className="flex gap-2"><span className="text-primary mt-0.5">·</span> Always say <strong className="text-foreground">white background</strong> — makes removal easier</li>
-              <li className="flex gap-2"><span className="text-primary mt-0.5">·</span> Add <strong className="text-foreground">flat lay</strong> or <strong className="text-foreground">front view</strong> to control the angle</li>
-              <li className="flex gap-2"><span className="text-primary mt-0.5">·</span> If it shows a model, add <strong className="text-foreground">no model, clothing only</strong></li>
+              <li className="flex gap-2"><span className="text-primary mt-0.5 shrink-0">·</span><span>Attach the photo — no need to describe the item</span></li>
+              <li className="flex gap-2"><span className="text-primary mt-0.5 shrink-0">·</span><span>Always say <strong className="text-foreground">white background</strong> — makes removal easier</span></li>
+              <li className="flex gap-2"><span className="text-primary mt-0.5 shrink-0">·</span><span>Add <strong className="text-foreground">flat lay</strong> or <strong className="text-foreground">front view</strong> to control the angle</span></li>
+              <li className="flex gap-2"><span className="text-primary mt-0.5 shrink-0">·</span><span>If it shows a model, add <strong className="text-foreground">no model, clothing only</strong></span></li>
             </ul>
             <CopyPrompt text="Place this on a plain white background, flat lay, studio lighting, no model" />
           </div>
@@ -158,10 +158,10 @@ export default function ImageGuidePage() {
             </div>
           </div>
           <ul className="space-y-1.5 text-sm text-muted-foreground">
-            <li className="flex gap-2"><span className="text-primary mt-0.5">1.</span> Tap <strong className="text-foreground">+</strong> in the top right</li>
-            <li className="flex gap-2"><span className="text-primary mt-0.5">2.</span> Fill in category, subcategory, and name</li>
-            <li className="flex gap-2"><span className="text-primary mt-0.5">3.</span> Upload the PNG you just made</li>
-            <li className="flex gap-2"><span className="text-primary mt-0.5">4.</span> Hangur auto-detects the colors</li>
+            <li className="flex gap-2"><span className="text-primary mt-0.5 shrink-0">1.</span><span>Tap <strong className="text-foreground">+</strong> in the top right</span></li>
+            <li className="flex gap-2"><span className="text-primary mt-0.5 shrink-0">2.</span><span>Fill in category, subcategory, and name</span></li>
+            <li className="flex gap-2"><span className="text-primary mt-0.5 shrink-0">3.</span><span>Upload the PNG you just made</span></li>
+            <li className="flex gap-2"><span className="text-primary mt-0.5 shrink-0">4.</span><span>Hangur auto-detects the colors</span></li>
           </ul>
         </div>
       </div>
