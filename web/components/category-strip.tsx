@@ -66,11 +66,7 @@ function StripCard({ item }: { item: ClothingItem }) {
         </div>
       )}
       {!item.last_worn && (
-        <div className="absolute top-1.5 right-1.5">
-          <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-muted/80 text-muted-foreground backdrop-blur-sm leading-none">
-            Unworn
-          </span>
-        </div>
+        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
       )}
     </Link>
   );

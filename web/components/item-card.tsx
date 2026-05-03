@@ -43,11 +43,7 @@ export function ItemCard({ item }: ItemCardProps) {
             </div>
           )}
           {!item.last_worn && (
-            <div className="absolute bottom-2 left-2 z-10">
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted/80 text-muted-foreground backdrop-blur-sm">
-                Never worn
-              </span>
-            </div>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary z-10" />
           )}
         </div>
         <div className="px-3 py-2">

@@ -115,6 +115,13 @@ export default function HangurPage() {
         </div>
       )}
 
+      {!loading && items.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-4 text-xs text-muted-foreground">
+          <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+          Never worn
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-8">
           {CATEGORIES.map((cat) => (
