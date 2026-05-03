@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { COLOR_LIBRARY } from "@/lib/colors";
 
 const PRESET_COLORS = [
   { hex: "#000000", name: "Black" },
@@ -75,7 +76,7 @@ export function ColorPicker({ values, onChange }: ColorPickerProps) {
       {values.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {values.map((hex, idx) => {
-            const preset = PRESET_COLORS.find((c) => c.hex.toUpperCase() === hex.toUpperCase());
+            const preset = [...PRESET_COLORS, ...COLOR_LIBRARY].find((c) => c.hex.toUpperCase() === hex.toUpperCase());
             return (
               <span
                 key={`${hex}-${idx}`}
