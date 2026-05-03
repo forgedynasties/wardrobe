@@ -20,7 +20,7 @@ import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
 import { CategoryPixelBox } from "@/components/category-pixel-box";
-import { Settings, Share2, Check, ChevronLeft, ChevronRight, Heart, Lock } from "lucide-react";
+import { Settings, Share2, Check, ChevronLeft, ChevronRight, Heart, Lock, LayoutGrid, Shirt, Rows2, Layers, Footprints, Gem, Package } from "lucide-react";
 import type {
   HangurStats, Outfit, HeatmapEntry, ProfileConfig,
   WishlistItem, ClothingItem, OutfitLog, PublicProfile,
@@ -102,6 +102,8 @@ export default function ProfilePage() {
   const [wearLogs, setWearLogs] = useState<OutfitLog[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [neverWorn, setNeverWorn] = useState<ClothingItem[]>([]);
+  const [allItems, setAllItems] = useState<ClothingItem[]>([]);
+  const [itemsTab, setItemsTab] = useState("all");
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(today));
   const [galleryTab, setGalleryTab] = useState<"visible" | "hidden">("visible");
   const [copied, setCopied] = useState(false);
@@ -127,6 +129,7 @@ export default function ProfilePage() {
       setOutfits(page.data);
       setWishlist(wl.filter((w) => !w.bought_at));
       setNeverWorn(items.filter((i) => !i.last_worn));
+      setAllItems(items);
     }).finally(() => setLoading(false));
   }, [hydrated, isSelf]);
 
@@ -501,14 +504,82 @@ export default function ProfilePage() {
             <PrivateSection label="Wear Calendar" />
           )}
 
-          {/* favourites (signature pieces) */}
-          {showSignature && topWornItems.length > 0 && (
+          {/* all items with category tabs (self only) */}
+          {isSelf && (() => {
+            const knownCats = ["top", "bottom", "outerwear", "shoes", "accessory"];
+            const TABS = [
+              { key: "all", label: "All", Icon: LayoutGrid },
+              { key: "top", label: "Tops", Icon: Shirt },
+              { key: "bottom", label: "Bottoms", Icon: Rows2 },
+              { key: "outerwear", label: "Outer", Icon: Layers },
+              { key: "shoes", label: "Shoes", Icon: Footprints },
+              { key: "accessory", label: "Acc.", Icon: Gem },
+              { key: "other", label: "Other", Icon: Package },
+            ];
+            const visibleTabs = TABS.filter(t => {
+              if (t.key === "all") return true;
+              if (t.key === "other") return allItems.some(i => !knownCats.includes(i.category?.toLowerCase() ?? ""));
+              return allItems.some(i => i.category?.toLowerCase() === t.key);
+            });
+            const filtered = itemsTab === "all"
+              ? allItems
+              : itemsTab === "other"
+                ? allItems.filter(i => !knownCats.includes(i.category?.toLowerCase() ?? ""))
+                : allItems.filter(i => i.category?.toLowerCase() === itemsTab);
+            return (
+              <section className="space-y-3">
+                <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Items</h2>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                  {visibleTabs.map(({ key, label, Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setItemsTab(key)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0 ${
+                        itemsTab === key
+                          ? "bg-foreground text-background"
+                          : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {filtered.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No items.</p>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {filtered.map((item) => {
+                      const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
+                      return (
+                        <Link key={item.id} href={`/items/${item.id}`}>
+                          <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
+                            <div className="aspect-square bg-muted/40 flex items-center justify-center relative">
+                              {src
+                                ? <ShimmerImg src={src} alt={item.category} className="w-full h-full object-contain" />
+                                : <span className="text-2xl">👕</span>}
+                            </div>
+                            <div className="p-1.5">
+                              <p className="text-xs font-medium capitalize truncate">{item.sub_category || item.category}</p>
+                            </div>
+                          </Card>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            );
+          })()}
+
+          {/* favourites (signature pieces) for other viewers */}
+          {!isSelf && showSignature && topWornItems.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">{displayName}&apos;s Favourites</h2>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {topWornItems.map(({ item, wear_count }) => {
                   const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
-                  const itemHref = isSelf ? `/items/${item.id}` : `/p/${username}/items/${item.id}`;
+                  const itemHref = `/p/${username}/items/${item.id}`;
                   return (
                     <Link key={item.id} href={itemHref}>
                       <Card className="overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all">
