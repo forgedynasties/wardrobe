@@ -137,20 +137,16 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
     items.forEach(item => {
       const src = thumbnailUrl(item);
       if (!src) return;
-      setNaturalDims(prev => {
-        if (prev.has(item.id)) return prev;
-        const img = new window.Image();
-        img.onload = () => {
-          setNaturalDims(d => {
-            if (d.has(item.id)) return d;
-            const next = new Map(d);
-            next.set(item.id, { w: img.naturalWidth, h: img.naturalHeight });
-            return next;
-          });
-        };
-        img.src = src;
-        return prev;
-      });
+      const img = new window.Image();
+      img.onload = () => {
+        setNaturalDims(prev => {
+          if (prev.has(item.id)) return prev;
+          const next = new Map(prev);
+          next.set(item.id, { w: img.naturalWidth, h: img.naturalHeight });
+          return next;
+        });
+      };
+      img.src = src;
     });
   }, [items]);
 
@@ -393,14 +389,18 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
       {/* canvas + layer panel */}
       <div className="flex gap-3 items-start">
         {/* canvas */}
-        <div className="flex-1 min-w-0 relative aspect-[3/4] bg-muted/30 rounded-xl overflow-hidden border touch-none select-none">
+        {/* Outer wrapper: sized, handles pointer events, no overflow clipping so handles aren't cut off */}
+        <div
+          className="flex-1 min-w-0 relative aspect-[3/4] touch-none select-none"
+          onPointerDown={handleCanvasPointerDown}
+          onPointerMove={handleCanvasPointerMove}
+          onPointerUp={handleCanvasPointerUp}
+          onPointerCancel={handleCanvasPointerUp}
+        >
+          {/* Clipped inner layer: background + items only */}
           <div
             ref={canvasRef}
-            className="absolute inset-0"
-            onPointerDown={handleCanvasPointerDown}
-            onPointerMove={handleCanvasPointerMove}
-            onPointerUp={handleCanvasPointerUp}
-            onPointerCancel={handleCanvasPointerUp}
+            className="absolute inset-0 bg-muted/30 rounded-xl overflow-hidden border"
           >
             {canvasSorted.map((item) => {
               const src = thumbnailUrl(item) || null;
@@ -433,101 +433,99 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
                 </div>
               );
             })}
+          </div>
 
-            {/* Bounding box overlay */}
-            {selectedItem && selectedLayout && (() => {
-              const bbox = getBBox(selectedItem, selectedLayout);
-              if (!bbox) return null;
+          {/* Unclipped overlay: bounding box + handles render on top, outside overflow:hidden */}
+          {selectedItem && selectedLayout && (() => {
+            const bbox = getBBox(selectedItem, selectedLayout);
+            if (!bbox) return null;
 
-              return (
+            return (
+              <div
+                style={{
+                  position: "absolute",
+                  left: bbox.left,
+                  top: bbox.top,
+                  width: bbox.width,
+                  height: bbox.height,
+                  transform: `rotate(${selectedLayout.rotation}deg)`,
+                  transformOrigin: "center",
+                  zIndex: 9999,
+                  pointerEvents: "none",
+                }}
+              >
+                {/* Box outline */}
                 <div
                   style={{
                     position: "absolute",
-                    left: bbox.left,
-                    top: bbox.top,
-                    width: bbox.width,
-                    height: bbox.height,
-                    transform: `rotate(${selectedLayout.rotation}deg)`,
-                    transformOrigin: "center",
-                    zIndex: 9999,
+                    inset: 0,
+                    border: "2px solid hsl(var(--primary))",
                     pointerEvents: "none",
                   }}
-                >
-                  {/* Box outline */}
+                />
+
+                {/* Corner scale handles */}
+                {([
+                  { k: "tl", style: { top: -h2, left: -h2 }, cursor: "nw-resize" },
+                  { k: "tr", style: { top: -h2, right: -h2 }, cursor: "ne-resize" },
+                  { k: "bl", style: { bottom: -h2, left: -h2 }, cursor: "sw-resize" },
+                  { k: "br", style: { bottom: -h2, right: -h2 }, cursor: "se-resize" },
+                ] as const).map(({ k, style, cursor }) => (
                   <div
+                    key={k}
                     style={{
                       position: "absolute",
-                      inset: 0,
+                      width: HANDLE,
+                      height: HANDLE,
+                      background: "hsl(var(--background))",
                       border: "2px solid hsl(var(--primary))",
+                      borderRadius: 3,
+                      cursor,
+                      pointerEvents: "all",
+                      ...style,
+                    }}
+                    onPointerDown={(e) => onHandlePointerDown(e, "scale", selectedItem.id)}
+                  />
+                ))}
+
+                {/* Rotation handle — circle above top center, connected by a line */}
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: -(ROT_STEM + HANDLE),
+                    transform: "translateX(-50%)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    pointerEvents: "all",
+                    cursor: "crosshair",
+                  }}
+                  onPointerDown={(e) => onHandlePointerDown(e, "rotate", selectedItem.id)}
+                >
+                  <div
+                    style={{
+                      width: HANDLE,
+                      height: HANDLE,
+                      background: "hsl(var(--background))",
+                      border: "2px solid hsl(var(--primary))",
+                      borderRadius: "50%",
+                      flexShrink: 0,
                       pointerEvents: "none",
                     }}
                   />
-
-                  {/* Corner scale handles */}
-                  {([
-                    { k: "tl", style: { top: -h2, left: -h2 }, cursor: "nw-resize" },
-                    { k: "tr", style: { top: -h2, right: -h2 }, cursor: "ne-resize" },
-                    { k: "bl", style: { bottom: -h2, left: -h2 }, cursor: "sw-resize" },
-                    { k: "br", style: { bottom: -h2, right: -h2 }, cursor: "se-resize" },
-                  ] as const).map(({ k, style, cursor }) => (
-                    <div
-                      key={k}
-                      style={{
-                        position: "absolute",
-                        width: HANDLE,
-                        height: HANDLE,
-                        background: "hsl(var(--background))",
-                        border: "2px solid hsl(var(--primary))",
-                        borderRadius: 3,
-                        cursor,
-                        pointerEvents: "all",
-                        ...style,
-                      }}
-                      onPointerDown={(e) => onHandlePointerDown(e, "scale", selectedItem.id)}
-                    />
-                  ))}
-
-                  {/* Rotation handle — circle above top center, connected by a line */}
                   <div
                     style={{
-                      position: "absolute",
-                      left: "50%",
-                      top: -(ROT_STEM + HANDLE),
-                      transform: "translateX(-50%)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      pointerEvents: "all",
-                      cursor: "crosshair",
+                      width: 2,
+                      height: ROT_STEM,
+                      background: "hsl(var(--primary))",
+                      pointerEvents: "none",
                     }}
-                    onPointerDown={(e) => onHandlePointerDown(e, "rotate", selectedItem.id)}
-                  >
-                    {/* circle */}
-                    <div
-                      style={{
-                        width: HANDLE,
-                        height: HANDLE,
-                        background: "hsl(var(--background))",
-                        border: "2px solid hsl(var(--primary))",
-                        borderRadius: "50%",
-                        flexShrink: 0,
-                        pointerEvents: "none",
-                      }}
-                    />
-                    {/* stem */}
-                    <div
-                      style={{
-                        width: 2,
-                        height: ROT_STEM,
-                        background: "hsl(var(--primary))",
-                        pointerEvents: "none",
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
-              );
-            })()}
-          </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* layer panel */}
