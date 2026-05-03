@@ -92,7 +92,7 @@ export async function extractColorsFromImage(src: string, maxColors = 2): Promis
         }
 
         resolve(
-          chosen.map(([r, g, b]) => `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`),
+          chosen.map(([r, g, b]) => boostColor(`#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`)),
         );
       } catch {
         resolve([]);

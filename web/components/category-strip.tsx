@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ChevronRight, Shirt, ArrowDown, Wind, Footprints, Watch } from "lucide-react";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { thumbnailUrl } from "@/lib/api";
-import { boostColor } from "@/lib/colors";
 import { CategoryPixelBox } from "@/components/category-pixel-box";
 import type { ClothingItem } from "@/lib/types";
 
@@ -61,7 +60,7 @@ function StripCard({ item }: { item: ClothingItem }) {
             <div
               key={i}
               className="w-2.5 h-2.5 rounded-full border border-background/80"
-              style={{ backgroundColor: boostColor(c) }}
+              style={{ backgroundColor: c }}
             />
           ))}
         </div>
