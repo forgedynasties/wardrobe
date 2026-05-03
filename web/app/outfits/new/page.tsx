@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { createOutfit, addOutfitItem } from "@/lib/api";
 import { FitBuilder } from "@/components/fit-builder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { randomOutfitName } from "@/lib/outfit-names";
 
 export default function NewOutfitPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => randomOutfitName());
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
@@ -25,7 +26,7 @@ export default function NewOutfitPage() {
     setSaving(true);
     try {
       const outfit = await createOutfit({
-        name: name || undefined,
+        name: name.trim() || randomOutfitName(),
       });
 
       // Add selected items to the outfit
@@ -56,12 +57,22 @@ export default function NewOutfitPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Outfit Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Auto-named if empty"
-              className="text-lg"
-            />
+            <div className="flex gap-2">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="text-lg"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setName(randomOutfitName())}
+                title="Regenerate name"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
