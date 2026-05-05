@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  getPublicProfile, getProfileSettings,
+  getPublicProfile,
   getHangurStats, getOutfitsPage, getWearHeatmap, getOutfitLogs,
   getWishlistItems, getItems, thumbnailUrl, imageUrl,
   updateOutfit,
@@ -20,23 +20,11 @@ import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
 import { CategoryPixelBox } from "@/components/category-pixel-box";
-import { Settings, Share2, Check, ChevronLeft, ChevronRight, Heart, Lock, LayoutGrid, Shirt, Rows2, Layers, Footprints, Gem, Package } from "lucide-react";
+import { Share2, Check, ChevronLeft, ChevronRight, Heart, LayoutGrid, Shirt, Rows2, Layers, Footprints, Gem, Package } from "lucide-react";
 import type {
-  HangurStats, Outfit, HeatmapEntry, ProfileConfig,
+  HangurStats, Outfit, HeatmapEntry,
   WishlistItem, ClothingItem, OutfitLog, PublicProfile,
 } from "@/lib/types";
-
-function PrivateSection({ label }: { label: string }) {
-  return (
-    <section>
-      <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide mb-3">{label}</h2>
-      <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed text-muted-foreground text-sm">
-        <Lock className="h-3.5 w-3.5 shrink-0" />
-        <span>This section is private</span>
-      </div>
-    </section>
-  );
-}
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   outerwear: 5, top: 4, bottom: 3, shoes: 2, accessory: 1,
@@ -119,12 +107,11 @@ export default function ProfilePage() {
     if (!hydrated) return;
     if (!isSelf) return;
     Promise.all([
-      getProfileSettings(),
       getHangurStats(),
       getOutfitsPage(50),
       getWishlistItems(),
       getItems(),
-    ]).then(([_cfg, s, page, wl, items]) => {
+    ]).then(([s, page, wl, items]) => {
       setStats(s);
       setOutfits(page.data);
       setWishlist(wl.filter((w) => !w.bought_at));
@@ -199,7 +186,7 @@ export default function ProfilePage() {
     return (
       <div className="p-4 max-w-lg mx-auto flex flex-col items-center justify-center py-24 text-center">
         <p className="text-lg font-semibold">Profile not found</p>
-        <p className="text-sm text-muted-foreground mt-1">This profile is private or doesn&apos;t exist.</p>
+        <p className="text-sm text-muted-foreground mt-1">This profile doesn&apos;t exist.</p>
       </div>
     );
   }
@@ -209,17 +196,6 @@ export default function ProfilePage() {
   const usernameLabel = isSelf ? user!.username : (publicProfile as PublicProfile).username;
 
   const pub = !isSelf ? (publicProfile as PublicProfile) : null;
-
-  // Section visibility for other viewers: enabled = section is on, has data or is known private
-  const pubSections = pub?.sections;
-  const allPrivate = !isSelf && pubSections != null &&
-    !pubSections.snapshot && !pubSections.outfits && !pubSections.calendar && !pubSections.signature && !pubSections.wishlist;
-
-  const showSnapshot = isSelf || !!pubSections?.snapshot;
-  const showOutfits = isSelf || !!pubSections?.outfits;
-  const showCalendar = isSelf || !!pubSections?.calendar;
-  const showSignature = isSelf || !!pubSections?.signature;
-  const showWishlist = isSelf || !!pubSections?.wishlist;
 
   const shownOutfits = isSelf
     ? outfits.filter((o) => galleryTab === "hidden" ? o.hidden : !o.hidden)
@@ -255,11 +231,6 @@ export default function ProfilePage() {
               ? <><Check className="h-4 w-4 text-green-500" />Copied</>
               : <><Share2 className="h-4 w-4" />Share</>}
           </Button>
-          {isSelf && (
-            <Button variant="ghost" size="icon" onClick={() => router.push("/profile/settings")}>
-              <Settings className="h-5 w-5" />
-            </Button>
-          )}
         </div>
       </div>
 
@@ -267,16 +238,9 @@ export default function ProfilePage() {
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
-      ) : allPrivate ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-          <Lock className="h-8 w-8 text-muted-foreground" />
-          <p className="font-semibold">Private profile</p>
-          <p className="text-sm text-muted-foreground">This person hasn&apos;t made their hangur public yet.</p>
-        </div>
       ) : (
         <>
           {/* overview / snapshot */}
-          {showSnapshot && (
             <section className="space-y-3">
               <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Overview</h2>
               {(() => {
@@ -347,15 +311,8 @@ export default function ProfilePage() {
                 );
               })()}
             </section>
-          )}
-
-          {/* snapshot hidden placeholder */}
-          {!isSelf && !showSnapshot && (
-            <PrivateSection label="Overview" />
-          )}
 
           {/* outfit gallery */}
-          {showOutfits && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Outfit Gallery</h2>
@@ -400,15 +357,8 @@ export default function ProfilePage() {
                 </div>
               )}
             </section>
-          )}
-
-          {/* outfits hidden placeholder */}
-          {!isSelf && !showOutfits && (
-            <PrivateSection label="Outfit Gallery" />
-          )}
 
           {/* wear calendar */}
-          {showCalendar && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Wear Calendar</h2>
@@ -500,12 +450,6 @@ export default function ProfilePage() {
                 );
               })()}
             </section>
-          )}
-
-          {/* calendar hidden placeholder */}
-          {!isSelf && !showCalendar && (
-            <PrivateSection label="Wear Calendar" />
-          )}
 
           {/* all items with category tabs */}
           {(() => {
@@ -582,13 +526,8 @@ export default function ProfilePage() {
 
 
 
-          {/* wishlist hidden placeholder */}
-          {!isSelf && !showWishlist && (
-            <PrivateSection label="Wishlist" />
-          )}
-
           {/* wishlist */}
-          {showWishlist && wishlistItems.length > 0 && (
+          {wishlistItems.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Wishlist</h2>
               <div className="flex gap-3 overflow-x-auto py-1 -mx-4 px-4">

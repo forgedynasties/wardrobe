@@ -239,30 +239,17 @@ type HeatmapEntry struct {
 	Count int    `json:"count"`
 }
 
-type ProfileSections struct {
-	Snapshot  bool `json:"snapshot"`
-	Outfits   bool `json:"outfits"`
-	Calendar  bool `json:"calendar"`
-	Signature bool `json:"signature"`
-	Wishlist  bool `json:"wishlist"`
-}
-
-type ProfileConfig struct {
-	Sections ProfileSections `json:"sections"`
-}
-
 type PublicProfile struct {
-	DisplayName  string           `json:"display_name"`
-	Username     string           `json:"username"`
-	AvatarColors []string         `json:"avatar_colors"`
-	Sections     ProfileSections  `json:"sections"`
-	Snapshot     *HangurStats     `json:"snapshot,omitempty"`
-	Outfits      []Outfit         `json:"outfits,omitempty"`
-	Calendar     []HeatmapEntry   `json:"calendar,omitempty"`
-	OutfitLogs   []OutfitLog      `json:"outfit_logs,omitempty"`
-	Signature    []TopItem        `json:"signature,omitempty"`
-	Wishlist     []WishlistItem   `json:"wishlist,omitempty"`
-	Items        []ClothingItem   `json:"items,omitempty"`
+	DisplayName  string         `json:"display_name"`
+	Username     string         `json:"username"`
+	AvatarColors []string       `json:"avatar_colors"`
+	Snapshot     *HangurStats   `json:"snapshot,omitempty"`
+	Outfits      []Outfit       `json:"outfits,omitempty"`
+	Calendar     []HeatmapEntry `json:"calendar,omitempty"`
+	OutfitLogs   []OutfitLog    `json:"outfit_logs,omitempty"`
+	Signature    []TopItem      `json:"signature,omitempty"`
+	Wishlist     []WishlistItem `json:"wishlist,omitempty"`
+	Items        []ClothingItem `json:"items,omitempty"`
 }
 
 type LeaderboardEntry struct {

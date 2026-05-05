@@ -2,7 +2,6 @@ package storage
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -323,26 +322,6 @@ func (s *Store) GetWearHeatmap(owner string, year int) ([]domain.HeatmapEntry, e
 	return entries, rows.Err()
 }
 
-func (s *Store) GetProfileConfig(username string) (domain.ProfileConfig, error) {
-	var cfg domain.ProfileConfig
-	cfg.Sections = domain.ProfileSections{} // zero = all false
-	var raw []byte
-	err := s.db.QueryRow(`SELECT profile_config FROM users WHERE username = $1`, username).Scan(&raw)
-	if err != nil {
-		return cfg, err
-	}
-	_ = json.Unmarshal(raw, &cfg)
-	return cfg, nil
-}
-
-func (s *Store) SetProfileConfig(username string, cfg domain.ProfileConfig) error {
-	raw, err := json.Marshal(cfg)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.Exec(`UPDATE users SET profile_config = $1 WHERE username = $2`, raw, username)
-	return err
-}
 
 func (s *Store) GetAvatarColors(owner string) ([]string, error) {
 	rows, err := s.db.Query(`

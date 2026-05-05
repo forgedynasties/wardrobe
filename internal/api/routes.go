@@ -86,12 +86,6 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 			stats.POST("/utility/fix-stale-data", h.FixStaleData)
 		}
 
-		profile := protected.Group("/profile")
-		{
-			profile.GET("/settings", h.GetProfileSettings)
-			profile.PUT("/settings", h.SetProfileSettings)
-		}
-
 		protected.GET("/config/outfit", h.GetOutfitConfig)
 		protected.PUT("/config/outfit", h.SetOutfitConfig)
 

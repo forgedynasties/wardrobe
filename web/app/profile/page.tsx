@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useUser } from "@/lib/user-context";
 import {
-  getProfileSettings, getHangurStats, getOutfitsPage, getWearHeatmap,
+  getHangurStats, getOutfitsPage, getWearHeatmap,
   getWishlistItems, getItems, imageUrl, thumbnailUrl, updateOutfit, getOutfitLogs,
 } from "@/lib/api";
 import { outfitRefreshStore } from "@/lib/outfit-refresh";
@@ -17,10 +17,10 @@ import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
 import { CategoryPixelBox } from "@/components/category-pixel-box";
-import { Settings, Share2, Check, Lock, ExternalLink, Star, Heart, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
+import { Share2, Check, ExternalLink, Star, Heart, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { HangurStats, Outfit, HeatmapEntry, ProfileConfig, WishlistItem, ClothingItem, OutfitLog } from "@/lib/types";
+import type { HangurStats, Outfit, HeatmapEntry, WishlistItem, ClothingItem, OutfitLog } from "@/lib/types";
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   outerwear: 5, top: 4, bottom: 3, shoes: 2, accessory: 1,
@@ -52,15 +52,6 @@ const isSameDay = (a: Date, b: Date) =>
 
 
 
-function PrivateBadge() {
-  return (
-    <Badge variant="secondary" className="gap-1 text-xs font-normal">
-      <Lock className="h-3 w-3" />
-      Private
-    </Badge>
-  );
-}
-
 async function doShare(title: string, url: string, onCopied: () => void) {
   if (typeof navigator === "undefined") return;
   if (navigator.share) {
@@ -81,7 +72,6 @@ export default function ProfilePage() {
     () => 0,
   );
 
-  const [config, setConfig] = useState<ProfileConfig | null>(null);
   const [stats, setStats] = useState<HangurStats | null>(null);
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [heatmapYear, setHeatmapYear] = useState(currentYear);
@@ -102,13 +92,11 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!hydrated || !user) return;
     Promise.all([
-      getProfileSettings(),
       getHangurStats(),
       getOutfitsPage(50),
       getWishlistItems(),
       getItems(),
-    ]).then(([cfg, s, page, wl, items]) => {
-      setConfig(cfg);
+    ]).then(([s, page, wl, items]) => {
       setStats(s);
       setOutfits(page.data);
       setWishlist(wl.filter(w => !w.bought_at));
@@ -151,9 +139,6 @@ export default function ProfilePage() {
 
   if (!hydrated || !user) return null;
 
-  const sec = config?.sections;
-  const isPublic = sec ? Object.values(sec).some(Boolean) : false;
-
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-8 pb-24">
 
@@ -169,15 +154,10 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isPublic && (
-            <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleShare}>
-              {copied
-                ? <><Check className="h-4 w-4 text-green-500" />Copied</>
-                : <><Share2 className="h-4 w-4" />Share</>}
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => router.push("/profile/settings")}>
-            <Settings className="h-5 w-5" />
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleShare}>
+            {copied
+              ? <><Check className="h-4 w-4 text-green-500" />Copied</>
+              : <><Share2 className="h-4 w-4" />Share</>}
           </Button>
         </div>
       </div>
@@ -194,7 +174,6 @@ export default function ProfilePage() {
           <section className="space-y-3">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Overview</h2>
-              {!sec?.snapshot && <PrivateBadge />}
             </div>
             {stats && (
               <>
@@ -270,8 +249,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Wear Calendar</h2>
-                {!sec?.calendar && <PrivateBadge />}
-              </div>
+                              </div>
               <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost" size="icon" className="h-7 w-7"
@@ -375,8 +353,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Outfit Gallery</h2>
-                {!sec?.outfits && <PrivateBadge />}
-              </div>
+                              </div>
               <div className="flex items-center gap-1 text-sm">
                 <button
                   onClick={() => setGalleryTab("visible")}
@@ -425,8 +402,7 @@ export default function ProfilePage() {
             <section className="space-y-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Signature Pieces</h2>
-                {!sec?.signature && <PrivateBadge />}
-              </div>
+                              </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {stats.top_worn_items.map(({ item, wear_count }) => {
                   const src = item.image_status === "done" || item.raw_image_url ? thumbnailUrl(item) : null;
@@ -491,8 +467,7 @@ export default function ProfilePage() {
           <section className="space-y-3">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Wishlist</h2>
-              {!sec?.wishlist && <PrivateBadge />}
-            </div>
+                          </div>
             {wishlist.length === 0 ? (
               <p className="text-sm text-muted-foreground">No wishlist items yet.</p>
             ) : (

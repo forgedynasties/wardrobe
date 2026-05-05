@@ -3,23 +3,10 @@ export interface HeatmapEntry {
   count: number;
 }
 
-export interface ProfileSections {
-  snapshot: boolean;
-  outfits: boolean;
-  calendar: boolean;
-  signature: boolean;
-  wishlist: boolean;
-}
-
-export interface ProfileConfig {
-  sections: ProfileSections;
-}
-
 export interface PublicProfile {
   display_name: string;
   username: string;
   avatar_colors: string[];
-  sections: ProfileSections;
   snapshot?: HangurStats;
   outfits?: Outfit[];
   calendar?: HeatmapEntry[];

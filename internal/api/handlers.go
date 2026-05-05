@@ -1021,30 +1021,6 @@ func (h *Handler) GetWearHeatmap(c *gin.Context) {
 	c.JSON(http.StatusOK, entries)
 }
 
-func (h *Handler) GetProfileSettings(c *gin.Context) {
-	owner := c.GetString("owner")
-	cfg, err := h.store.GetProfileConfig(owner)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, cfg)
-}
-
-func (h *Handler) SetProfileSettings(c *gin.Context) {
-	owner := c.GetString("owner")
-	var cfg domain.ProfileConfig
-	if err := c.ShouldBindJSON(&cfg); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	if err := h.store.SetProfileConfig(owner, cfg); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, cfg)
-}
-
 func (h *Handler) GetPublicProfile(c *gin.Context) {
 	username := c.Param("username")
 
@@ -1054,69 +1030,49 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 		return
 	}
 
-	cfg, err := h.store.GetProfileConfig(username)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
 	profile := domain.PublicProfile{
 		DisplayName:  user.DisplayName,
 		Username:     user.Username,
 		AvatarColors: []string{},
-		Sections:     cfg.Sections,
 	}
 
 	if colors, err := h.store.GetAvatarColors(username); err == nil {
 		profile.AvatarColors = colors
 	}
 
-	s := cfg.Sections
-	if s.Snapshot || s.Signature {
-		if stats, err := h.store.GetHangurStats(username); err == nil {
-			if s.Snapshot {
-				profile.Snapshot = stats
-			}
-			if s.Signature {
-				profile.Signature = stats.TopWornItems
-			}
-		}
+	if stats, err := h.store.GetHangurStats(username); err == nil {
+		profile.Snapshot = stats
+		profile.Signature = stats.TopWornItems
 	}
 
-	if s.Outfits {
-		if outfits, err := h.store.ListOutfits(username, 50, nil); err == nil {
-			profile.Outfits = outfits
-		}
+	if outfits, err := h.store.ListOutfits(username, 50, nil); err == nil {
+		profile.Outfits = outfits
 	}
 
-	if s.Calendar {
-		year := time.Now().Year()
-		if entries, err := h.store.GetWearHeatmap(username, year); err == nil {
-			profile.Calendar = entries
-			if profile.Calendar == nil {
-				profile.Calendar = []domain.HeatmapEntry{}
-			}
-		}
-		start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-		end := time.Date(year, 12, 31, 23, 59, 59, 0, time.UTC)
-		if logs, err := h.store.GetOutfitLogs(start, end, username); err == nil {
-			profile.OutfitLogs = logs
+	year := time.Now().Year()
+	if entries, err := h.store.GetWearHeatmap(username, year); err == nil {
+		profile.Calendar = entries
+		if profile.Calendar == nil {
+			profile.Calendar = []domain.HeatmapEntry{}
 		}
 	}
+	start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(year, 12, 31, 23, 59, 59, 0, time.UTC)
+	if logs, err := h.store.GetOutfitLogs(start, end, username); err == nil {
+		profile.OutfitLogs = logs
+	}
 
-	if s.Wishlist {
-		if all, err := h.store.ListWishlistItems(username, 0, nil); err == nil {
-			var visible []domain.WishlistItem
-			for _, w := range all {
-				if w.BoughtAt == nil {
-					visible = append(visible, w)
-				}
+	if all, err := h.store.ListWishlistItems(username, 0, nil); err == nil {
+		var visible []domain.WishlistItem
+		for _, w := range all {
+			if w.BoughtAt == nil {
+				visible = append(visible, w)
 			}
-			if visible == nil {
-				visible = []domain.WishlistItem{}
-			}
-			profile.Wishlist = visible
 		}
+		if visible == nil {
+			visible = []domain.WishlistItem{}
+		}
+		profile.Wishlist = visible
 	}
 
 	if items, err := h.store.ListItems(username, 0, nil); err == nil {

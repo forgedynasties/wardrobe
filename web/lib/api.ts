@@ -16,7 +16,6 @@ import type {
   CreateWishlistItemRequest,
   Page,
   HeatmapEntry,
-  ProfileConfig,
   PublicProfile,
   LeaderboardEntry,
 } from "./types";
@@ -304,14 +303,6 @@ export function fetchWishlistMeta(url: string): Promise<{ image_url: string; tit
 
 export function getWearHeatmap(year: number): Promise<HeatmapEntry[]> {
   return fetcher(`/api/stats/wear-heatmap?year=${year}`);
-}
-
-export function getProfileSettings(): Promise<ProfileConfig> {
-  return fetcher("/api/profile/settings");
-}
-
-export function setProfileSettings(cfg: ProfileConfig): Promise<ProfileConfig> {
-  return fetcher("/api/profile/settings", { method: "PUT", body: JSON.stringify(cfg) });
 }
 
 export function getPublicProfile(username: string): Promise<PublicProfile> {
