@@ -76,7 +76,7 @@ export default function NewItemPage() {
       <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" size="sm" onClick={() => router.push("/wardrobe")} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" />
-          Hangur
+          Wardrobe
         </Button>
         <h1 className="text-2xl font-bold">Add Item</h1>
         <div className="w-20" />
