@@ -44,7 +44,7 @@ export default function NewOutfitPage() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/outfits")} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/wardrobe?tab=outfits")} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" />
           Outfits
         </Button>
