@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/nav-bar";
@@ -51,13 +52,15 @@ export default function RootLayout({
           }}
         />
         <UserProvider>
-          <UserGate>
-            <TopBar />
-            <main className="flex-1 pb-20">{children}</main>
-            <NavBar />
-            <OutfitReminder />
-            <OutfitAdminPanel />
-          </UserGate>
+          <Suspense fallback={null}>
+            <UserGate>
+              <TopBar />
+              <main className="flex-1 pb-20">{children}</main>
+              <NavBar />
+              <OutfitReminder />
+              <OutfitAdminPanel />
+            </UserGate>
+          </Suspense>
         </UserProvider>
         <PwaRegister />
       </body>
