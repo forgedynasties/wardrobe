@@ -114,7 +114,7 @@ function ItemsTab() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {s === "color" ? "Color" : "Default"}
+                {s === "color" ? "Color" : "Recently Added"}
               </button>
             ))}
           </div>
