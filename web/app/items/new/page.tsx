@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { createItem, uploadImage } from "@/lib/api";
 import { extractColorsFromImage } from "@/lib/colors";
 import { ImageUpload } from "@/components/image-upload";
@@ -80,6 +81,22 @@ export default function NewItemPage() {
         <h1 className="text-2xl font-bold">Add Item</h1>
         <div className="w-20" />
       </div>
+
+      <Link
+        href="/image-guide"
+        className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 mb-5 hover:bg-muted/40 transition-colors group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 shrink-0">
+            <Sparkles className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Adding clothes with AI</p>
+            <p className="text-xs text-muted-foreground">Use Gemini + remove.bg to prep your images</p>
+          </div>
+        </div>
+        <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 group-hover:translate-x-0.5 transition-transform" />
+      </Link>
 
       <div className="space-y-5">
         <ImageUpload

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/lib/user-context";
 
 const navItems = [
-  { href: "/", label: "Feed", icon: Globe },
+  { href: "/", label: "Explore", icon: Globe },
   { href: "/wardrobe", label: "Wardrobe", icon: Shirt },
   { href: "/logger", label: "Logger", icon: CalendarDays },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
