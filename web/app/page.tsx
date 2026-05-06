@@ -81,9 +81,9 @@ function FeedCard({ item }: { item: FeedItem }) {
 
 function FeedSkeleton() {
   return (
-    <div className="columns-2 sm:columns-3 md:columns-4 gap-3 space-y-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
       {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="break-inside-avoid rounded-xl border border-border bg-card overflow-hidden">
+        <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
           <Skeleton className="aspect-[3/4] w-full rounded-none" />
           <div className="p-2.5 space-y-1.5">
             <Skeleton className="h-3 w-3/4" />
@@ -98,9 +98,9 @@ function FeedSkeleton() {
 function MasonryGrid({ items }: { items: FeedItem[] }) {
   if (items.length === 0) return null;
   return (
-    <div className="columns-2 sm:columns-3 md:columns-4 gap-3 space-y-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
       {items.map((item) => (
-        <div key={`${item.type}-${item.type === "outfit" ? item.outfit?.id : item.item?.id}`} className="break-inside-avoid">
+        <div key={`${item.type}-${item.type === "outfit" ? item.outfit?.id : item.item?.id}`}>
           <FeedCard item={item} />
         </div>
       ))}
