@@ -10,9 +10,6 @@ import { OutfitCanvas } from "@/components/outfit-canvas";
 import type { FeedItem } from "@/lib/types";
 
 const PAGE_SIZE = 30;
-const CATEGORIES = ["Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
-
-type FilterMode = "outfits" | "items" | "all";
 
 function FeedCard({ item }: { item: FeedItem }) {
   const router = useRouter();
@@ -115,8 +112,6 @@ export default function FeedPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterMode>("outfits");
-  const [itemCategory, setItemCategory] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async (cursor?: string) => {
@@ -159,36 +154,9 @@ export default function FeedPage() {
     return () => obs.disconnect();
   }, [nextCursor, loadingMore, load]);
 
-  const filteredItems = useMemo(() => {
-    if (filter === "outfits") return items.filter((i) => i.type === "outfit");
-    if (filter === "items") {
-      const itemEntries = items.filter((i) => i.type === "item");
-      if (!itemCategory) return itemEntries;
-      return itemEntries.filter((i) => (i.item?.category || "Other") === itemCategory);
-    }
-    return items;
-  }, [items, filter, itemCategory]);
-
-  const allGroups = useMemo(() => {
-    if (filter !== "all") return null;
-    const itemEntries = items.filter((i) => i.type === "item");
-    const outfitEntries = items.filter((i) => i.type === "outfit");
-    const byCategory: Record<string, FeedItem[]> = {};
-    for (const item of itemEntries) {
-      const cat = item.item?.category || "Other";
-      if (!byCategory[cat]) byCategory[cat] = [];
-      byCategory[cat].push(item);
-    }
-    return { byCategory, outfits: outfitEntries };
-  }, [items, filter]);
+  const outfits = useMemo(() => items.filter((i) => i.type === "outfit"), [items]);
 
   if (!hydrated) return null;
-
-  const FILTERS: { key: FilterMode; label: string }[] = [
-    { key: "outfits", label: "Outfits" },
-    { key: "items", label: "Items" },
-    { key: "all", label: "All" },
-  ];
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
@@ -196,87 +164,19 @@ export default function FeedPage() {
         <h1 className="text-xl font-bold">Explore</h1>
       </div>
 
-      {/* Filter pills */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => { setFilter(f.key); setItemCategory(null); }}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              filter === f.key
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Category sub-pills — only when Items is selected */}
-      {filter === "items" && (
-        <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-none">
-          {(["All", ...CATEGORIES] as const).map((cat) => {
-            const active = cat === "All" ? itemCategory === null : itemCategory === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => setItemCategory(cat === "All" ? null : cat)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  active
-                    ? "bg-foreground text-background"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {error && (
         <p className="text-sm text-destructive mb-4">{error}</p>
       )}
 
       {loading ? (
         <FeedSkeleton />
-      ) : items.length === 0 ? (
+      ) : outfits.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <p className="text-lg font-medium text-foreground mb-1">Nothing to see yet</p>
-          <p className="text-sm">Be the first to add something</p>
-        </div>
-      ) : filter === "all" && allGroups ? (
-        <div className="space-y-8">
-          {allGroups.outfits.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Outfits</h2>
-              <MasonryGrid items={allGroups.outfits} />
-            </div>
-          )}
-          {CATEGORIES.map((cat) => {
-            const catItems = allGroups.byCategory[cat];
-            if (!catItems || catItems.length === 0) return null;
-            return (
-              <div key={cat}>
-                <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{cat}</h2>
-                <MasonryGrid items={catItems} />
-              </div>
-            );
-          })}
-          {(() => {
-            const otherItems = allGroups.byCategory["Other"];
-            if (!otherItems || otherItems.length === 0) return null;
-            return (
-              <div>
-                <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Other</h2>
-                <MasonryGrid items={otherItems} />
-              </div>
-            );
-          })()}
+          <p className="text-sm">Be the first to add an outfit</p>
         </div>
       ) : (
-        <MasonryGrid items={filteredItems} />
+        <MasonryGrid items={outfits} />
       )}
 
       {/* Infinite scroll sentinel */}

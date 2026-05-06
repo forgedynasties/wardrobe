@@ -162,7 +162,7 @@ function ItemsTab() {
       )}
 
       {!loading && items.length > 0 && (
-        <div className="fixed bottom-20 right-4 z-40 md:hidden">
+        <div className="fixed bottom-20 right-4 z-40">
           <AddItemButton variant="fab" />
         </div>
       )}
@@ -299,7 +299,7 @@ function OutfitsTab() {
       )}
 
       {!loading && outfits.length > 0 && (
-        <Link href="/outfits/new" className="fixed bottom-20 right-4 z-40 md:hidden">
+        <Link href="/outfits/new" className="fixed bottom-20 right-4 z-40">
           <Button size="icon" className="h-14 w-14 rounded-full shadow-lg">
             <Plus className="h-6 w-6" />
           </Button>
