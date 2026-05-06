@@ -7,6 +7,7 @@ import { getItemsPage } from "@/lib/api";
 import { CategoryStrip } from "@/components/category-strip";
 import { ItemGrid } from "@/components/item-grid";
 import { AddItemButton } from "@/components/add-item-button";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/lib/user-context";
 import type { ClothingItem } from "@/lib/types";
@@ -78,7 +79,7 @@ export default function HangurPage() {
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         {focusCategory ? (
           <button
             onClick={() => setFocusCategory(null)}
@@ -91,26 +92,6 @@ export default function HangurPage() {
           <h1 className="text-2xl font-bold">My Hangur</h1>
         )}
         <AddItemButton />
-      </div>
-
-      {/* Filter pills */}
-      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-none">
-        {(["All", ...CATEGORIES] as const).map((cat) => {
-          const active = cat === "All" ? focusCategory === null : focusCategory === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setFocusCategory(cat === "All" ? null : cat)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                active
-                  ? "bg-foreground text-background"
-                  : "bg-muted text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {cat}
-            </button>
-          );
-        })}
       </div>
 
       {focusCategory && (
