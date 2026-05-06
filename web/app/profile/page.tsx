@@ -17,9 +17,10 @@ import { OutfitCanvas } from "@/components/outfit-canvas";
 import { ShimmerImg } from "@/components/shimmer-img";
 import { HangurAvatar } from "@/components/hangur-avatar";
 import { CategoryPixelBox } from "@/components/category-pixel-box";
-import { Share2, Check, ExternalLink, Star, Heart, ChevronLeft, ChevronRight, Pin, EyeOff } from "lucide-react";
+import { Share2, Check, ExternalLink, Star, Heart, ChevronLeft, ChevronRight, Pin, EyeOff, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { applyTheme, saveTheme, loadTheme, type ThemeId } from "@/lib/theme";
 import type { HangurStats, Outfit, HeatmapEntry, WishlistItem, ClothingItem, OutfitLog } from "@/lib/types";
 
 const CATEGORY_WEIGHT: Record<string, number> = {
@@ -83,6 +84,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [galleryTab, setGalleryTab] = useState<"visible" | "hidden">("visible");
+  const [theme, setTheme] = useState<ThemeId>("");
 
 
   useEffect(() => {
@@ -124,6 +126,11 @@ export default function ProfilePage() {
     });
   }, [heatmapYear, hydrated, user]);
 
+  useEffect(() => {
+    if (!hydrated || !user) return;
+    setTheme(loadTheme(user.username));
+  }, [hydrated, user]);
+
   const handleShare = () => {
     if (!user) return;
     const url = `${window.location.origin}/p/${user.username}`;
@@ -157,6 +164,44 @@ export default function ProfilePage() {
           </Button>
         </div>
       </div>
+
+      {/* theme picker */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Settings className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">Appearance</h2>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {([{ id: "", label: "Default", color: "var(--default-primary,oklch(0.55 0.02 0))" },
+             { id: "theme-alishba", label: "Alishba", color: "oklch(0.72 0.17 350)" },
+             { id: "theme-sage", label: "Sage", color: "oklch(0.50 0.14 148)" },
+             { id: "theme-mauve", label: "Mauve", color: "oklch(0.50 0.14 310)" },
+             { id: "theme-ocean", label: "Ocean", color: "oklch(0.50 0.14 240)" },
+             { id: "theme-clay", label: "Clay", color: "oklch(0.50 0.14 40)" },
+             { id: "theme-noir", label: "Noir", color: "oklch(0.50 0 0)" },
+          ] as const).map(({ id, label, color }) => {
+            const active = id === theme;
+            return (
+              <button
+                key={id}
+                onClick={() => {
+                  setTheme(id);
+                  applyTheme(id);
+                  if (user) saveTheme(user.username, id);
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  active
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-card hover:border-primary/30"
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full shrink-0 border border-border/50" style={{ backgroundColor: color }} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {loading ? (
         <div className="space-y-4">
