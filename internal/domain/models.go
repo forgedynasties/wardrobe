@@ -87,7 +87,8 @@ type UpdateItemRequest struct {
 }
 
 type CreateOutfitRequest struct {
-	Name string `json:"name"`
+	Name    string   `json:"name"`
+	ItemIDs []string `json:"item_ids"`
 }
 
 type UpdateOutfitRequest struct {
@@ -237,6 +238,15 @@ type TopItem struct {
 type HeatmapEntry struct {
 	Date  string `json:"date"`
 	Count int    `json:"count"`
+}
+
+type StaleOutfit struct {
+	OutfitID       uuid.UUID  `json:"outfit_id"`
+	Name           string     `json:"name"`
+	UsageCount     int        `json:"usage_count"`
+	LastWorn       *time.Time `json:"last_worn"`
+	ActualCount    int        `json:"actual_count"`
+	ActualLastWorn *time.Time `json:"actual_last_worn"`
 }
 
 type PublicProfile struct {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw } from "lucide-react";
-import { createOutfit, addOutfitItem, getItems, imageUrl } from "@/lib/api";
+import { createOutfit, getItems, imageUrl } from "@/lib/api";
 import { OutfitCanvas } from "@/components/outfit-canvas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,10 +55,10 @@ export default function NewOutfitPage() {
     if (selected.size === 0) return;
     setSaving(true);
     try {
-      const outfit = await createOutfit({ name: name.trim() || randomOutfitName() });
-      for (const itemId of selected) {
-        await addOutfitItem(outfit.id, itemId);
-      }
+      const outfit = await createOutfit({
+        name: name.trim() || randomOutfitName(),
+        item_ids: Array.from(selected),
+      });
       router.push(`/outfits/${outfit.id}`);
     } catch (err) {
       console.error(err);

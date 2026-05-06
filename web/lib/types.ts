@@ -93,6 +93,7 @@ export interface UpdateItemRequest {
 
 export interface CreateOutfitRequest {
   name?: string;
+  item_ids?: string[];
 }
 
 export interface UpdateOutfitRequest {

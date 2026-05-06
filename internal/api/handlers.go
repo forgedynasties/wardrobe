@@ -495,6 +495,20 @@ func (h *Handler) CreateOutfit(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// Add items if provided
+	for _, itemIDStr := range req.ItemIDs {
+		itemID, err := uuid.Parse(itemIDStr)
+		if err != nil {
+			continue
+		}
+		h.store.AddOutfitItem(outfit.ID, itemID)
+	}
+	// Backfill stats from past logs
+	if len(req.ItemIDs) > 0 {
+		h.store.BackfillOutfitStats(outfit.ID, owner)
+		// Re-fetch to get updated stats
+		outfit, _ = h.store.GetOutfit(outfit.ID, owner)
+	}
 	h.invalidateOutfitCaches(owner)
 	c.JSON(http.StatusCreated, outfit)
 }
@@ -791,6 +805,10 @@ func (h *Handler) LogOutfitWear(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// Sync matching outfit stats
+	if len(req.ItemIDs) > 0 {
+		_ = h.store.SyncOutfitsFromLog(owner, req.ItemIDs)
+	}
 	c.JSON(http.StatusCreated, log)
 }
 
@@ -883,6 +901,10 @@ func (h *Handler) UpdateOutfitLog(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// Sync matching outfit stats
+	if len(req.ItemIDs) > 0 {
+		_ = h.store.SyncOutfitsFromLog(owner, req.ItemIDs)
+	}
 	c.JSON(http.StatusOK, log)
 }
 
@@ -927,22 +949,35 @@ func (h *Handler) DetectStaleData(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"stale_items_count": len(staleItems),
-		"stale_items":       staleItems,
-	})
-}
-
-func (h *Handler) FixStaleData(c *gin.Context) {
-	owner := c.GetString("owner")
-	fixedCount, err := h.store.FixStaleItemData(owner)
+	staleOutfits, err := h.store.DetectStaleOutfitData(owner)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"fixed_items_count": fixedCount,
-		"message":           fmt.Sprintf("Fixed %d stale items", fixedCount),
+		"stale_items_count":   len(staleItems),
+		"stale_items":         staleItems,
+		"stale_outfits_count": len(staleOutfits),
+		"stale_outfits":       staleOutfits,
+	})
+}
+
+func (h *Handler) FixStaleData(c *gin.Context) {
+	owner := c.GetString("owner")
+	fixedItems, err := h.store.FixStaleItemData(owner)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	fixedOutfits, err := h.store.FixStaleOutfitData(owner)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"fixed_items_count":   fixedItems,
+		"fixed_outfits_count": fixedOutfits,
+		"message":             fmt.Sprintf("Fixed %d items and %d outfits", fixedItems, fixedOutfits),
 	})
 }
 

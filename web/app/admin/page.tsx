@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   adminListUsers, adminResetPassword, adminSetUserActive,
   adminSetUserAdmin, adminDeleteUser, adminRecropImages,
+  detectStaleData, fixStaleData,
 } from "@/lib/api";
 import { useUser } from "@/lib/user-context";
 import type { AuthUser } from "@/lib/user-context";
@@ -204,6 +205,12 @@ export default function AdminPage() {
   const [layoutPanelEnabled, setLayoutPanelEnabled] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem(LAYOUT_PANEL_KEY) !== "false" : true
   );
+  const [staleStatus, setStaleStatus] = useState<{
+    stale_items_count: number;
+    stale_outfits_count: number;
+  } | null>(null);
+  const [fixingStale, setFixingStale] = useState(false);
+  const [fixResult, setFixResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -223,6 +230,29 @@ export default function AdminPage() {
 
   const handleDelete = (username: string) => {
     setUsers((prev) => prev?.filter((u) => u.username !== username) ?? null);
+  };
+
+  const handleCheckStale = async () => {
+    setStaleStatus(null); setFixResult(null);
+    try {
+      const res = await detectStaleData();
+      setStaleStatus(res);
+    } catch (e) {
+      setFixResult(e instanceof Error ? e.message : "Failed");
+    }
+  };
+
+  const handleFixStale = async () => {
+    setFixingStale(true); setFixResult(null);
+    try {
+      const res = await fixStaleData();
+      setFixResult(res.message);
+      setStaleStatus(null);
+    } catch (e) {
+      setFixResult(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setFixingStale(false);
+    }
   };
 
   const handleRecrop = async () => {
@@ -285,6 +315,32 @@ export default function AdminPage() {
           <Button variant="outline" size="sm" onClick={handleRecrop} disabled={recropping} className="shrink-0">
             {recropping ? "Running..." : "Run"}
           </Button>
+        </Card>
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="font-medium flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Stale data</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Detects outfits and items with stats that don&apos;t match actual log data</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleCheckStale}>
+                Check
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleFixStale} disabled={fixingStale}>
+                {fixingStale ? "Fixing..." : "Fix all"}
+              </Button>
+            </div>
+          </div>
+          {staleStatus !== null && (
+            <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1">
+              <p><span className="font-medium text-foreground">{staleStatus.stale_items_count}</span> stale items</p>
+              <p><span className="font-medium text-foreground">{staleStatus.stale_outfits_count}</span> stale outfits</p>
+              {(staleStatus.stale_items_count === 0 && staleStatus.stale_outfits_count === 0) && (
+                <p className="text-foreground">All clean ✓</p>
+              )}
+            </div>
+          )}
+          {fixResult && <p className="text-xs text-muted-foreground">{fixResult}</p>}
         </Card>
         <Card className="p-4 flex items-center justify-between gap-4">
           <div>

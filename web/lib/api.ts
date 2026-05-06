@@ -324,6 +324,23 @@ export function getLeaderboard(): Promise<LeaderboardEntry[]> {
   return fetcher("/api/leaderboard");
 }
 
+export function detectStaleData(): Promise<{
+  stale_items_count: number;
+  stale_outfits_count: number;
+  stale_items: Array<{ ItemID: string }>;
+  stale_outfits: Array<{ outfit_id: string; name: string; usage_count: number; last_worn: string | null; actual_count: number; actual_last_worn: string | null }>;
+}> {
+  return fetcher("/api/stats/utility/stale-data");
+}
+
+export function fixStaleData(): Promise<{
+  fixed_items_count: number;
+  fixed_outfits_count: number;
+  message: string;
+}> {
+  return fetcher("/api/stats/utility/fix-stale-data", { method: "POST" });
+}
+
 export function getPublicItem(username: string, id: string): Promise<ClothingItem> {
   return fetcher(`/api/profile/public/${username}/items/${id}`);
 }

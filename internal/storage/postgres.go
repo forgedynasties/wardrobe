@@ -563,6 +563,90 @@ func (s *Store) RemoveOutfitItem(outfitID, itemID uuid.UUID) error {
 	return nil
 }
 
+// BackfillOutfitStats recalculates usage_count and last_worn for an outfit
+// by scanning past logs for dates where all the outfit's items were worn together.
+func (s *Store) BackfillOutfitStats(outfitID uuid.UUID, owner string) error {
+	// Get the outfit's item IDs
+	rows, err := s.db.Query(`SELECT clothing_item_id FROM outfit_items WHERE outfit_id = $1`, outfitID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var itemIDs []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		itemIDs = append(itemIDs, id)
+	}
+	if rows.Err() != nil {
+		return rows.Err()
+	}
+	if len(itemIDs) == 0 {
+		return nil
+	}
+
+	// Count dates where all items appear together, and get the most recent such date
+	var usageCount int
+	var lastWorn *time.Time
+	err = s.db.QueryRow(`
+		SELECT COUNT(*), MAX(wear_date) FROM (
+			SELECT ol.wear_date
+			FROM outfit_logs ol
+			JOIN outfit_log_items oli ON ol.id = oli.log_id
+			WHERE ol.owner = $2 AND oli.clothing_item_id = ANY($3)
+			GROUP BY ol.wear_date
+			HAVING COUNT(DISTINCT oli.clothing_item_id) = $4
+		) AS matches`,
+		owner, pq.Array(itemIDs), len(itemIDs),
+	).Scan(&usageCount, &lastWorn)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(`UPDATE outfits SET usage_count = $1, last_worn = $2, updated_at = NOW() WHERE id = $3`,
+		usageCount, lastWorn, outfitID)
+	return err
+}
+
+// SyncOutfitsFromLog finds outfits whose items are a subset of the logged items
+// and backfills their stats. Call after any log save/update.
+func (s *Store) SyncOutfitsFromLog(owner string, itemIDs []uuid.UUID) error {
+	rows, err := s.db.Query(`
+		SELECT o.id FROM outfits o
+		WHERE o.owner = $1
+		AND NOT EXISTS (
+			SELECT 1 FROM outfit_items oi
+			WHERE oi.outfit_id = o.id
+			AND NOT (oi.clothing_item_id = ANY($2::uuid[]))
+		)
+		AND EXISTS (SELECT 1 FROM outfit_items oi WHERE oi.outfit_id = o.id)`,
+		owner, pq.Array(itemIDs),
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var outfitIDs []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		outfitIDs = append(outfitIDs, id)
+	}
+	if rows.Err() != nil {
+		return rows.Err()
+	}
+	for _, id := range outfitIDs {
+		if err := s.BackfillOutfitStats(id, owner); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Store) WearOutfit(id uuid.UUID, owner string) (*domain.Outfit, error) {
 	var o domain.Outfit
 	err := s.db.QueryRow(`
@@ -1317,6 +1401,77 @@ func (s *Store) FixStaleItemData(owner string) (int, error) {
 	}
 
 	return len(staleItems), nil
+}
+
+// DetectStaleOutfitData finds outfits whose usage_count or last_worn don't
+// match the actual log data.
+func (s *Store) DetectStaleOutfitData(owner string) ([]domain.StaleOutfit, error) {
+	rows, err := s.db.Query(`
+		SELECT o.id, o.name, o.usage_count, o.last_worn,
+			COALESCE(m.match_count, 0) AS actual_count,
+			m.last_match AS actual_last_worn
+		FROM outfits o
+		LEFT JOIN (
+			SELECT oi.outfit_id,
+				COUNT(DISTINCT ol.wear_date) AS match_count,
+				MAX(ol.wear_date) AS last_match
+			FROM outfit_items oi
+			JOIN outfit_logs ol ON ol.owner = $1
+			JOIN outfit_log_items oli ON oli.log_id = ol.id AND oli.clothing_item_id = oi.clothing_item_id
+			GROUP BY oi.outfit_id, ol.wear_date
+			HAVING COUNT(DISTINCT oli.clothing_item_id) = (
+				SELECT COUNT(*) FROM outfit_items oi2 WHERE oi2.outfit_id = oi.outfit_id
+			)
+		) m ON m.outfit_id = o.id
+		WHERE o.owner = $1 AND EXISTS (SELECT 1 FROM outfit_items oi3 WHERE oi3.outfit_id = o.id)
+		AND (o.usage_count != COALESCE(m.match_count, 0) OR (o.last_worn IS DISTINCT FROM m.last_match))`,
+		owner)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var stale []domain.StaleOutfit
+	for rows.Next() {
+		var s domain.StaleOutfit
+		var lastWorn, actualLastWorn sql.NullTime
+		if err := rows.Scan(&s.OutfitID, &s.Name, &s.UsageCount, &lastWorn, &s.ActualCount, &actualLastWorn); err != nil {
+			return nil, err
+		}
+		if lastWorn.Valid {
+			s.LastWorn = &lastWorn.Time
+		}
+		if actualLastWorn.Valid {
+			s.ActualLastWorn = &actualLastWorn.Time
+		}
+		stale = append(stale, s)
+	}
+	return stale, rows.Err()
+}
+
+// FixStaleOutfitData backfills all outfits with stale stats.
+func (s *Store) FixStaleOutfitData(owner string) (int, error) {
+	rows, err := s.db.Query(`SELECT id FROM outfits WHERE owner = $1 AND EXISTS (SELECT 1 FROM outfit_items oi WHERE oi.outfit_id = outfits.id)`, owner)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return 0, err
+		}
+		ids = append(ids, id)
+	}
+	if rows.Err() != nil {
+		return 0, rows.Err()
+	}
+	for _, id := range ids {
+		if err := s.BackfillOutfitStats(id, owner); err != nil {
+			return 0, err
+		}
+	}
+	return len(ids), nil
 }
 
 // Stats
