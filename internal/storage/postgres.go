@@ -1504,3 +1504,129 @@ func (s *Store) GetLeaderboard() ([]domain.LeaderboardEntry, error) {
 	}
 	return entries, rows.Err()
 }
+
+// GetFeed returns a mixed feed of recent items and outfits across all active users.
+// Per-user cap (max 3 of each type) ensures variety. Supports cursor pagination via after.
+func (s *Store) GetFeed(limit int, after *time.Time) ([]domain.FeedItem, error) {
+	feedQuery := `
+WITH ranked_items AS (
+	SELECT 'item' AS type, ci.owner, u.display_name, ci.created_at,
+		ci.id, ci.name, ci.brand, ci.product_url, ci.category, ci.sub_category,
+		ci.colors, ci.material, ci.image_url, ci.raw_image_url,
+		ci.thumbnail_url, ci.image_status, ci.display_scale, ci.last_worn,
+		ci.created_at AS item_created_at, ci.updated_at AS item_updated_at,
+		NULL::uuid AS outfit_id, '' AS outfit_name, 0 AS usage_count,
+		NULL::timestamptz AS last_worn_outfit, false AS hidden, false AS pinned,
+		'1970-01-01'::timestamptz AS outfit_created_at, '1970-01-01'::timestamptz AS outfit_updated_at,
+		ROW_NUMBER() OVER (PARTITION BY ci.owner ORDER BY ci.created_at DESC) AS rn
+	FROM clothing_items ci
+	JOIN users u ON u.username = ci.owner AND u.is_active = true
+	WHERE ci.image_status = 'done'
+), ranked_outfits AS (
+	SELECT 'outfit' AS type, o.owner, u.display_name, o.created_at,
+		NULL::uuid AS id, '' AS name, '' AS brand, '' AS product_url, '' AS category, '' AS sub_category,
+		'{}'::text[] AS colors, '' AS material, '' AS image_url, '' AS raw_image_url,
+		'' AS thumbnail_url, '' AS image_status, 0.0 AS display_scale, NULL::timestamptz AS last_worn,
+		'1970-01-01'::timestamptz AS item_created_at, '1970-01-01'::timestamptz AS item_updated_at,
+		o.id AS outfit_id, o.name AS outfit_name, o.usage_count,
+		o.last_worn AS last_worn_outfit, o.hidden, o.pinned,
+		o.created_at AS outfit_created_at, o.updated_at AS outfit_updated_at,
+		ROW_NUMBER() OVER (PARTITION BY o.owner ORDER BY o.created_at DESC) AS rn
+	FROM outfits o
+	JOIN users u ON u.username = o.owner AND u.is_active = true
+	WHERE o.hidden = false
+		AND EXISTS (SELECT 1 FROM outfit_items oi WHERE oi.outfit_id = o.id)
+)
+SELECT type, owner, display_name, created_at,
+	id, name, brand, product_url, category, sub_category, colors, material,
+	image_url, raw_image_url, COALESCE(thumbnail_url, '') as thumbnail_url,
+	image_status, display_scale, last_worn, item_created_at, item_updated_at,
+	outfit_id, outfit_name, usage_count, last_worn_outfit, hidden, pinned,
+	outfit_created_at, outfit_updated_at
+FROM ranked_items WHERE rn <= 3
+UNION ALL
+SELECT type, owner, display_name, created_at,
+	id, name, brand, product_url, category, sub_category, colors, material,
+	image_url, raw_image_url, COALESCE(thumbnail_url, '') as thumbnail_url,
+	image_status, display_scale, last_worn, item_created_at, item_updated_at,
+	outfit_id, outfit_name, usage_count, last_worn_outfit, hidden, pinned,
+	outfit_created_at, outfit_updated_at
+FROM ranked_outfits WHERE rn <= 3
+ORDER BY created_at DESC`
+
+	var rows *sql.Rows
+	var err error
+	if after != nil {
+		rows, err = s.db.Query(`SELECT * FROM (`+feedQuery+`) feed WHERE created_at < $2 ORDER BY created_at DESC LIMIT $1`, limit, after)
+	} else {
+		rows, err = s.db.Query(feedQuery+` LIMIT $1`, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []domain.FeedItem
+	var outfitIDs []uuid.UUID
+	for rows.Next() {
+		var fi domain.FeedItem
+		var itemID, outfitID uuid.UUID
+		var itemName, brand, productURL, category, subCategory, material, imageURL, rawImageURL, thumbnailURL, imageStatus, outfitName string
+		var itemDisplayScale float64
+		var itemLastWorn, outfitLastWorn *time.Time
+		var itemCreatedAt, itemUpdatedAt, outfitCreatedAt, outfitUpdatedAt time.Time
+		var usageCount int
+		var hidden, pinned bool
+		var colors []string
+
+		if err := rows.Scan(
+			&fi.Type, &fi.Owner, &fi.DisplayName, &fi.CreatedAt,
+			&itemID, &itemName, &brand, &productURL, &category, &subCategory,
+			pq.Array(&colors), &material, &imageURL, &rawImageURL, &thumbnailURL,
+			&imageStatus, &itemDisplayScale, &itemLastWorn, &itemCreatedAt, &itemUpdatedAt,
+			&outfitID, &outfitName, &usageCount, &outfitLastWorn, &hidden, &pinned,
+			&outfitCreatedAt, &outfitUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		if fi.Type == "item" {
+			fi.Item = &domain.ClothingItem{
+				ID: itemID, Name: itemName, Brand: brand, ProductURL: productURL,
+				Category: category, SubCategory: subCategory, Colors: colors,
+				Material: material, ImageURL: imageURL, RawImageURL: rawImageURL,
+				ThumbnailURL: thumbnailURL, ImageStatus: imageStatus,
+				DisplayScale: itemDisplayScale, LastWorn: itemLastWorn,
+				CreatedAt: itemCreatedAt, UpdatedAt: itemUpdatedAt,
+			}
+		} else {
+			fi.Outfit = &domain.Outfit{
+				ID: outfitID, Name: outfitName, UsageCount: usageCount,
+				LastWorn: outfitLastWorn, Hidden: hidden, Pinned: pinned,
+				CreatedAt: outfitCreatedAt, UpdatedAt: outfitUpdatedAt,
+			}
+			outfitIDs = append(outfitIDs, outfitID)
+		}
+		items = append(items, fi)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(outfitIDs) > 0 {
+		itemsByOutfit, err := s.loadOutfitItemsBatch(outfitIDs)
+		if err != nil {
+			return nil, err
+		}
+		for i := range items {
+			if items[i].Outfit != nil {
+				items[i].Outfit.Items = itemsByOutfit[items[i].Outfit.ID]
+			}
+		}
+	}
+
+	if items == nil {
+		items = []domain.FeedItem{}
+	}
+	return items, nil
+}

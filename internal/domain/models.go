@@ -252,6 +252,15 @@ type PublicProfile struct {
 	Items        []ClothingItem `json:"items,omitempty"`
 }
 
+type FeedItem struct {
+	Type        string        `json:"type"` // "item" or "outfit"
+	Item        *ClothingItem `json:"item,omitempty"`
+	Outfit      *Outfit       `json:"outfit,omitempty"`
+	Owner       string        `json:"owner"`
+	DisplayName string        `json:"display_name"`
+	CreatedAt   time.Time     `json:"created_at"`
+}
+
 type LeaderboardEntry struct {
 	Username    string   `json:"username"`
 	DisplayName string   `json:"display_name"`

@@ -1085,6 +1085,19 @@ func (h *Handler) GetPublicProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, profile)
 }
 
+func (h *Handler) GetFeed(c *gin.Context) {
+	limit, after := parsePage(c)
+	if limit <= 0 {
+		limit = 30
+	}
+	items, err := h.store.GetFeed(limit, after)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, pageResponse(items, limit, func(i int) time.Time { return items[i].CreatedAt }))
+}
+
 func (h *Handler) GetLeaderboard(c *gin.Context) {
 	entries, err := h.store.GetLeaderboard()
 	if err != nil {
