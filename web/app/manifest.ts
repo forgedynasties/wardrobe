@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Hangur",
     short_name: "Hangur",
-    description: "Digital hangur manager",
+    description: "Catalog your clothes, build outfits, and track what you wear every day.",
     start_url: "/",
     scope: "/",
     display: "standalone",

@@ -16,7 +16,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "Hangur",
-  description: "Digital wardrobe manager",
+  description: "Catalog your clothes, build outfits, and track what you wear every day. A personal wardrobe organizer with AI-powered background removal and outfit logging.",
   applicationName: "Hangur",
   appleWebApp: {
     capable: true,
