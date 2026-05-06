@@ -74,6 +74,26 @@ func (s *Store) ListItems(owner string, limit int, after *time.Time) ([]domain.C
 	return items, rows.Err()
 }
 
+func (s *Store) SearchItems(owner, query string) ([]domain.ClothingItem, error) {
+	like := "%" + query + "%"
+	q := `SELECT id, name, brand, product_url, category, sub_category, colors, material, image_url, raw_image_url, COALESCE(thumbnail_url, '') as thumbnail_url, image_status, display_scale, last_worn, created_at, updated_at
+		FROM clothing_items WHERE owner = $1 AND (name ILIKE $2 OR brand ILIKE $2 OR EXISTS (SELECT 1 FROM unnest(colors) AS c WHERE c ILIKE $2)) ORDER BY created_at DESC`
+	rows, err := s.db.Query(q, owner, like)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []domain.ClothingItem
+	for rows.Next() {
+		var item domain.ClothingItem
+		if err := rows.Scan(&item.ID, &item.Name, &item.Brand, &item.ProductURL, &item.Category, &item.SubCategory, pq.Array(&item.Colors), &item.Material, &item.ImageURL, &item.RawImageURL, &item.ThumbnailURL, &item.ImageStatus, &item.DisplayScale, &item.LastWorn, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 func (s *Store) GetItem(id uuid.UUID, owner string) (*domain.ClothingItem, error) {
 	var item domain.ClothingItem
 	err := s.db.QueryRow(`

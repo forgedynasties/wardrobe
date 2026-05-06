@@ -103,6 +103,11 @@ export function getItems(): Promise<ClothingItem[]> {
   return fetcher("/api/items");
 }
 
+export function searchItems(query: string): Promise<ClothingItem[]> {
+  if (!query.trim()) return getItems();
+  return fetcher(`/api/items/search?q=${encodeURIComponent(query.trim())}`);
+}
+
 export function getItemsPage(limit: number, after?: string): Promise<Page<ClothingItem>> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (after) params.set("after", after);

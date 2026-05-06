@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, Plus, ArrowUpDown } from "lucide-react";
-import { getItemsPage, getOutfitsPage } from "@/lib/api";
+import { Sparkles, Plus, ArrowUpDown, Search, X } from "lucide-react";
+import { getItemsPage, getOutfitsPage, searchItems } from "@/lib/api";
 import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import { CategoryStrip } from "@/components/category-strip";
 import { ItemGrid } from "@/components/item-grid";
@@ -13,6 +13,7 @@ import { OutfitStats } from "@/components/outfit-stats";
 import { AddItemButton } from "@/components/add-item-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -64,17 +65,21 @@ function ItemsTab() {
   const [focusCategory, setFocusCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<ItemSortBy>("default");
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!hydrated || !user) return;
     setLoading(true);
-    getItemsPage(ITEMS_PAGE_SIZE)
-      .then((page) => {
-        setItems(page.data);
-        setNextCursor(page.next_cursor);
+    const fetch = searchQuery.trim()
+      ? searchItems(searchQuery)
+      : getItemsPage(ITEMS_PAGE_SIZE).then(p => p.data);
+    fetch
+      .then((data) => {
+        setItems(data);
+        setNextCursor(undefined);
       })
       .finally(() => setLoading(false));
-  }, [hydrated, user]);
+  }, [hydrated, user, searchQuery]);
 
   useEffect(() => {
     if (!nextCursor || loadingMore) return;
@@ -116,7 +121,26 @@ function ItemsTab() {
         </div>
       )}
 
-      {!loading && items.length > 0 && (
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by name, brand, or color..."
+          className="pl-9 pr-8 h-9 text-sm"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {!loading && items.length > 0 && !searchQuery && (
         <div className="flex items-center gap-1.5 mb-4 text-xs text-muted-foreground">
           <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
           Never worn

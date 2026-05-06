@@ -140,6 +140,24 @@ func (h *Handler) ListItems(c *gin.Context) {
 	c.JSON(http.StatusOK, pageResponse(items, limit, func(i int) time.Time { return items[i].CreatedAt }))
 }
 
+func (h *Handler) SearchItems(c *gin.Context) {
+	owner := c.GetString("owner")
+	q := strings.TrimSpace(c.Query("q"))
+	if q == "" {
+		c.JSON(http.StatusOK, []domain.ClothingItem{})
+		return
+	}
+	items, err := h.store.SearchItems(owner, q)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if items == nil {
+		items = []domain.ClothingItem{}
+	}
+	c.JSON(http.StatusOK, items)
+}
+
 func (h *Handler) GetItem(c *gin.Context) {
 	owner := c.GetString("owner")
 	id, err := uuid.Parse(c.Param("id"))

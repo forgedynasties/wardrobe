@@ -38,6 +38,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		items := protected.Group("/items")
 		{
 			items.GET("", h.ListItems)
+			items.GET("/search", h.SearchItems)
 			items.GET("/:id", h.GetItem)
 			items.POST("", h.CreateItem)
 			items.PUT("/:id", h.UpdateItem)
