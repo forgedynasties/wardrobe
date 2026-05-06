@@ -84,10 +84,6 @@ export default function ProfilePage() {
   const [copied, setCopied] = useState(false);
   const [galleryTab, setGalleryTab] = useState<"visible" | "hidden">("visible");
 
-  useEffect(() => {
-    if (!hydrated || !user) return;
-    router.replace(`/p/${user.username}`);
-  }, [hydrated, user, router]);
 
   useEffect(() => {
     if (!hydrated || !user) return;
