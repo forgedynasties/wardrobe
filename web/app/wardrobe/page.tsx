@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Plus, ArrowUpDown } from "lucide-react";
+import { Sparkles, Plus, ArrowUpDown } from "lucide-react";
 import { getItemsPage, getOutfitsPage } from "@/lib/api";
 import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import { CategoryStrip } from "@/components/category-strip";
@@ -11,6 +11,7 @@ import { ItemGrid } from "@/components/item-grid";
 import { OutfitCard } from "@/components/outfit-card";
 import { OutfitStats } from "@/components/outfit-stats";
 import { AddItemButton } from "@/components/add-item-button";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -62,6 +63,7 @@ function ItemsTab() {
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [focusCategory, setFocusCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<ItemSortBy>("default");
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
 
   useEffect(() => {
     if (!hydrated || !user) return;
@@ -146,9 +148,12 @@ function ItemsTab() {
               onSeeAll={() => { setFocusCategory(cat); setSortBy("default"); }}
             />
           ))}
-          {items.length === 0 && (
+          {items.length === 0 && !onboardingDismissed && (
+            <OnboardingWizard onDismiss={() => setOnboardingDismissed(true)} />
+          )}
+          {items.length === 0 && onboardingDismissed && (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-              <p className="text-lg font-medium text-foreground mb-1">Your hangur is empty</p>
+              <p className="text-lg font-medium text-foreground mb-1">Your wardrobe is empty</p>
               <p className="text-sm mb-6">Add your first clothing item to get started</p>
               <AddItemButton />
             </div>
