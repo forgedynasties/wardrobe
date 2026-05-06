@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Globe, Shirt, Sparkles, CalendarDays, Heart, User } from "lucide-react";
+import { Globe, Shirt, CalendarDays, Heart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/lib/user-context";
 
 const navItems = [
   { href: "/", label: "Feed", icon: Globe },
-  { href: "/items", label: "Items", icon: Shirt },
-  { href: "/outfits", label: "Outfits", icon: Sparkles },
+  { href: "/wardrobe", label: "Wardrobe", icon: Shirt },
   { href: "/logger", label: "Logger", icon: CalendarDays },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
   { href: "/profile", label: "Profile", icon: User },
@@ -58,7 +57,8 @@ export function NavBar() {
           const isActive =
             pathname === item.href ||
             pathname.startsWith(item.href + "/") ||
-            (item.href === "/profile" && !!user && pathname === `/p/${user.username}`);
+            (item.href === "/profile" && !!user && pathname === `/p/${user.username}`) ||
+            (item.href === "/wardrobe" && (pathname.startsWith("/items/") || pathname.startsWith("/outfits/")));
           const Icon = item.icon;
           return (
             <Link

@@ -81,7 +81,7 @@ export default function OutfitDetailPage() {
     try {
       await deleteOutfit(id);
       outfitRefreshStore.trigger();
-      router.push("/outfits");
+      router.push("/wardrobe?tab=outfits");
     } catch {
       setDeleting(false);
     }
@@ -114,7 +114,7 @@ export default function OutfitDetailPage() {
       <div className="p-4 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[50vh] gap-3 text-center">
         <p className="font-semibold">Outfit not found</p>
         <p className="text-sm text-muted-foreground">This outfit may have been deleted.</p>
-        <Button variant="outline" size="sm" onClick={() => router.push("/outfits")}>Back to outfits</Button>
+        <Button variant="outline" size="sm" onClick={() => router.push("/wardrobe?tab=outfits")}>Back to outfits</Button>
       </div>
     );
   }
@@ -137,7 +137,7 @@ export default function OutfitDetailPage() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/outfits")} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/wardrobe?tab=outfits")} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" />
           Outfits
         </Button>
