@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getFeed, thumbnailUrl } from "@/lib/api";
 import { useUser } from "@/lib/user-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import { OutfitCanvas } from "@/components/outfit-canvas";
 import type { FeedItem } from "@/lib/types";
 
 const PAGE_SIZE = 30;
@@ -13,9 +14,6 @@ const PAGE_SIZE = 30;
 function FeedCard({ item }: { item: FeedItem }) {
   const router = useRouter();
   const isOutfit = item.type === "outfit";
-  const imgUrl = isOutfit
-    ? thumbnailUrl(item.outfit?.items?.[0] ?? {})
-    : thumbnailUrl(item.item ?? {});
 
   const href = isOutfit
     ? `/p/${item.owner}/outfits/${item.outfit?.id}`
@@ -32,25 +30,34 @@ function FeedCard({ item }: { item: FeedItem }) {
       href={href}
       className="group block rounded-xl overflow-hidden bg-card border border-border hover:border-primary/30 transition-colors"
     >
-      <div className="bg-muted/30 relative overflow-hidden">
-        {imgUrl ? (
-          <img
-            src={imgUrl}
-            alt=""
-            className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full aspect-[3/4] flex items-center justify-center text-muted-foreground text-xs">
-            No image
-          </div>
-        )}
-        {isOutfit && (item.outfit?.items?.length ?? 0) > 1 && (
-          <span className="absolute top-2 left-2 bg-background/80 backdrop-blur rounded-full px-2 py-0.5 text-[10px] font-medium">
-            {item.outfit!.items!.length} items
-          </span>
-        )}
-      </div>
+      {isOutfit ? (
+        <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
+          <OutfitCanvas items={item.outfit?.items ?? []} />
+          {(item.outfit?.items?.length ?? 0) > 1 && (
+            <span className="absolute top-2 left-2 bg-background/80 backdrop-blur rounded-full px-2 py-0.5 text-[10px] font-medium">
+              {item.outfit!.items!.length} items
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="bg-muted/30 relative overflow-hidden">
+          {(() => {
+            const imgUrl = thumbnailUrl(item.item ?? {});
+            return imgUrl ? (
+              <img
+                src={imgUrl}
+                alt=""
+                className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full aspect-[3/4] flex items-center justify-center text-muted-foreground text-xs">
+                No image
+              </div>
+            );
+          })()}
+        </div>
+      )}
       <div className="p-2.5 space-y-1">
         <p className="text-xs font-medium truncate">
           {isOutfit ? item.outfit?.name : (item.item?.name || item.item?.category)}
