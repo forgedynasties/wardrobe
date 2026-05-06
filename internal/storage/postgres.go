@@ -1506,7 +1506,7 @@ func (s *Store) GetLeaderboard() ([]domain.LeaderboardEntry, error) {
 }
 
 // GetFeed returns a mixed feed of recent items and outfits across all active users.
-// Per-user cap (max 3 of each type) ensures variety. Supports cursor pagination via after.
+// Supports cursor pagination via after.
 func (s *Store) GetFeed(limit int, after *time.Time) ([]domain.FeedItem, error) {
 	feedQuery := `
 WITH ranked_items AS (
@@ -1517,8 +1517,7 @@ WITH ranked_items AS (
 		ci.created_at AS item_created_at, ci.updated_at AS item_updated_at,
 		NULL::uuid AS outfit_id, '' AS outfit_name, 0 AS usage_count,
 		NULL::timestamptz AS last_worn_outfit, false AS hidden, false AS pinned,
-		'1970-01-01'::timestamptz AS outfit_created_at, '1970-01-01'::timestamptz AS outfit_updated_at,
-		ROW_NUMBER() OVER (PARTITION BY ci.owner ORDER BY ci.created_at DESC) AS rn
+		'1970-01-01'::timestamptz AS outfit_created_at, '1970-01-01'::timestamptz AS outfit_updated_at
 	FROM clothing_items ci
 	JOIN users u ON u.username = ci.owner AND u.is_active = true
 	WHERE ci.image_status = 'done'
@@ -1530,8 +1529,7 @@ WITH ranked_items AS (
 		'1970-01-01'::timestamptz AS item_created_at, '1970-01-01'::timestamptz AS item_updated_at,
 		o.id AS outfit_id, o.name AS outfit_name, o.usage_count,
 		o.last_worn AS last_worn_outfit, o.hidden, o.pinned,
-		o.created_at AS outfit_created_at, o.updated_at AS outfit_updated_at,
-		ROW_NUMBER() OVER (PARTITION BY o.owner ORDER BY o.created_at DESC) AS rn
+		o.created_at AS outfit_created_at, o.updated_at AS outfit_updated_at
 	FROM outfits o
 	JOIN users u ON u.username = o.owner AND u.is_active = true
 	WHERE o.hidden = false
@@ -1543,7 +1541,7 @@ SELECT type, owner, display_name, created_at,
 	image_status, display_scale, last_worn, item_created_at, item_updated_at,
 	outfit_id, outfit_name, usage_count, last_worn_outfit, hidden, pinned,
 	outfit_created_at, outfit_updated_at
-FROM ranked_items WHERE rn <= 3
+FROM ranked_items
 UNION ALL
 SELECT type, owner, display_name, created_at,
 	id, name, brand, product_url, category, sub_category, colors, material,
@@ -1551,7 +1549,7 @@ SELECT type, owner, display_name, created_at,
 	image_status, display_scale, last_worn, item_created_at, item_updated_at,
 	outfit_id, outfit_name, usage_count, last_worn_outfit, hidden, pinned,
 	outfit_created_at, outfit_updated_at
-FROM ranked_outfits WHERE rn <= 3
+FROM ranked_outfits
 ORDER BY created_at DESC`
 
 	var rows *sql.Rows
