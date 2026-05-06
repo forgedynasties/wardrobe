@@ -309,6 +309,12 @@ export function getPublicProfile(username: string): Promise<PublicProfile> {
   return fetcher(`/api/profile/public/${username}`);
 }
 
+export function getFeed(limit: number, after?: string): Promise<Page<import("./types").FeedItem>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (after) params.set("after", after);
+  return fetcher(`/api/feed?${params}`);
+}
+
 export function getLeaderboard(): Promise<LeaderboardEntry[]> {
   return fetcher("/api/leaderboard");
 }

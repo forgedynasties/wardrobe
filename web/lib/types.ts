@@ -170,6 +170,15 @@ export interface TopItem {
   wear_count: number;
 }
 
+export interface FeedItem {
+  type: "item" | "outfit";
+  item?: ClothingItem;
+  outfit?: Outfit;
+  owner: string;
+  display_name: string;
+  created_at: string;
+}
+
 export interface LeaderboardEntry {
   username: string;
   display_name: string;

@@ -42,7 +42,9 @@ export function UserGate({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
 
   if (!hydrated) return null;
-  if (user || pathname.startsWith("/p/")) return <>{children}</>;
+  const publicPaths = ["/p/", "/leaderboard"];
+  const isPublic = publicPaths.some((p) => pathname.startsWith(p)) || pathname === "/";
+  if (user || isPublic) return <>{children}</>;
 
   const go = (m: Mode) => { setMode(m); setError(""); };
 

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/lib/user-context";
 
 const navItems = [
-  { href: "/", label: "Hangur", icon: Shirt },
+  { href: "/items", label: "Items", icon: Shirt },
   { href: "/outfits", label: "Outfits", icon: Sparkles },
   { href: "/logger", label: "Logger", icon: CalendarDays },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
@@ -45,7 +45,8 @@ export function NavBar() {
   const pathname = usePathname();
   const { user } = useUser();
 
-  if (pathname.startsWith("/p/") && !user) {
+  const publicPaths = ["/p/", "/leaderboard"];
+  if ((publicPaths.some((p) => pathname.startsWith(p)) || pathname === "/") && !user) {
     return <GuestBar />;
   }
 
