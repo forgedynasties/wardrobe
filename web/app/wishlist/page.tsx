@@ -240,7 +240,7 @@ export default function WishlistPage() {
               className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
             >
               <Star
-                className={`h-4 w-4 ${item.priority === 1 ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
+                className={`h-4 w-4 ${item.priority === 1 ? "fill-foreground text-foreground" : "text-muted-foreground"}`}
               />
             </button>
           )}
@@ -285,7 +285,7 @@ export default function WishlistPage() {
             </Button>
             {!bought && (
               <Button
-                type="button" variant="outline" size="sm" className="gap-1 text-xs h-7 px-2 text-green-600 border-green-600/40 hover:bg-green-50 dark:hover:bg-green-950"
+                type="button" variant="outline" size="sm" className="gap-1 text-xs h-7 px-2"
                 onClick={() => handleToggleBought(item)}
               >
                 <ShoppingBag className="h-3 w-3" /> Bought

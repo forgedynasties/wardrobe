@@ -145,7 +145,7 @@ export function UserSwitcher() {
           {view === "change-password" && (
             <form onSubmit={handleChangePassword} className="space-y-4">
               {success ? (
-                <p className="text-sm text-green-600">Password changed successfully.</p>
+                <p className="text-sm text-foreground">Password changed successfully.</p>
               ) : (
                 <>
                   <div className="space-y-1.5">

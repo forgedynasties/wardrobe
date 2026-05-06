@@ -152,7 +152,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleShare}>
             {copied
-              ? <><Check className="h-4 w-4 text-green-500" />Copied</>
+              ? <><Check className="h-4 w-4 text-foreground" />Copied</>
               : <><Share2 className="h-4 w-4" />Share</>}
           </Button>
         </div>
@@ -487,7 +487,7 @@ export default function ProfilePage() {
                       <div className="p-1.5 space-y-0.5">
                         <div className="flex items-center gap-1">
                           {item.priority === 1 && (
-                            <Heart className="h-3 w-3 shrink-0 text-red-500 fill-red-500" />
+                            <Heart className="h-3 w-3 shrink-0 text-foreground fill-foreground" />
                           )}
                           <p className="text-xs font-medium truncate">{item.name}</p>
                         </div>

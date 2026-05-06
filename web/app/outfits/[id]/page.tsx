@@ -155,7 +155,7 @@ export default function OutfitDetailPage() {
                   setTimeout(() => setShareCopied(false), 2000);
                 }}
               >
-                {shareCopied ? <Check className="h-4 w-4 text-green-500" /> : <Share2 className="h-4 w-4" />}
+                {shareCopied ? <Check className="h-4 w-4 text-foreground" /> : <Share2 className="h-4 w-4" />}
               </Button>
               <OutfitExportButton items={outfit.items ?? []} name={outfit.name} />
               <Button variant="outline" size="sm" onClick={() => setEditingLayout(true)} className="gap-1.5" disabled={!outfit?.items?.length}>

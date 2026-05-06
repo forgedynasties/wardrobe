@@ -1,0 +1,122 @@
+/* ─────────────────────────────────────────────────────────────
+   THEME CONFIG — edit only this file to retheme the entire app.
+   All values use oklch(lightness chroma hue).
+   chroma=0 → pure black/white. Add chroma+hue for color tints.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* shape */
+  --radius: 0.625rem;
+
+  /* chrome — header and bottom nav */
+  --chrome:                    oklch(1 0 0);
+  --chrome-foreground:         oklch(0.12 0 0);
+
+  /* backgrounds */
+  --background:                oklch(0.98 0 0);
+  --card:                      oklch(1 0 0);
+  --popover:                   oklch(1 0 0);
+  --sidebar:                   oklch(0.96 0 0);
+
+  /* foregrounds */
+  --foreground:                oklch(0.12 0 0);
+  --card-foreground:           oklch(0.12 0 0);
+  --popover-foreground:        oklch(0.12 0 0);
+  --sidebar-foreground:        oklch(0.12 0 0);
+
+  /* primary — main action color */
+  --primary:                   oklch(0.12 0 0);
+  --primary-foreground:        oklch(0.98 0 0);
+
+  /* secondary */
+  --secondary:                 oklch(0.94 0 0);
+  --secondary-foreground:      oklch(0.2 0 0);
+
+  /* muted */
+  --muted:                     oklch(0.94 0 0);
+  --muted-foreground:          oklch(0.5 0 0);
+
+  /* accent */
+  --accent:                    oklch(0.92 0 0);
+  --accent-foreground:         oklch(0.2 0 0);
+
+  /* borders / inputs */
+  --border:                    oklch(0.88 0 0);
+  --input:                     oklch(0.88 0 0);
+  --ring:                      oklch(0.12 0 0);
+
+  /* sidebar specifics */
+  --sidebar-primary:           oklch(0.12 0 0);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent:            oklch(0.92 0 0);
+  --sidebar-accent-foreground: oklch(0.2 0 0);
+  --sidebar-border:            oklch(0.88 0 0);
+  --sidebar-ring:              oklch(0.12 0 0);
+
+  /* destructive — keep red regardless */
+  --destructive:               oklch(0.577 0.245 27.325);
+
+  /* charts — light to dark grays */
+  --chart-1:                   oklch(0.15 0 0);
+  --chart-2:                   oklch(0.35 0 0);
+  --chart-3:                   oklch(0.55 0 0);
+  --chart-4:                   oklch(0.7 0 0);
+  --chart-5:                   oklch(0.85 0 0);
+}
+
+.dark {
+  /* chrome */
+  --chrome:                    oklch(0.06 0 0);
+  --chrome-foreground:         oklch(0.95 0 0);
+
+  /* backgrounds */
+  --background:                oklch(0.18 0 0);
+  --card:                      oklch(0.22 0 0);
+  --popover:                   oklch(0.17 0 0);
+  --sidebar:                   oklch(0.17 0 0);
+
+  /* foregrounds */
+  --foreground:                oklch(0.95 0 0);
+  --card-foreground:           oklch(0.95 0 0);
+  --popover-foreground:        oklch(0.95 0 0);
+  --sidebar-foreground:        oklch(0.95 0 0);
+
+  /* primary */
+  --primary:                   oklch(0.95 0 0);
+  --primary-foreground:        oklch(0.12 0 0);
+
+  /* secondary */
+  --secondary:                 oklch(0.22 0 0);
+  --secondary-foreground:      oklch(0.92 0 0);
+
+  /* muted */
+  --muted:                     oklch(0.22 0 0);
+  --muted-foreground:          oklch(0.62 0 0);
+
+  /* accent */
+  --accent:                    oklch(0.28 0 0);
+  --accent-foreground:         oklch(0.92 0 0);
+
+  /* borders / inputs */
+  --border:                    oklch(1 0 0 / 12%);
+  --input:                     oklch(1 0 0 / 15%);
+  --ring:                      oklch(0.95 0 0);
+
+  /* sidebar specifics */
+  --sidebar-primary:           oklch(0.95 0 0);
+  --sidebar-primary-foreground: oklch(0.12 0 0);
+  --sidebar-accent:            oklch(0.25 0 0);
+  --sidebar-accent-foreground: oklch(0.92 0 0);
+  --sidebar-border:            oklch(1 0 0 / 12%);
+  --sidebar-ring:              oklch(0.95 0 0);
+
+  /* destructive */
+  --destructive:               oklch(0.704 0.191 22.216);
+
+  /* charts — light in dark mode */
+  --chart-1:                   oklch(0.9 0 0);
+  --chart-2:                   oklch(0.72 0 0);
+  --chart-3:                   oklch(0.55 0 0);
+  --chart-4:                   oklch(0.38 0 0);
+  --chart-5:                   oklch(0.25 0 0);
+}

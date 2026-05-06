@@ -51,7 +51,7 @@ export function OutfitStats({ outfits }: OutfitStatsProps) {
       {mostWorn && mostWorn.usage_count > 0 ? (
         <Link href={`/outfits/${mostWorn.id}`} className="rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors col-span-1">
           <div className="flex items-center gap-1 mb-1">
-            <Flame className="h-3 w-3 text-orange-400" />
+            <Flame className="h-3 w-3 text-foreground" />
             <p className="text-[11px] text-muted-foreground font-medium">most worn</p>
           </div>
           <p className="text-sm font-semibold truncate leading-snug">{mostWorn.name}</p>
