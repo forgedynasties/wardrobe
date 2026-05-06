@@ -83,6 +83,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [galleryTab, setGalleryTab] = useState<"visible" | "hidden">("visible");
+  const [profileTab, setProfileTab] = useState<"overview" | "gallery" | "items">("overview");
 
 
   useEffect(() => {
@@ -158,6 +159,27 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Tab pills */}
+      <div className="flex gap-2">
+        {([
+          { key: "overview", label: "Overview" },
+          { key: "gallery", label: "Gallery" },
+          { key: "items", label: "Items" },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setProfileTab(t.key)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              profileTab === t.key
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -166,6 +188,8 @@ export default function ProfilePage() {
         </div>
       ) : (
         <>
+          {profileTab === "overview" && (
+          <>
           {/* numbers */}
           <section className="space-y-3">
             <div className="flex items-center gap-2">
@@ -343,7 +367,11 @@ export default function ProfilePage() {
               );
             })()}
           </section>
+          </>
+          )}
 
+          {profileTab === "gallery" && (
+          <>
           {/* outfit gallery */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
@@ -392,7 +420,11 @@ export default function ProfilePage() {
               );
             })()}
           </section>
+          </>
+          )}
 
+          {profileTab === "items" && (
+          <>
           {/* signature pieces */}
           {stats && stats.top_worn_items.length > 0 && (
             <section className="space-y-3">
@@ -501,6 +533,8 @@ export default function ProfilePage() {
               </div>
             )}
           </section>
+          </>
+          )}
         </>
       )}
     </div>
