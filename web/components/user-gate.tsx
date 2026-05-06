@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useUser } from "@/lib/user-context";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,11 @@ type Mode = "login" | "register" | "otp" | "forgot" | "reset";
 export function UserGate({ children }: { children: React.ReactNode }) {
   const { user, hydrated, login, initiateSignup, verifySignup } = useUser();
   const pathname = usePathname();
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode] = useState<Mode>(() => {
+    if (pathname === "/register") return "register";
+    if (pathname === "/forgot") return "forgot";
+    return "login";
+  });
 
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -40,6 +44,12 @@ export function UserGate({ children }: { children: React.ReactNode }) {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (pathname === "/register") setMode("register");
+    else if (pathname === "/forgot") setMode("forgot");
+    else if (pathname === "/login") setMode("login");
+  }, [pathname]);
 
   if (!hydrated) return null;
   const publicPaths = ["/p/", "/leaderboard"];
