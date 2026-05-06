@@ -384,7 +384,7 @@ export default function WishlistPage() {
       <Card className="p-4 space-y-4">
         <div className="flex gap-4">
           {/* image preview */}
-          <div className="w-20 h-20 shrink-0 rounded-lg bg-muted/40 overflow-hidden flex items-center justify-center border">
+          <div className="w-28 h-28 shrink-0 rounded-lg bg-muted/40 overflow-hidden flex items-center justify-center border">
             {fetchingMeta ? (
               <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
             ) : image ? (
