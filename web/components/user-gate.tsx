@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useUser } from "@/lib/user-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,9 +26,12 @@ type Mode = "login" | "register" | "otp" | "forgot" | "reset";
 export function UserGate({ children }: { children: React.ReactNode }) {
   const { user, hydrated, login, initiateSignup, verifySignup } = useUser();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const authParam = searchParams.get("auth");
+
   const [mode, setMode] = useState<Mode>(() => {
-    if (pathname === "/register") return "register";
-    if (pathname === "/forgot") return "forgot";
+    if (authParam === "register") return "register";
+    if (authParam === "forgot") return "forgot";
     return "login";
   });
 
@@ -46,15 +49,16 @@ export function UserGate({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (pathname === "/register") setMode("register");
-    else if (pathname === "/forgot") setMode("forgot");
-    else if (pathname === "/login") setMode("login");
-  }, [pathname]);
+    if (authParam === "register") setMode("register");
+    else if (authParam === "forgot") setMode("forgot");
+    else if (authParam === "login") setMode("login");
+  }, [authParam]);
 
   if (!hydrated) return null;
   const publicPaths = ["/p/", "/leaderboard"];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p)) || pathname === "/";
-  if (user || isPublic) return <>{children}</>;
+  // Show auth overlay on / if ?auth= param is present, even though / is public
+  if (user || (isPublic && !authParam)) return <>{children}</>;
 
   const go = (m: Mode) => { setMode(m); setError(""); };
 
