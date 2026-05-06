@@ -9,7 +9,7 @@ import { useUser } from "@/lib/user-context";
 const navItems = [
   { href: "/", label: "Explore", icon: Globe },
   { href: "/wardrobe", label: "Wardrobe", icon: Shirt },
-  { href: "/logger", label: "Logger", icon: CalendarDays },
+  { href: "/logger", label: "Calendar", icon: CalendarDays },
   { href: "/wishlist", label: "Wishlist", icon: Heart },
   { href: "/profile", label: "Profile", icon: User },
 ];
