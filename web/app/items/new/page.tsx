@@ -74,7 +74,7 @@ export default function NewItemPage() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/wardrobe")} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" />
           Hangur
         </Button>
