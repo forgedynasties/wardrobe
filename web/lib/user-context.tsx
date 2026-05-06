@@ -1,8 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { applyTheme, loadTheme } from "./theme";
-
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export interface AuthUser {
@@ -46,12 +44,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       .catch(() => setUser(null))
       .finally(() => setHydrated(true));
   }, []);
-
-  useEffect(() => {
-    if (!user) { applyTheme(""); return; }
-    const saved = user.username === "alishba" ? "theme-alishba" : loadTheme(user.username);
-    applyTheme(saved);
-  }, [user]);
 
   const login = useCallback(async (username: string, password: string) => {
     const data = await apiFetch("/api/auth/login", {
