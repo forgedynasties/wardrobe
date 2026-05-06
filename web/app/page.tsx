@@ -1,182 +1,190 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import { getItemsPage } from "@/lib/api";
-import { CategoryStrip } from "@/components/category-strip";
-import { ItemGrid } from "@/components/item-grid";
-import { AddItemButton } from "@/components/add-item-button";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
+import { getFeed, thumbnailUrl } from "@/lib/api";
 import { useUser } from "@/lib/user-context";
-import type { ClothingItem } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { FeedItem } from "@/lib/types";
 
-type SortBy = "default" | "color";
+const PAGE_SIZE = 30;
 
-function hexToHue(hex: string): number {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  if (max === min) return 0;
-  const d = max - min;
-  const h = max === r ? (g - b) / d + (g < b ? 6 : 0)
-          : max === g ? (b - r) / d + 2
-          : (r - g) / d + 4;
-  return h * 60;
+function FeedCard({ item }: { item: FeedItem }) {
+  const router = useRouter();
+  const isOutfit = item.type === "outfit";
+  const imgUrl = isOutfit
+    ? thumbnailUrl(item.outfit?.items?.[0] ?? {})
+    : thumbnailUrl(item.item ?? {});
+
+  const href = isOutfit
+    ? `/p/${item.owner}/outfits/${item.outfit?.id}`
+    : `/p/${item.owner}/items/${item.item?.id}`;
+
+  const goToProfile = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    router.push(`/p/${item.owner}`);
+  };
+
+  return (
+    <Link
+      href={href}
+      className="group block rounded-xl overflow-hidden bg-card border border-border hover:border-primary/30 transition-colors"
+    >
+      <div className="bg-muted/30 relative overflow-hidden">
+        {imgUrl ? (
+          <img
+            src={imgUrl}
+            alt=""
+            className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full aspect-[3/4] flex items-center justify-center text-muted-foreground text-xs">
+            No image
+          </div>
+        )}
+        {isOutfit && (item.outfit?.items?.length ?? 0) > 1 && (
+          <span className="absolute top-2 left-2 bg-background/80 backdrop-blur rounded-full px-2 py-0.5 text-[10px] font-medium">
+            {item.outfit!.items!.length} items
+          </span>
+        )}
+      </div>
+      <div className="p-2.5 space-y-1">
+        <p className="text-xs font-medium truncate">
+          {isOutfit ? item.outfit?.name : (item.item?.name || item.item?.category)}
+        </p>
+        <span
+          onClick={goToProfile}
+          onKeyDown={(e) => e.key === "Enter" && goToProfile(e)}
+          role="link"
+          tabIndex={0}
+          className="text-[11px] text-muted-foreground hover:text-foreground truncate block cursor-pointer"
+        >
+          {item.display_name}
+        </span>
+      </div>
+    </Link>
+  );
 }
 
-function sortItems(items: ClothingItem[], sort: SortBy): ClothingItem[] {
-  if (sort === "color") {
-    return [...items].sort((a, b) => {
-      const ha = a.colors?.[0] ? hexToHue(a.colors[0]) : 361;
-      const hb = b.colors?.[0] ? hexToHue(b.colors[0]) : 361;
-      return ha - hb;
-    });
-  }
-  return items;
+function FeedSkeleton() {
+  return (
+    <div className="columns-2 sm:columns-3 md:columns-4 gap-3 space-y-3">
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div key={i} className="break-inside-avoid rounded-xl border border-border bg-card overflow-hidden">
+          <Skeleton className="aspect-[3/4] w-full rounded-none" />
+          <div className="p-2.5 space-y-1.5">
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-2.5 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-const CATEGORIES = ["Top", "Bottom", "Outerwear", "Shoes", "Accessory"];
-const PAGE_SIZE = 100;
-
-export default function HangurPage() {
-  const { user, hydrated } = useUser();
-  const [items, setItems] = useState<ClothingItem[]>([]);
+export default function FeedPage() {
+  const { hydrated } = useUser();
+  const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
-  const [focusCategory, setFocusCategory] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortBy>("default");
+  const [error, setError] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const load = useCallback(async (cursor?: string) => {
+    setError(null);
+    try {
+      const page = await getFeed(PAGE_SIZE, cursor);
+      if (cursor) {
+        setItems((prev) => [...prev, ...page.data]);
+      } else {
+        setItems(page.data);
+      }
+      setNextCursor(page.next_cursor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load feed");
+    }
+  }, []);
 
   useEffect(() => {
-    if (!hydrated || !user) return;
+    if (!hydrated) return;
     setLoading(true);
-    getItemsPage(PAGE_SIZE)
-      .then((page) => {
-        setItems(page.data);
-        setNextCursor(page.next_cursor);
-      })
-      .finally(() => setLoading(false));
-  }, [hydrated, user]);
+    load().finally(() => setLoading(false));
+  }, [hydrated, load]);
 
-  // Auto-load remaining pages so strips show full counts
+  // Infinite scroll via IntersectionObserver
   useEffect(() => {
     if (!nextCursor || loadingMore) return;
-    setLoadingMore(true);
-    getItemsPage(PAGE_SIZE, nextCursor)
-      .then((page) => {
-        setItems((prev) => [...prev, ...page.data]);
-        setNextCursor(page.next_cursor);
-      })
-      .finally(() => setLoadingMore(false));
-  }, [nextCursor]);
+    const el = sentinelRef.current;
+    if (!el) return;
 
-  const focusItems = focusCategory
-    ? sortItems(items.filter((i) => i.category === focusCategory), sortBy)
-    : [];
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setLoadingMore(true);
+          load(nextCursor).finally(() => setLoadingMore(false));
+        }
+      },
+      { rootMargin: "400px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [nextCursor, loadingMore, load]);
+
+  if (!hydrated) return null;
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
+    <div className="p-4 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-4">
-        {focusCategory ? (
-          <button
-            onClick={() => setFocusCategory(null)}
-            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Hangur
-          </button>
-        ) : (
-          <h1 className="text-2xl font-bold">My Hangur</h1>
-        )}
-        <AddItemButton />
+        <h1 className="text-xl font-bold">Feed</h1>
       </div>
 
-      {focusCategory && (
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">{focusCategory}</h2>
-          <div className="flex items-center gap-1 rounded-md border p-0.5 bg-muted/40 text-xs">
-            {(["default", "color"] as SortBy[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSortBy(s)}
-                className={`px-2.5 py-1 rounded capitalize transition-colors font-medium ${
-                  sortBy === s
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {s === "color" ? "Color" : "Default"}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!loading && items.length > 0 && (
-        <div className="flex items-center gap-1.5 mb-4 text-xs text-muted-foreground">
-          <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
-          Never worn
-        </div>
+      {error && (
+        <p className="text-sm text-destructive mb-4">{error}</p>
       )}
 
       {loading ? (
-        <div className="space-y-8">
-          {CATEGORIES.map((cat) => (
-            <div key={cat} className="space-y-2">
-              <Skeleton className="h-5 w-20" />
-              <div className="flex gap-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl flex-shrink-0" />
-                ))}
-              </div>
-            </div>
-          ))}
+        <FeedSkeleton />
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <p className="text-lg font-medium text-foreground mb-1">Nothing to see yet</p>
+          <p className="text-sm">Be the first to add something</p>
         </div>
-      ) : focusCategory ? (
-        <ItemGrid items={focusItems} />
       ) : (
-        <div className="space-y-8">
-          <Link
-            href="/image-guide"
-            className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 hover:bg-muted/40 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 shrink-0">
-                <Sparkles className="h-4 w-4 text-primary" />
+        <>
+          <div className="columns-2 sm:columns-3 md:columns-4 gap-3 space-y-3">
+            {items.map((item) => (
+              <div key={`${item.type}-${item.type === "outfit" ? item.outfit?.id : item.item?.id}`} className="break-inside-avoid">
+                <FeedCard item={item} />
               </div>
-              <div>
-                <p className="text-sm font-medium">Adding clothes with AI</p>
-                <p className="text-xs text-muted-foreground">Use Gemini + remove.bg to prep your images</p>
-              </div>
-            </div>
-            <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+            ))}
+          </div>
 
-          {CATEGORIES.map((cat) => (
-            <CategoryStrip
-              key={cat}
-              category={cat}
-              items={items.filter((i) => i.category === cat)}
-              onSeeAll={() => { setFocusCategory(cat); setSortBy("default"); }}
-            />
-          ))}
-          {items.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-              <p className="text-lg font-medium text-foreground mb-1">Your hangur is empty</p>
-              <p className="text-sm mb-6">Add your first clothing item to get started</p>
-              <AddItemButton />
+          {/* Infinite scroll sentinel */}
+          {nextCursor && (
+            <div
+              ref={sentinelRef}
+              className="flex items-center justify-center py-8"
+            >
+              {loadingMore && (
+                <div className="columns-2 sm:columns-3 md:columns-4 gap-3 space-y-3 w-full">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="break-inside-avoid rounded-xl border border-border bg-card overflow-hidden">
+                      <Skeleton className="aspect-[3/4] w-full rounded-none" />
+                      <div className="p-2.5 space-y-1.5">
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-2.5 w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
-
-      {!loading && items.length > 0 && (
-        <div className="fixed bottom-20 right-4 z-40 md:hidden">
-          <AddItemButton variant="fab" />
-        </div>
+        </>
       )}
     </div>
   );
