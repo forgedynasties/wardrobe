@@ -595,9 +595,9 @@ func (s *Store) BackfillOutfitStats(outfitID uuid.UUID, owner string) error {
 			SELECT ol.wear_date
 			FROM outfit_logs ol
 			JOIN outfit_log_items oli ON ol.id = oli.outfit_log_id
-			WHERE ol.owner = $2 AND oli.clothing_item_id = ANY($3)
+			WHERE ol.owner = $1 AND oli.clothing_item_id = ANY($2)
 			GROUP BY ol.wear_date
-			HAVING COUNT(DISTINCT oli.clothing_item_id) = $4
+			HAVING COUNT(DISTINCT oli.clothing_item_id) = $3
 		) AS matches`,
 		owner, pq.Array(itemIDs), len(itemIDs),
 	).Scan(&usageCount, &lastWorn)
