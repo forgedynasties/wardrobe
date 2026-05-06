@@ -14,7 +14,7 @@ export function TopBar() {
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
           <path fill="currentColor" d="M26 7v4h-4v14h-12v-14h-4v-4h8v4h4v-4h8z"/>
         </svg>
-        <span className="font-heading text-sm font-semibold tracking-tight">Hangur</span>
+        <span className="font-sans text-sm font-semibold tracking-tight">Hangur</span>
       </Link>
       <div className="flex items-center gap-1">
         <Link href="/leaderboard">
