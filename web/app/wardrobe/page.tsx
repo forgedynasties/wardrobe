@@ -67,6 +67,13 @@ function ItemsTab() {
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Reset items immediately on query change to prevent stale empty-state flash
+  useEffect(() => {
+    if (!hydrated || !user) return;
+    setItems([]);
+    setLoading(true);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!hydrated || !user) return;
     setLoading(true);
