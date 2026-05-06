@@ -25,8 +25,8 @@ const STEPS = [
     icon: CalendarDays,
     title: "Log your wear",
     body: "Tap \"Wear Today\" on any outfit. The calendar fills up. Over time you'll see what you actually wear and what just sits there.",
-    cta: "Go to Wardrobe",
-    href: "/wardrobe",
+    cta: "Got it",
+    href: null,
   },
 ];
 
@@ -86,12 +86,19 @@ export function OnboardingWizard({ onDismiss }: { onDismiss: () => void }) {
               Back
             </Button>
           )}
-          <Link href={current.href}>
-            <Button size="sm" className="gap-1.5">
+          {current.href ? (
+            <Link href={current.href}>
+              <Button size="sm" className="gap-1.5">
+                {current.cta}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          ) : (
+            <Button size="sm" className="gap-1.5" onClick={onDismiss}>
               {current.cta}
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
-          </Link>
+          )}
           {step < STEPS.length - 1 && (
             <Button
               variant="ghost"
