@@ -30,7 +30,7 @@ export function OutfitStats({ outfits }: OutfitStatsProps) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {/* total */}
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-4">
         <p className="text-3xl font-bold tracking-tight">{outfits.length}</p>
         <p className="text-xs font-medium mt-1">outfits</p>
         <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -39,7 +39,7 @@ export function OutfitStats({ outfits }: OutfitStatsProps) {
       </div>
 
       {/* total wears */}
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-4">
         <p className="text-3xl font-bold tracking-tight">{totalWears}</p>
         <p className="text-xs font-medium mt-1">total wears</p>
         <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -49,7 +49,7 @@ export function OutfitStats({ outfits }: OutfitStatsProps) {
 
       {/* most worn */}
       {mostWorn && mostWorn.usage_count > 0 ? (
-        <Link href={`/outfits/${mostWorn.id}`} className="rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors col-span-1">
+        <Link href={`/outfits/${mostWorn.id}`} className="rounded-xl bg-card ring-1 ring-foreground/10 p-4 hover:bg-muted/40 transition-colors col-span-1">
           <div className="flex items-center gap-1 mb-1">
             <Flame className="h-3 w-3 text-foreground" />
             <p className="text-[11px] text-muted-foreground font-medium">most worn</p>
@@ -58,7 +58,7 @@ export function OutfitStats({ outfits }: OutfitStatsProps) {
           <p className="text-[11px] text-muted-foreground mt-0.5">{mostWorn.usage_count} wears</p>
         </Link>
       ) : (
-        <div className="rounded-xl border bg-card p-4">
+        <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-4">
           <div className="flex items-center gap-1 mb-1">
             <BarChart3 className="h-3 w-3 text-muted-foreground" />
             <p className="text-[11px] text-muted-foreground font-medium">most worn</p>
@@ -69,7 +69,7 @@ export function OutfitStats({ outfits }: OutfitStatsProps) {
 
       {/* dustiest / never worn */}
       {neverWorn.length > 0 ? (
-        <Link href={`/outfits/${neverWorn[0].id}`} className="rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors col-span-1">
+        <Link href={`/outfits/${neverWorn[0].id}`} className="rounded-xl bg-card ring-1 ring-foreground/10 p-4 hover:bg-muted/40 transition-colors col-span-1">
           <div className="flex items-center gap-1 mb-1">
             <Ghost className="h-3 w-3 text-muted-foreground" />
             <p className="text-[11px] text-muted-foreground font-medium">never worn</p>
@@ -80,7 +80,7 @@ export function OutfitStats({ outfits }: OutfitStatsProps) {
           </p>
         </Link>
       ) : dustiest ? (
-        <Link href={`/outfits/${dustiest.id}`} className="rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors col-span-1">
+        <Link href={`/outfits/${dustiest.id}`} className="rounded-xl bg-card ring-1 ring-foreground/10 p-4 hover:bg-muted/40 transition-colors col-span-1">
           <div className="flex items-center gap-1 mb-1">
             <TrendingUp className="h-3 w-3 text-muted-foreground rotate-180" />
             <p className="text-[11px] text-muted-foreground font-medium">collecting dust</p>

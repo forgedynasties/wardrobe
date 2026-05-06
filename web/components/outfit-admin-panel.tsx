@@ -74,7 +74,7 @@ export function OutfitAdminPanel() {
     <>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-24 left-4 z-40 h-10 w-10 rounded-full bg-card border shadow-lg flex items-center justify-center hover:bg-muted transition"
+        className="fixed bottom-24 left-4 z-40 h-10 w-10 rounded-full bg-card ring-1 ring-foreground/10 shadow-lg flex items-center justify-center hover:bg-muted transition"
         title="Outfit layout admin"
         aria-label="Outfit layout admin"
       >

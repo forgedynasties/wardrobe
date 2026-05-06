@@ -34,7 +34,7 @@ export default function LeaderboardPage() {
             <Link
               key={entry.username}
               href={`/p/${entry.username}`}
-              className="flex items-center gap-3 p-3 rounded-xl bg-card border hover:border-primary/40 transition-all"
+              className="flex items-center gap-3 p-3 rounded-xl bg-card ring-1 ring-foreground/10 hover:ring-foreground/20 transition-all"
             >
               <div className="w-7 text-center shrink-0">
                 {MEDAL[i]

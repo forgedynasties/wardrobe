@@ -586,7 +586,7 @@ export function OutfitLayoutEditor({ items, onSave, onCancel }: Props) {
       </div>
 
       {/* controls */}
-      <div className="rounded-xl border bg-card p-3">
+      <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-3">
         {selectedItem ? (
           <p className="text-xs text-muted-foreground text-center">
             Drag to move · corner handles to scale · ○ handle to rotate
