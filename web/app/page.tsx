@@ -109,7 +109,8 @@ function MasonryGrid({ items }: { items: FeedItem[] }) {
 }
 
 export default function FeedPage() {
-  const { hydrated } = useUser();
+  const { user, hydrated } = useUser();
+  const router = useRouter();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -118,6 +119,12 @@ export default function FeedPage() {
   const [filter, setFilter] = useState<FilterMode>("outfits");
   const [itemCategory, setItemCategory] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (hydrated && user) router.replace("/wardrobe");
+  }, [hydrated, user, router]);
+
+  if (!hydrated || user) return null;
 
   const load = useCallback(async (cursor?: string) => {
     setError(null);
@@ -135,10 +142,10 @@ export default function FeedPage() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || user) return;
     setLoading(true);
     load().finally(() => setLoading(false));
-  }, [hydrated, load]);
+  }, [hydrated, user, load]);
 
   // Infinite scroll via IntersectionObserver
   useEffect(() => {
@@ -181,8 +188,6 @@ export default function FeedPage() {
     }
     return { byCategory, outfits: outfitEntries };
   }, [items, filter]);
-
-  if (!hydrated) return null;
 
   const FILTERS: { key: FilterMode; label: string }[] = [
     { key: "outfits", label: "Outfits" },
