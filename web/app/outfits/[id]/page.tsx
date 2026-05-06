@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, Check, Plus, X, Share2, LayoutTemplate } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Check, Plus, X, Share2, LayoutTemplate, Shirt } from "lucide-react";
 import { getOutfit, updateOutfit, deleteOutfit, wearOutfit, addOutfitItem, removeOutfitItem, updateOutfitLayout, imageUrl, thumbnailUrl } from "@/lib/api";
 import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import { FitBuilder } from "@/components/fit-builder";
@@ -263,7 +263,7 @@ export default function OutfitDetailPage() {
             className="w-full gap-2 text-base"
             onClick={handleWear}
           >
-            <Check className="h-5 w-5" />
+            <Shirt className="h-5 w-5" />
             Wear Today
           </Button>
 

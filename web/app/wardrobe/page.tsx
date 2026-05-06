@@ -323,15 +323,6 @@ export default function WardrobePage() {
     <div className="p-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-3">
         <h1 className="text-2xl font-bold">Wardrobe</h1>
-        <div className="flex gap-2">
-          <AddItemButton />
-          <Link href="/outfits/new">
-            <Button size="sm" className="gap-1.5">
-              <Plus className="h-4 w-4" />
-              Create Outfit
-            </Button>
-          </Link>
-        </div>
       </div>
 
       {/* Tab pills */}
