@@ -116,6 +116,7 @@ export default function FeedPage() {
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterMode>("outfits");
+  const [itemCategory, setItemCategory] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async (cursor?: string) => {
@@ -160,9 +161,13 @@ export default function FeedPage() {
 
   const filteredItems = useMemo(() => {
     if (filter === "outfits") return items.filter((i) => i.type === "outfit");
-    if (filter === "items") return items.filter((i) => i.type === "item");
+    if (filter === "items") {
+      const itemEntries = items.filter((i) => i.type === "item");
+      if (!itemCategory) return itemEntries;
+      return itemEntries.filter((i) => (i.item?.category || "Other") === itemCategory);
+    }
     return items;
-  }, [items, filter]);
+  }, [items, filter, itemCategory]);
 
   const allGroups = useMemo(() => {
     if (filter !== "all") return null;
@@ -192,11 +197,11 @@ export default function FeedPage() {
       </div>
 
       {/* Filter pills */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         {FILTERS.map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => { setFilter(f.key); setItemCategory(null); }}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               filter === f.key
                 ? "bg-foreground text-background"
@@ -207,6 +212,28 @@ export default function FeedPage() {
           </button>
         ))}
       </div>
+
+      {/* Category sub-pills — only when Items is selected */}
+      {filter === "items" && (
+        <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-none">
+          {(["All", ...CATEGORIES] as const).map((cat) => {
+            const active = cat === "All" ? itemCategory === null : itemCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setItemCategory(cat === "All" ? null : cat)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  active
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {error && (
         <p className="text-sm text-destructive mb-4">{error}</p>
