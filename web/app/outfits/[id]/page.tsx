@@ -227,19 +227,7 @@ export default function OutfitDetailPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">{outfit.name}</h1>
-            <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-              <span>{outfit.usage_count} {outfit.usage_count === 1 ? "wear" : "wears"}</span>
-              {outfit.last_worn && (
-                <>
-                  <span>·</span>
-                  <span>last worn {new Date(outfit.last_worn).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-                </>
-              )}
-            </div>
-          </div>
-
+          {/* Hero canvas */}
           {editingLayout && outfit.items && outfit.items.length > 0 ? (
             <OutfitLayoutEditor
               items={outfit.items as import("@/lib/types").OutfitItem[]}
@@ -252,10 +240,23 @@ export default function OutfitDetailPage() {
               onCancel={() => setEditingLayout(false)}
             />
           ) : outfit.items && outfit.items.length > 0 ? (
-            <div className="aspect-[3/4] w-full max-w-sm mx-auto bg-muted/30 rounded-lg overflow-hidden relative">
+            <div className="aspect-[3/4] w-full max-w-md mx-auto bg-muted/30 rounded-xl overflow-hidden relative">
               <OutfitCanvas items={outfit.items} />
             </div>
           ) : null}
+
+          <div>
+            <h1 className="text-3xl font-bold">{outfit.name}</h1>
+            <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+              <span>{outfit.usage_count} {outfit.usage_count === 1 ? "wear" : "wears"}</span>
+              {outfit.last_worn && (
+                <>
+                  <span>·</span>
+                  <span>last worn {new Date(outfit.last_worn).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                </>
+              )}
+            </div>
+          </div>
 
           <Button
             size="lg"
