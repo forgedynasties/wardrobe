@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getOutfitLogs, getOutfits, deleteOutfitLog, imageUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShimmerImg } from "@/components/shimmer-img";
+import { LogSheet } from "@/components/log-sheet";
 import {
   Dialog,
   DialogContent,
@@ -79,7 +79,6 @@ function viewRange(view: View, anchor: Date): { start: Date; end: Date } {
 }
 
 export default function OutfitLoggerPage() {
-  const router = useRouter();
   const [view, setView] = useState<View>("week");
   const [anchor, setAnchor] = useState(new Date());
   const [logs, setLogs] = useState<Map<string, OutfitLog>>(new Map());
@@ -90,6 +89,7 @@ export default function OutfitLoggerPage() {
   const [deletingLog, setDeletingLog] = useState(false);
   const [peek, setPeek] = useState<{ log: OutfitLog; x: number; y: number } | null>(null);
   const peekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sheetDate, setSheetDate] = useState<string | null>(null);
 
   const handlePeekEnter = (e: React.MouseEvent<HTMLDivElement>, log: OutfitLog | null) => {
     if (!log) return;
@@ -106,12 +106,7 @@ export default function OutfitLoggerPage() {
     setPeek(null);
   };
 
-  useEffect(() => {
-    loadLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, anchor]);
-
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     try {
       setLoading(true);
       const { start, end } = viewRange(view, anchor);
@@ -129,10 +124,14 @@ export default function OutfitLoggerPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [view, anchor]);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   const handleDateClick = (date: Date) => {
-    router.push(`/logger/${toKey(date)}`);
+    setSheetDate(toKey(date));
   };
 
   const shiftAnchor = (dir: -1 | 1) => {
@@ -541,6 +540,15 @@ export default function OutfitLoggerPage() {
             style={{ transform: "translateY(-4px) rotate(45deg)" }}
           />
         </div>
+      )}
+
+      {sheetDate && (
+        <LogSheet
+          dateStr={sheetDate}
+          open={!!sheetDate}
+          onClose={() => setSheetDate(null)}
+          onSaved={loadLogs}
+        />
       )}
     </div>
   );
