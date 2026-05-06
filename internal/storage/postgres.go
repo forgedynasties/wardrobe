@@ -594,7 +594,7 @@ func (s *Store) BackfillOutfitStats(outfitID uuid.UUID, owner string) error {
 		SELECT COUNT(*), MAX(wear_date) FROM (
 			SELECT ol.wear_date
 			FROM outfit_logs ol
-			JOIN outfit_log_items oli ON ol.id = oli.log_id
+			JOIN outfit_log_items oli ON ol.id = oli.outfit_log_id
 			WHERE ol.owner = $2 AND oli.clothing_item_id = ANY($3)
 			GROUP BY ol.wear_date
 			HAVING COUNT(DISTINCT oli.clothing_item_id) = $4
@@ -1417,7 +1417,7 @@ func (s *Store) DetectStaleOutfitData(owner string) ([]domain.StaleOutfit, error
 				MAX(ol.wear_date) AS last_match
 			FROM outfit_items oi
 			JOIN outfit_logs ol ON ol.owner = $1
-			JOIN outfit_log_items oli ON oli.log_id = ol.id AND oli.clothing_item_id = oi.clothing_item_id
+			JOIN outfit_log_items oli ON oli.outfit_log_id = ol.id AND oli.clothing_item_id = oi.clothing_item_id
 			GROUP BY oi.outfit_id, ol.wear_date
 			HAVING COUNT(DISTINCT oli.clothing_item_id) = (
 				SELECT COUNT(*) FROM outfit_items oi2 WHERE oi2.outfit_id = oi.outfit_id
