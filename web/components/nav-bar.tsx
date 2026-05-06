@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shirt, Sparkles, CalendarDays, Heart, User } from "lucide-react";
+import { Globe, Shirt, Sparkles, CalendarDays, Heart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/lib/user-context";
 
 const navItems = [
+  { href: "/", label: "Feed", icon: Globe },
   { href: "/items", label: "Items", icon: Shirt },
   { href: "/outfits", label: "Outfits", icon: Sparkles },
   { href: "/logger", label: "Logger", icon: CalendarDays },
