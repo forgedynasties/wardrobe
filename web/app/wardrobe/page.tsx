@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, Plus, ArrowUpDown, Search, X } from "lucide-react";
+import { Sparkles, Plus, ArrowUpDown, Search, X, Shirt } from "lucide-react";
 import { getItemsPage, getOutfitsPage, searchItems } from "@/lib/api";
 import { outfitRefreshStore } from "@/lib/outfit-refresh";
 import { CategoryStrip } from "@/components/category-strip";
@@ -172,24 +172,23 @@ function ItemsTab() {
               onSeeAll={() => { setFocusCategory(cat); setSortBy("default"); }}
             />
           ))}
-          {items.length === 0 && !onboardingDismissed && (
+          {items.length === 0 && searchQuery ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <p className="text-lg font-medium text-foreground mb-1">No results</p>
+              <p className="text-sm">No items match &ldquo;{searchQuery}&rdquo;</p>
+            </div>
+          ) : items.length === 0 && !onboardingDismissed ? (
             <OnboardingWizard onDismiss={() => setOnboardingDismissed(true)} />
-          )}
-          {items.length === 0 && onboardingDismissed && (
+          ) : items.length === 0 && onboardingDismissed ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <p className="text-lg font-medium text-foreground mb-1">Your wardrobe is empty</p>
               <p className="text-sm mb-6">Add your first clothing item to get started</p>
               <AddItemButton />
             </div>
-          )}
+          ) : null}
         </div>
       )}
 
-      {!loading && items.length > 0 && (
-        <div className="fixed bottom-20 right-4 z-40">
-          <AddItemButton variant="fab" />
-        </div>
-      )}
     </>
   );
 }
@@ -322,13 +321,6 @@ function OutfitsTab() {
         </>
       )}
 
-      {!loading && outfits.length > 0 && (
-        <Link href="/outfits/new" className="fixed bottom-20 right-4 z-40">
-          <Button size="icon" className="h-14 w-14 rounded-full shadow-lg">
-            <Plus className="h-6 w-6" />
-          </Button>
-        </Link>
-      )}
     </>
   );
 }
@@ -337,6 +329,7 @@ export default function WardrobePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tab = searchParams.get("tab") || "items";
+  const [fabOpen, setFabOpen] = useState(false);
 
   const TABS = [
     { key: "items", label: "Items" },
@@ -367,6 +360,38 @@ export default function WardrobePage() {
       </div>
 
       {tab === "items" ? <ItemsTab /> : <OutfitsTab />}
+
+      {/* Unified FAB */}
+      <div className="fixed bottom-20 right-4 z-40 flex flex-col items-end gap-2">
+        {fabOpen && (
+          <div className="flex flex-col gap-2 mb-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <Link
+              href="/items/new"
+              onClick={() => setFabOpen(false)}
+              className="flex items-center gap-2 bg-card border rounded-full px-4 py-2.5 shadow-lg text-sm font-medium hover:bg-muted transition-colors"
+            >
+              <Shirt className="h-4 w-4" />
+              Add Item
+            </Link>
+            <Link
+              href="/outfits/new"
+              onClick={() => setFabOpen(false)}
+              className="flex items-center gap-2 bg-card border rounded-full px-4 py-2.5 shadow-lg text-sm font-medium hover:bg-muted transition-colors"
+            >
+              <Sparkles className="h-4 w-4" />
+              Create Outfit
+            </Link>
+          </div>
+        )}
+        <Button
+          size="icon"
+          className="h-14 w-14 rounded-full shadow-lg transition-transform duration-200"
+          style={{ transform: fabOpen ? "rotate(45deg)" : "rotate(0deg)" }}
+          onClick={() => setFabOpen(!fabOpen)}
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </div>
     </div>
   );
 }

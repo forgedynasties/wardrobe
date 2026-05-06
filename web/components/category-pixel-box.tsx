@@ -49,7 +49,7 @@ export function CategoryPixelBox({ colors, size = 40 }: CategoryPixelBoxProps) {
         style={{
           position: "absolute",
           inset: -4,
-          background: `
+          backgroundImage: `
             radial-gradient(circle at 30% 40%, ${c0}dd, transparent 65%),
             radial-gradient(circle at 72% 62%, ${c1}cc, transparent 60%),
             radial-gradient(circle at 50% 15%, ${c2}aa, transparent 65%)
