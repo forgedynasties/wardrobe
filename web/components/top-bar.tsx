@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Trophy } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { UserSwitcher } from "@/components/user-switcher";
 import { Button } from "@/components/ui/button";
 
@@ -21,6 +22,7 @@ export function TopBar() {
             <Trophy className="h-4 w-4" />
           </Button>
         </Link>
+        <ThemeToggle />
         <UserSwitcher />
       </div>
     </header>
