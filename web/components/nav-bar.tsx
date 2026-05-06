@@ -16,7 +16,7 @@ const navItems = [
 
 function GuestBar() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/90 backdrop-blur-lg">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-lg">
       <div className="flex items-center justify-between h-16 max-w-sm mx-auto px-6 gap-4">
         <div>
           <p className="text-sm font-semibold">Hangur</p>
@@ -51,7 +51,7 @@ export function NavBar() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-lg">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg">
       <div className="flex items-center justify-around h-16 max-w-3xl mx-auto">
         {navItems.map((item) => {
           const isActive =
